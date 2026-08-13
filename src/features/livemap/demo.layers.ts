@@ -87,6 +87,7 @@ export function demoHubInventoryMap(hubId: string): HubInventoryMap {
       status: 'active',
       expectedReturnAt: new Date(Date.now() + 2 * 86_400_000).toISOString(),
       lngLat: offset(640, 410),
+      locationAge: 'live',
       lastSeenAt: new Date(Date.now() - 6 * 60_000).toISOString(),
       liveStatus: 'parked',
     },
@@ -102,8 +103,14 @@ export function demoHubInventoryMap(hubId: string): HubInventoryMap {
       status: 'active',
       expectedReturnAt: new Date(Date.now() + 86_400_000).toISOString(),
       lngLat: offset(-260, -720),
+      /**
+       * Off shift, but we know where they were. The demo carries this case deliberately: the stale
+       * pin is a distinct visual state, and a fixture set with only live-or-nothing would leave it
+       * untested by eye.
+       */
+      locationAge: 'last_known',
       lastSeenAt: new Date(Date.now() - 40 * 60_000).toISOString(),
-      liveStatus: 'driving',
+      liveStatus: null,
     },
     {
       // The row that matters most: overdue AND unlocatable.
@@ -118,9 +125,15 @@ export function demoHubInventoryMap(hubId: string): HubInventoryMap {
       status: 'overdue',
       expectedReturnAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
       lngLat: null,
+      locationAge: null,
       lastSeenAt: null,
       liveStatus: null,
     },
   ];
-  return { hubId, holders, locatedCount: holders.filter((h) => h.lngLat).length };
+  return {
+    hubId,
+    holders,
+    locatedCount: holders.filter((h) => h.lngLat).length,
+    liveCount: holders.filter((h) => h.locationAge === 'live').length,
+  };
 }

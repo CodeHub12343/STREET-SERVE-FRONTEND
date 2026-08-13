@@ -100,8 +100,13 @@ export interface InventoryHolder {
   valueCents: number;
   status: string;
   expectedReturnAt: string;
-  /** Null when the seller has no live session — the rows worth chasing. */
+  /** Null only when this seller has NEVER been live — the rows genuinely worth chasing. */
   lngLat: LngLat | null;
+  /**
+   * How much to trust the pin. `live` is a running session; `last_known` is where they were when
+   * they last pinged. A stale fix must be dated on screen, never drawn as if it were current.
+   */
+  locationAge: 'live' | 'last_known' | null;
   lastSeenAt: string | null;
   liveStatus: string | null;
 }
@@ -109,7 +114,10 @@ export interface InventoryHolder {
 export interface HubInventoryMap {
   hubId: string;
   holders: InventoryHolder[];
+  /** Anything with a pin on the map, live or stale. */
   locatedCount: number;
+  /** Of those, the ones the server can vouch for right now. */
+  liveCount: number;
 }
 
 /** Server → client `pin:update` payload (REALTIME_ARCHITECTURE.md §5). */

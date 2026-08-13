@@ -117,15 +117,28 @@ describe('C-5 hub inventory map (demo mode)', () => {
       </Providers>,
     );
 
+    /**
+     * Counts what is ON THE MAP — one live seller and one last-known — so the number agrees with
+     * the pins. It used to count live sessions only, which read "0/2 located" beside an empty frame
+     * on any screen opened between shifts. The label softens to "last seen" whenever some of those
+     * pins are stale, because calling a last-known position "located" overstates it.
+     */
     await waitFor(() => expect(screen.getByText('2/3')).toBeInTheDocument());
-    expect(screen.getByText('located')).toBeInTheDocument();
+    expect(screen.getByText('last seen')).toBeInTheDocument();
 
     /**
      * The reason the screen exists: "we don't know where this is" is the most useful thing a hub
-     * owner can be told, so the unlocatable holder is named rather than silently dropped.
+     * owner can be told, so the unlocatable holder is named rather than silently dropped. This is
+     * now reserved for sellers we have NEVER had a position for — a different, worse case than
+     * someone who is simply off shift.
      */
     expect(screen.getByText('1 not showing a location')).toBeInTheDocument();
     expect(screen.getByText(/Dev P\. · 7 × Art prints/)).toBeInTheDocument();
+
+    // The stale pin is explained rather than left as an unexplained rendering difference.
+    expect(
+      screen.getByText(/pin shows where the seller was last seen, not where they are now/i),
+    ).toBeInTheDocument();
 
     // And the overdue count is called out on its own.
     expect(screen.getByText('overdue')).toBeInTheDocument();

@@ -55,6 +55,12 @@ export function HubInventoryMap({ hubId }: { hubId: string }) {
     [data],
   );
 
+  /** Pinned from a session that has since ended — a real position, but a past one. */
+  const stale = useMemo(
+    () => located.filter((h) => h.locationAge === 'last_known'),
+    [located],
+  );
+
   const markers: MapMarker[] = located.map((h) => ({
     id: h.checkoutId,
     lngLat: h.lngLat,
@@ -65,8 +71,18 @@ export function HubInventoryMap({ hubId }: { hubId: string }) {
         type="button"
         $overdue={h.status === 'overdue'}
         $selected={selected === h.checkoutId}
+        /**
+         * A last-known fix is drawn hollow and dashed. It is genuinely useful — it is where the
+         * stock was — but a stale position rendered identically to a live one would tell a hub
+         * owner someone is standing somewhere they left hours ago, and send them there.
+         */
+        $stale={h.locationAge === 'last_known'}
         onClick={() => setSelected(h.checkoutId)}
-        aria-label={`${h.sellerName}, ${h.outstanding} × ${h.productName}, last seen ${rel(h.lastSeenAt)}`}
+        aria-label={
+          h.locationAge === 'last_known'
+            ? `${h.sellerName}, ${h.outstanding} × ${h.productName}, last seen here ${rel(h.lastSeenAt)}, not live now`
+            : `${h.sellerName}, ${h.outstanding} × ${h.productName}, live now`
+        }
       >
         <HolderCount className="tnum">{h.outstanding}</HolderCount>
       </HolderPin>
@@ -103,11 +119,16 @@ export function HubInventoryMap({ hubId }: { hubId: string }) {
           <StatValue className="tnum">{formatCents(totalValue)}</StatValue>
           <StatLabel>out with sellers</StatLabel>
         </Stat>
+        {/*
+          Counts what is ON THE MAP, live or last-known, so the number and the pins agree. It used
+          to count live sessions only, which read "0/2 located" beside an empty frame on any screen
+          opened between shifts — technically true and practically a dead end.
+        */}
         <Stat>
           <StatValue className="tnum">
             {data.locatedCount}/{data.holders.length}
           </StatValue>
-          <StatLabel>located</StatLabel>
+          <StatLabel>{data.liveCount === data.locatedCount ? 'located' : 'last seen'}</StatLabel>
         </Stat>
         <Stat $alert={overdue.length > 0}>
           <StatValue className="tnum">{overdue.length}</StatValue>
@@ -124,9 +145,14 @@ export function HubInventoryMap({ hubId }: { hubId: string }) {
               {unlocated.length} not showing a location
             </b>
           </UnlocatedHead>
+          {/*
+            Reworded because it was wrong about the cause. These sellers have never been live at
+            all, so there is no last position to fall back to — which is a different (and worse)
+            situation than "not broadcasting right now", the case now handled by stale pins.
+          */}
           <UnlocatedHint>
-            These sellers aren’t broadcasting right now. That’s normal between shifts — worth a
-            message if any are overdue.
+            We’ve never had a location for these sellers, so there’s nowhere to point you. Message
+            them if any are overdue.
           </UnlocatedHint>
           <UnlocatedList>
             {unlocated.map((h) => (
@@ -154,10 +180,27 @@ export function HubInventoryMap({ hubId }: { hubId: string }) {
         ) : (
           <NoneLocated>
             <PackageSearch size={22} aria-hidden />
-            <span>None of your stock is broadcasting a location right now.</span>
+            <span>
+              None of your sellers has ever shared a location, so there’s nothing to map yet.
+            </span>
           </NoneLocated>
         )}
       </MapFrame>
+
+      {/*
+        The legend only appears when there is something stale to explain. A dashed pin that nobody
+        told you was dashed is just a rendering glitch — and the whole reason to distinguish it is
+        so a hub owner does not drive to where someone WAS.
+      */}
+      {stale.length > 0 ? (
+        <StaleNote>
+          <StaleSwatch aria-hidden />
+          <span>
+            {stale.length} {stale.length === 1 ? 'pin shows' : 'pins show'} where the seller was last
+            seen, not where they are now — they aren’t live at the moment.
+          </span>
+        </StaleNote>
+      ) : null}
 
       {selectedHolder ? (
         <Detail>
@@ -166,8 +209,16 @@ export function HubInventoryMap({ hubId }: { hubId: string }) {
             {selectedHolder.outstanding} × {selectedHolder.productName} ·{' '}
             {formatCents(selectedHolder.valueCents)}
           </DetailMeta>
+          {/*
+            "Last seen 3h ago" beside a pin means two very different things depending on whether
+            the seller is still live. Said explicitly, because this panel is what a hub owner reads
+            before deciding to go and find someone.
+          */}
           <DetailMeta>
-            {selectedHolder.quantitySold} sold · last seen {rel(selectedHolder.lastSeenAt)}
+            {selectedHolder.quantitySold} sold ·{' '}
+            {selectedHolder.locationAge === 'last_known'
+              ? `last seen here ${rel(selectedHolder.lastSeenAt)} — not live now`
+              : `live now · pinged ${rel(selectedHolder.lastSeenAt)}`}
             {selectedHolder.status === 'overdue' ? ' · overdue' : ''}
           </DetailMeta>
         </Detail>
@@ -270,24 +321,53 @@ const NoneLocated = styled.div`
   color: ${({ theme }) => theme.color.textTertiary};
   background: ${({ theme }) => theme.color.surfaceRaised};
 `;
-const HolderPin = styled.button<{ $overdue: boolean; $selected: boolean }>`
+/**
+ * A live pin is solid; a last-known pin is hollow with a dashed ring, in the same hue. The shape
+ * carries the meaning rather than colour alone, so it survives both themes and colour-blindness —
+ * and the difference between "they are here" and "they were here" is the one a hub owner acts on.
+ */
+const HolderPin = styled.button<{ $overdue: boolean; $selected: boolean; $stale: boolean }>`
   display: grid;
   place-items: center;
   width: 30px;
   height: 30px;
   border-radius: 50%;
   cursor: pointer;
-  color: #fff;
-  background: ${({ theme, $overdue }) =>
-    $overdue ? theme.color.statusAway : theme.color.statusLive};
-  border: 2px solid ${({ theme }) => theme.color.surfaceBase};
+  color: ${({ theme, $overdue, $stale }) =>
+    $stale ? ($overdue ? theme.color.statusAway : theme.color.statusLive) : '#fff'};
+  background: ${({ theme, $overdue, $stale }) =>
+    $stale
+      ? theme.color.surfaceBase
+      : $overdue
+        ? theme.color.statusAway
+        : theme.color.statusLive};
+  border: 2px ${({ $stale }) => ($stale ? 'dashed' : 'solid')}
+    ${({ theme, $overdue, $stale }) =>
+      $stale ? ($overdue ? theme.color.statusAway : theme.color.statusLive) : theme.color.surfaceBase};
   box-shadow: ${({ theme }) => theme.color.shadow};
+  opacity: ${({ $stale }) => ($stale ? 0.85 : 1)};
   transform: ${({ $selected }) => ($selected ? 'scale(1.15)' : 'none')};
   transition: transform 140ms ease;
 `;
 const HolderCount = styled.span`
   font-size: 12px;
   font-weight: 800;
+`;
+const StaleNote = styled.p`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[2]}px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.color.textSecondary};
+`;
+const StaleSwatch = styled.span`
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px dashed ${({ theme }) => theme.color.statusLive};
+  background: ${({ theme }) => theme.color.surfaceBase};
 `;
 const Detail = styled.div`
   display: grid;
