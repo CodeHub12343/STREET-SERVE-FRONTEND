@@ -190,3 +190,31 @@ export interface RtoDashboard extends RtoAgreement {
   payoffCents: Cents;
   schedule?: { dueAt: string; amountCents: Cents; status: string }[];
 }
+
+/**
+ * What accepting an offer returns: the agreement, plus the card payment it is waiting on.
+ *
+ * Accepting does not move money. The server records the clickwrap, locks the schedule and OPENS a
+ * PaymentIntent for everything due today — the initial payment and the set-up fee as one charge —
+ * and hands back the secret to confirm it with. No ownership is credited until that intent settles
+ * through the webhook, so `ownershipCreditedCents` is 0 on this response by design.
+ */
+export interface RtoAcceptResult extends RtoDashboard {
+  /** Null only when nothing is due today (no initial payment, no set-up fee). */
+  clientSecret: string | null;
+  paymentIntentRef: string | null;
+  amountDueNowCents: Cents;
+}
+
+/**
+ * What requesting an early payoff returns. `completed` is FALSE here — it means "ownership has
+ * transferred", and that happens on the webhook after the card clears, never at the moment the
+ * charge is opened.
+ */
+export interface RtoPayoffResult {
+  agreementId: string;
+  payoffCents: Cents;
+  completed: boolean;
+  clientSecret: string | null;
+  paymentIntentRef: string | null;
+}

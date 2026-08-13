@@ -4,6 +4,7 @@
  * U9 Rent-to-Own progress dashboard — where a customer sees exactly where they stand: how much they
  * own, what's next, and the live "pay off early" amount (the locked formula, R23). Supportive tone.
  */
+import { useState } from 'react';
 import styled from 'styled-components';
 import { CheckCircle2, PackageOpen, PauseCircle } from 'lucide-react';
 import { TabPage } from '@/components/layout/TabPage';
@@ -13,6 +14,8 @@ import { ErrorState } from '@/components/feedback/ErrorState';
 import { Banner } from '@/components/feedback/Banner';
 import { useToast } from '@/components/feedback/ToastProvider';
 import { formatCents } from '@/lib/money';
+import { PaymentSheet } from '@/features/payments/components/PaymentSheet';
+import type { RtoPayoffResult } from '../types';
 import {
   useRtoDashboard,
   useRtoStatements,
@@ -35,6 +38,8 @@ export function RtoDashboard({ id }: { id: string }) {
   const payoff = usePayoff(id);
   const returnQuote = useRtoReturnPreview(id);
   const requestReturn = useRequestRtoReturn(id);
+  /** Non-null once a payoff charge is open and the card is owed. */
+  const [payingOff, setPayingOff] = useState<RtoPayoffResult | null>(null);
 
   if (isLoading) {
     return (
@@ -145,17 +150,59 @@ export function RtoDashboard({ id }: { id: string }) {
             <PayoffLabel>Pay off early</PayoffLabel>
             <PayoffHint>Own it today for {formatCents(data.payoffCents)} — no further rental cost.</PayoffHint>
           </div>
-          <Button
-            loading={payoff.isPending}
-            onClick={() =>
-              payoff.mutate(undefined, {
-                onSuccess: () => show('Paid off — it’s yours!', 'success'),
-                onError: () => show('Couldn’t complete payoff. Please try again.', 'danger'),
-              })
-            }
-          >
-            <CheckCircle2 size={16} /> Pay {formatCents(data.payoffCents)}
-          </Button>
+          {/*
+            ═══ Paying off takes a card. It always should have. ═══
+
+            This button used to POST and toast "Paid off — it's yours!", because the server
+            transferred ownership at the moment the charge was OPENED. Nobody was ever asked to pay.
+            The mutation now returns a client secret and the sheet below collects it; ownership
+            transfers when Stripe's webhook settles that intent, which is why nothing here claims
+            the item is theirs.
+          */}
+          {payingOff ? (
+            <PayoffPay>
+              <PaymentSheet
+                clientSecret={payingOff.clientSecret ?? 'demo'}
+                amountCents={payingOff.payoffCents}
+                onSuccess={() => {
+                  show('Payment received — we’ll confirm your ownership in a moment', 'success');
+                  setPayingOff(null);
+                }}
+              />
+              <CancelPay type="button" onClick={() => setPayingOff(null)}>
+                Not now
+              </CancelPay>
+            </PayoffPay>
+          ) : (
+            <Button
+              loading={payoff.isPending}
+              onClick={() =>
+                payoff.mutate(undefined, {
+                  onSuccess: (res) => {
+                    /**
+                     * Already fully credited — the server had nothing to charge and transferred
+                     * ownership outright. The only case where "it's yours" is true on this call.
+                     */
+                    if (res.completed) {
+                      show('Paid off — it’s yours!', 'success');
+                      return;
+                    }
+                    if (!res.clientSecret) {
+                      show(
+                        'We couldn’t start your payoff payment. Nothing has been charged — please try again.',
+                        'warning',
+                      );
+                      return;
+                    }
+                    setPayingOff(res);
+                  },
+                  onError: () => show('Couldn’t start the payoff. Please try again.', 'danger'),
+                })
+              }
+            >
+              <CheckCircle2 size={16} /> Pay {formatCents(data.payoffCents)}
+            </Button>
+          )}
         </Payoff>
       ) : null}
       {/*
@@ -293,6 +340,19 @@ const PayoffLabel = styled.p`
 const PayoffHint = styled.p`
   font-size: 13px;
   color: ${({ theme }) => theme.color.textSecondary};
+`;
+
+/** The card form takes the full width of the payoff card rather than sitting beside the copy. */
+const PayoffPay = styled.div`
+  flex: 1 1 100%;
+  display: grid;
+  gap: ${({ theme }) => theme.space[3]}px;
+`;
+const CancelPay = styled.button`
+  justify-self: center;
+  font-size: 13px;
+  color: ${({ theme }) => theme.color.textSecondary};
+  text-decoration: underline;
 `;
 
 const ReturnBlock = styled.section`
