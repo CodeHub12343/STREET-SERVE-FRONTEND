@@ -22,6 +22,7 @@ import { useToast } from '@/components/feedback/ToastProvider';
 import { AppApiError } from '@/lib/api/errors';
 import { formatCents } from '@/lib/money';
 import { formatDateTime } from '@/lib/format';
+import { positionErrorMessage, requestPosition } from '@/lib/geo';
 import {
   useCancelJob,
   useJobApplicants,
@@ -48,45 +49,54 @@ export function EmployerJobs({ businessId }: { businessId: string }) {
   const [startsAt, setStartsAt] = useState('');
   const [error, setError] = useState<string>();
 
-  const submit = () => {
+  const submit = async () => {
     const payCents = Math.round(Number(pay) * 100);
     if (!title.trim()) return setError('Give the gig a title');
     if (!Number.isFinite(payCents) || payCents <= 0) return setError('Enter what it pays');
     setError(undefined);
 
-    // The gig is located where the business is; the worker's check-in is geofenced to it.
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      show('Location is required to post a gig — workers check in against it.', 'danger');
+    /**
+     * The gig is located where the business is; the worker's check-in is geofenced to it.
+     *
+     * A 60s cache window: this pins the gig to where the employer is standing, so a five-minute-old
+     * fix could place it down the street and push every worker's check-in radius with it. It does
+     * not need the check-in path's `maximumAge: 0`, though — that guards against a worker claiming
+     * presence they do not have, and an employer has no reason to spoof their own gig.
+     */
+    let pos: GeolocationPosition;
+    try {
+      pos = await requestPosition({ maxCachedAgeMs: 60_000 });
+    } catch (e) {
+      // Previously every failure claimed a missing permission, including plain timeouts.
+      show(
+        positionErrorMessage(e as GeolocationPositionError | undefined, 'A gig needs a location.'),
+        'danger',
+      );
       return;
     }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        post.mutate(
-          {
-            title: title.trim(),
-            lng: pos.coords.longitude,
-            lat: pos.coords.latitude,
-            payCents,
-            payUnit: 'flat',
-            durationHrs: Number(hours) || undefined,
-            startsAt: startsAt ? new Date(startsAt).toISOString() : undefined,
-            businessId,
-          },
-          {
-            onSuccess: () => {
-              setComposing(false);
-              setTitle('');
-              setPay('');
-              setStartsAt('');
-              show('Gig posted — it’s live on the board', 'success');
-            },
-            onError: (e) =>
-              show(e instanceof AppApiError ? e.message : 'Could not post the gig', 'danger'),
-          },
-        );
+
+    post.mutate(
+      {
+        title: title.trim(),
+        lng: pos.coords.longitude,
+        lat: pos.coords.latitude,
+        payCents,
+        payUnit: 'flat',
+        durationHrs: Number(hours) || undefined,
+        startsAt: startsAt ? new Date(startsAt).toISOString() : undefined,
+        businessId,
       },
-      () => show('Location permission is needed to post a gig.', 'danger'),
-      { enableHighAccuracy: true, timeout: 10_000 },
+      {
+        onSuccess: () => {
+          setComposing(false);
+          setTitle('');
+          setPay('');
+          setStartsAt('');
+          show('Gig posted — it’s live on the board', 'success');
+        },
+        onError: (e) =>
+          show(e instanceof AppApiError ? e.message : 'Could not post the gig', 'danger'),
+      },
     );
   };
 
@@ -234,7 +244,7 @@ export function EmployerJobs({ businessId }: { businessId: string }) {
             <MapPin size={13} aria-hidden />
             Posted at your current location — workers must be within range to check in.
           </Hint>
-          <Button fullWidth loading={post.isPending} onClick={submit}>
+          <Button fullWidth loading={post.isPending} onClick={() => void submit()}>
             Post gig
           </Button>
         </Form>

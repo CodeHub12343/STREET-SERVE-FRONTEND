@@ -122,8 +122,19 @@ export function getCurrentCoords(opts: { precise?: boolean } = {}): Promise<JobC
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       (err) => reject(describeGeolocationError(err)),
+      /**
+       * `maximumAge: 0` on the precise path is deliberate and stays: this backs the geofenced
+       * check-in, and accepting a cached fix would let a worker claim presence at a site they had
+       * merely been near earlier. That is the one place a stale position is a correctness problem
+       * rather than a convenience, so it is NOT routed through `requestPosition`.
+       *
+       * The timeout is the part that was wrong. Forbidding the cache means waiting for a real
+       * acquisition, and a cold GPS indoors regularly needs longer than 15s — so the strictness the
+       * check-in depends on was also what made it time out. 30s asks for the same guarantee with
+       * enough patience to actually get it.
+       */
       precise
-        ? { enableHighAccuracy: true, timeout: 15_000, maximumAge: 0 }
+        ? { enableHighAccuracy: true, timeout: 30_000, maximumAge: 0 }
         : { enableHighAccuracy: false, timeout: 15_000, maximumAge: 120_000 },
     );
   });
