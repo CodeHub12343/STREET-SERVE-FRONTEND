@@ -14,7 +14,10 @@
  * this, nothing on the customer surface ever said "you are in Customer mode", so a user who had
  * just become a Street Seller had no reason to believe another surface existed.
  *
- * Renders nothing for a user with one mode — no clutter for the majority who never switch.
+ * Renders nothing only when there is genuinely nowhere to go — meaning the account neither holds a
+ * second mode nor may grant itself one. Holding a single mode is NOT that case: a customer who can
+ * become a Street Seller has a destination, and hiding the control from them is what made the
+ * feature invisible to everyone who had not already found it.
  */
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -54,8 +57,16 @@ export function ModeSwitchRow({ onNavigate }: { onNavigate?: () => void }) {
   const activeMeta = MODE_META[activeMode];
   const ActiveIcon = activeMeta.icon;
 
-  // Nothing to switch to → no control. A single-role user shouldn't pay for a feature they can't use.
-  if (held.length <= 1) return null;
+  /**
+   * Nothing to switch to → no control.
+   *
+   * Measured against `visible`, not `held`. The sheet lists modes the account HOLDS plus ones it may
+   * grant itself, so a customer-only account has somewhere to go — "Become a Street Seller" — yet a
+   * `held.length <= 1` test hid the control from precisely those users. That defeated the reason
+   * this component exists (see the header): the person who has never switched is the one who needs
+   * to learn another surface exists.
+   */
+  if (visible.length <= 1) return null;
 
   const go = (mode: AppMode) => {
     setPreview(null);
