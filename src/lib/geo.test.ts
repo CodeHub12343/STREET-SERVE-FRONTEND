@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { bboxKey, coverCells, distanceMeters, geohashEncode } from './geo';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { bboxKey, coverCells, distanceMeters, geohashEncode, requestPosition } from './geo';
 
 describe('geo', () => {
   it('encodes a known coordinate to the expected geohash prefix', () => {
@@ -22,5 +22,62 @@ describe('geo', () => {
     expect(cells.length).toBeGreaterThan(0);
     expect(cells.length).toBeLessThanOrEqual(64); // hard cap
     expect(new Set(cells).size).toBe(cells.length); // unique
+  });
+});
+
+/**
+ * The mobile PWA reported "finding your location took too long" repeatedly. Every call site asked
+ * for a FRESH high-accuracy fix (`maximumAge` defaults to 0), which a phone indoors cannot deliver
+ * inside ten seconds — so the retry advice was advice to fail again.
+ */
+describe('requestPosition', () => {
+  const position = (accuracy = 30) =>
+    ({ coords: { longitude: -120.9969, latitude: 37.6391, accuracy } }) as GeolocationPosition;
+
+  const stub = (impl: (ok: PositionCallback, err: PositionErrorCallback, o: PositionOptions) => void) => {
+    const getCurrentPosition = vi.fn(impl);
+    vi.stubGlobal('navigator', { geolocation: { getCurrentPosition } });
+    return getCurrentPosition;
+  };
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('accepts a recent cached fix on the first pass, without a second request', async () => {
+    const get = stub((ok) => ok(position()));
+
+    await expect(requestPosition()).resolves.toMatchObject({ coords: { latitude: 37.6391 } });
+
+    expect(get).toHaveBeenCalledTimes(1);
+    // The whole point: a position the device already holds is good enough for choosing an area.
+    expect(get.mock.calls[0]![2]).toMatchObject({ maximumAge: 300_000, enableHighAccuracy: false });
+  });
+
+  it('retries patiently when the fast pass times out', async () => {
+    const get = stub((ok, err, opts) => {
+      if (opts.enableHighAccuracy) return ok(position(12));
+      err({ code: 3, PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 } as GeolocationPositionError);
+    });
+
+    await expect(requestPosition()).resolves.toMatchObject({ coords: { accuracy: 12 } });
+
+    expect(get).toHaveBeenCalledTimes(2);
+    // A cold GPS needs materially longer than the 10s every call site used to allow.
+    expect(get.mock.calls[1]![2]).toMatchObject({ enableHighAccuracy: true, timeout: 25_000 });
+  });
+
+  it('does not retry a denied permission', async () => {
+    // Asking again cannot turn a denial into a grant, and the browser will not re-prompt — retrying
+    // only makes the user wait longer for the same answer.
+    const get = stub((_ok, err) =>
+      err({ code: 1, PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 } as GeolocationPositionError),
+    );
+
+    await expect(requestPosition()).rejects.toMatchObject({ code: 1 });
+    expect(get).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects rather than hanging when the device has no geolocation at all', async () => {
+    vi.stubGlobal('navigator', {});
+    await expect(requestPosition()).rejects.toMatchObject({ code: 2 });
   });
 });

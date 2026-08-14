@@ -8,6 +8,51 @@ import type { LngLat } from '@/types';
 /** Backend live-cell geohash precision. Keep in sync with the server constant. */
 export const LIVE_CELL_GEOHASH_PRECISION = 6;
 
+/**
+ * One-shot position request for "where am I, roughly" — onboarding, service area, near-me.
+ *
+ * ## Why this exists
+ *
+ * Most call sites passed `{ enableHighAccuracy: true, timeout: 10_000 }` and no `maximumAge`.
+ * `maximumAge` defaults to **0**, which means "refuse any position the device already has and
+ * acquire a fresh one". On a phone indoors, or on a cold GPS, that routinely takes longer than ten
+ * seconds — so the request times out and the user is told to try again, which fails identically.
+ *
+ * Nothing in these flows needs metre accuracy: they are choosing a city, a service-area centre, or
+ * a search origin. A fix from a few minutes ago is indistinguishable for that purpose and usually
+ * returns instantly.
+ *
+ * ## Strategy
+ *
+ * 1. **Fast pass** — accept a cached fix up to 5 minutes old, coarse accuracy, short timeout. This
+ *    is the path that succeeds immediately on a phone that has been outdoors or used a map recently.
+ * 2. **Patient pass** — only if the fast pass could not produce anything, ask for a real fix with a
+ *    timeout long enough for a cold GPS to actually respond.
+ *
+ * A denied permission short-circuits: it will not become allowed by asking again, and the browser
+ * will not re-prompt, so retrying only delays the honest error.
+ */
+export function requestPosition(): Promise<GeolocationPosition> {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    return Promise.reject(
+      Object.assign(new Error('Geolocation is unavailable on this device.'), { code: 2 }),
+    );
+  }
+
+  const get = (options: PositionOptions) =>
+    new Promise<GeolocationPosition>((resolve, reject) =>
+      navigator.geolocation.getCurrentPosition(resolve, reject, options),
+    );
+
+  return get({ enableHighAccuracy: false, timeout: 8_000, maximumAge: 300_000 }).catch(
+    (first: GeolocationPositionError) => {
+      // Asking a second time cannot turn a denial into a grant — surface it now.
+      if (first.code === 1) throw first;
+      return get({ enableHighAccuracy: true, timeout: 25_000, maximumAge: 60_000 });
+    },
+  );
+}
+
 const BASE32 = '0123456789bcdefghjkmnpqrstuvwxyz';
 
 /** Encode a coordinate to a geohash of the given precision. */

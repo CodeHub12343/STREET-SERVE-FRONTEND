@@ -21,6 +21,7 @@ import { Button } from '@/components/primitives/Button';
 import { Banner } from '@/components/feedback/Banner';
 import { useToast } from '@/components/feedback/ToastProvider';
 import { uploadImage } from '@/lib/upload';
+import { requestPosition } from '@/lib/geo';
 import { DAY_LABEL, RADIUS_OPTIONS, type HoursEntry } from '../../registration';
 
 export interface BasicsStepProps {
@@ -68,37 +69,32 @@ export function BasicsStep({
     onHours(hours.map((h) => (h.day === day ? { ...h, [field]: v } : h)));
   };
 
-  const locate = () => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      show('This device can’t share a location — pick a radius and we’ll use your city.', 'warning');
-      return;
-    }
+  const locate = async () => {
     setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        onCenter([pos.coords.longitude, pos.coords.latitude]);
-        setLocating(false);
-        show('Service area centred on your location', 'success');
-      },
+    try {
+      // Accepts a recent cached fix before demanding a fresh one — see requestPosition().
+      const pos = await requestPosition();
+      onCenter([pos.coords.longitude, pos.coords.latitude]);
+      show('Service area centred on your location', 'success');
+    } catch (e) {
       /**
        * The error carries a `code` saying WHY, and collapsing all three into one message told a user
        * who had blocked the permission to "try again", which can never work — the browser will not
        * re-prompt once denied, so the button silently does nothing forever.
        *
-       * 1 PERMISSION_DENIED · 2 POSITION_UNAVAILABLE · 3 TIMEOUT — only the last two are worth retrying.
+       * 1 PERMISSION_DENIED · 2 POSITION_UNAVAILABLE · 3 TIMEOUT.
        */
-      (err) => {
-        setLocating(false);
-        const message =
-          err.code === err.PERMISSION_DENIED
-            ? 'Location is blocked for this site. Allow it in your browser’s address-bar settings, or set your area later in settings.'
-            : err.code === err.TIMEOUT
-              ? 'Finding your location took too long. Try again, or set your area later in settings.'
-              : 'We couldn’t get your location. You can set this later in settings.';
-        show(message, 'warning');
-      },
-      { enableHighAccuracy: false, timeout: 10_000 },
-    );
+      const code = (e as GeolocationPositionError | undefined)?.code;
+      const message =
+        code === 1
+          ? 'Location is blocked for this site. Allow it in your browser’s settings, or set your area later in settings.'
+          : code === 3
+            ? 'Finding your location took too long — this often means no GPS signal indoors. Try near a window or outside, or set your area later in settings.'
+            : 'We couldn’t get your location. You can set this later in settings.';
+      show(message, 'warning');
+    } finally {
+      setLocating(false);
+    }
   };
 
   const onFile = async (file: File | undefined) => {
