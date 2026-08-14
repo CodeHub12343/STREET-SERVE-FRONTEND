@@ -187,7 +187,14 @@ export function BasicsStep({
       <Field>
         <FieldLabel>Where do you operate?</FieldLabel>
         <AreaRow>
-          <Button variant="secondary" size="compact" loading={locating} onClick={locate}>
+          {/* `locate` is async; onClick expects void. `void` discards the promise explicitly —
+              rejections are already handled inside locate(), so nothing is being swallowed here. */}
+          <Button
+            variant="secondary"
+            size="compact"
+            loading={locating}
+            onClick={() => void locate()}
+          >
             {locating ? <Loader2 size={14} /> : <MapPin size={14} />}
             {center ? 'Update my location' : 'Use my location'}
           </Button>
