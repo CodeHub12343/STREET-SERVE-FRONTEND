@@ -61,7 +61,7 @@ export function ProductStep({
         to supply one image.
       </Note>
 
-      <fieldset>
+      <Fieldset>
         <Legend>Size</Legend>
         <Grid>
           {products.map((p) => {
@@ -90,10 +90,10 @@ export function ProductStep({
             );
           })}
         </Grid>
-      </fieldset>
+      </Fieldset>
 
       {product ? (
-        <fieldset>
+        <Fieldset>
           <Legend>How it travels</Legend>
           <Grid>
             {product.mailClasses.map((mc) => (
@@ -112,7 +112,7 @@ export function ProductStep({
               </Card>
             ))}
           </Grid>
-        </fieldset>
+        </Fieldset>
       ) : null}
 
       <Actions>
@@ -140,6 +140,26 @@ const Note = styled.p`
   color: ${({ theme }) => theme.color.textSecondary};
   font-size: ${({ theme }) => theme.typography.scale[1]}px;
   line-height: ${({ theme }) => theme.typography.lineBody};
+`;
+
+/**
+ * `fieldset` is the one element that ignores the app's shrink-to-fit assumptions.
+ *
+ * Browsers apply `min-inline-size: min-content` to it in the UA stylesheet, which no amount of
+ * `min-width: 0` on ancestors can override — the fieldset simply refuses to be narrower than its
+ * widest child. On a 390px phone the option cards' min-content width exceeded the viewport, so the
+ * whole document gained a horizontal scroll and every page above it (title, stepper, topbar) was
+ * pushed sideways. `DashboardShell` already sets `min-width: 0` and `overflow-x: clip`; they could
+ * not help, because the overflow originated below them.
+ *
+ * The border/padding/margin reset is the UA default too: this fieldset was never styled, so it drew
+ * a stray box around the option grid that no other grouping in the app has.
+ */
+const Fieldset = styled.fieldset`
+  min-inline-size: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
 `;
 
 const Legend = styled.legend`

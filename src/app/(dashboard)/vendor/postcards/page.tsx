@@ -76,6 +76,13 @@ const Head = styled.header`
   justify-content: space-between;
   align-items: flex-start;
   gap: ${({ theme }) => theme.space[3]}px;
+  /* A display-scale title and a nowrap button do not both fit across a 390px phone; let the button
+     drop to its own line instead of the pair forcing the row wider than the viewport. */
+  flex-wrap: wrap;
+
+  > div {
+    min-width: 0;
+  }
 `;
 
 const Title = styled.h1`
