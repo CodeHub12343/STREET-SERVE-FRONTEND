@@ -49,7 +49,17 @@ export function VendorSettings({ businessId }: { businessId: string }) {
   const save = useMutation({
     mutationFn: () => {
       if (isMapDemo) return Promise.resolve();
-      const patch: Record<string, unknown> = { name: name.trim(), hours };
+      /**
+       * Send only the three fields an hours entry actually has.
+       *
+       * `hours` is seeded from the GET response, and the API used to include the Mongo `_id` of each
+       * subdocument. Echoing the response back verbatim therefore hit the server's `.strict()`
+       * update schema and failed every save with 400 "Unrecognized key(s) in object: '_id'". The
+       * API no longer sends that id, but rebuilding the entries here means this screen cannot be
+       * broken again by a field being added to the read model.
+       */
+      const cleanHours = hours.map((h) => ({ day: h.day, open: h.open, close: h.close }));
+      const patch: Record<string, unknown> = { name: name.trim(), hours: cleanHours };
       if (logoUrl) patch.logoUrl = logoUrl;
       if (center) {
         patch.serviceArea = center;
