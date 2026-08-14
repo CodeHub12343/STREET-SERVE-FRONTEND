@@ -1,0 +1,488 @@
+<title>StreetServe — C-14 Business Profile Sheet</title>
+<style>
+  :root{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-discount:#7A5AF8;
+    --map-ground:#ECEAE4; --map-block:#E2E0D9; --map-road:#FFFFFF;
+    --border:rgba(91,94,104,.28); --shadow:0 12px 32px rgba(20,21,26,.14);
+    --scrim:rgba(20,21,26,.4);
+    --motion-micro:100ms; --motion-standard:200ms; --motion-sheet:300ms;
+    --ease-in:cubic-bezier(.2,0,0,1);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-base:#0E0F12; --surface-raised:#17181C;
+      --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+      --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+      --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+      --status-warning:#FDB022; --status-discount:#9B8AFA;
+      --map-ground:#101216; --map-block:#171A20; --map-road:#232833;
+      --border:rgba(156,159,168,.22); --shadow:0 12px 32px rgba(0,0,0,.5);
+      --scrim:rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="dark"]{
+    --surface-base:#0E0F12; --surface-raised:#17181C;
+    --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+    --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+    --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+    --status-warning:#FDB022; --status-discount:#9B8AFA;
+    --map-ground:#101216; --map-block:#171A20; --map-road:#232833;
+    --border:rgba(156,159,168,.22); --shadow:0 12px 32px rgba(0,0,0,.5);
+    --scrim:rgba(0,0,0,.55);
+  }
+  :root[data-theme="light"]{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-discount:#7A5AF8;
+    --map-ground:#ECEAE4; --map-block:#E2E0D9; --map-road:#FFFFFF;
+    --border:rgba(91,94,104,.28); --shadow:0 12px 32px rgba(20,21,26,.14);
+    --scrim:rgba(20,21,26,.4);
+  }
+
+  *{box-sizing:border-box; margin:0}
+  html,body{background:var(--surface-base); color:var(--text-primary);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.4}
+  button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+  :is(button,[tabindex]):focus-visible{outline:2px solid var(--accent-secondary); outline-offset:2px; border-radius:8px}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:40px 20px 80px; display:flex; flex-direction:column; gap:28px}
+  .page-head .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:600}
+  .page-head h1{font-size:32px; font-weight:700; letter-spacing:-.02em; text-wrap:balance; margin-top:6px}
+  .page-head p{color:var(--text-secondary); max-width:62ch; margin-top:8px; font-size:15px}
+
+  .studio{display:grid; grid-template-columns:minmax(0,460px) minmax(280px,1fr); gap:36px; align-items:start}
+  @media (max-width:900px){ .studio{grid-template-columns:1fr} }
+  .stage{display:flex; flex-direction:column; gap:14px; align-items:center}
+  .controls{display:flex; gap:12px; flex-wrap:wrap; justify-content:center}
+  .seg{display:flex; gap:4px; background:var(--surface-raised); border:1px solid var(--border); border-radius:999px; padding:4px}
+  .seg span{align-self:center; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--text-secondary); padding:0 6px 0 10px}
+  .seg button{padding:7px 14px; border-radius:999px; font-size:13px; font-weight:600; color:var(--text-secondary);
+    transition:background var(--motion-micro) var(--ease-in), color var(--motion-micro) var(--ease-in)}
+  .seg button[aria-pressed="true"]{background:var(--accent-secondary); color:#fff}
+  .hint{font-size:13px; color:var(--text-secondary)}
+
+  .phone{width:min(390px,100%); height:800px; border-radius:44px; background:var(--surface-base);
+    border:1px solid var(--border); box-shadow:var(--shadow); overflow:hidden; position:relative;
+    display:flex; flex-direction:column}
+  .statusbar{height:44px; flex:none; display:flex; align-items:center; justify-content:space-between;
+    padding:0 24px; font-size:14px; font-weight:600; position:relative; z-index:5}
+  .notch{position:absolute; left:50%; top:10px; transform:translateX(-50%); width:110px; height:26px;
+    border-radius:999px; background:var(--text-primary); opacity:.92}
+
+  .mapbg{position:absolute; inset:44px 0 0; background:var(--map-ground)}
+  .mapbg svg{width:100%; height:100%}
+  .scrim{position:absolute; inset:0; background:var(--scrim); z-index:2; opacity:0; pointer-events:none;
+    transition:opacity var(--motion-sheet) var(--ease-in)}
+  .phone[data-snap="half"] .scrim, .phone[data-snap="full"] .scrim{opacity:1; pointer-events:auto}
+
+  /* ---------- sheet ---------- */
+  .sheet{position:absolute; left:0; right:0; bottom:0; z-index:3; background:var(--surface-raised);
+    border-radius:16px 16px 0 0; box-shadow:0 -8px 30px rgba(0,0,0,.3); overflow:hidden;
+    height:150px; transition:height var(--motion-sheet) var(--ease-in), border-radius var(--motion-sheet) var(--ease-in);
+    display:flex; flex-direction:column}
+  .phone[data-snap="half"] .sheet{height:448px}
+  .phone[data-snap="full"] .sheet{height:calc(100% - 44px); border-radius:0}
+
+  .handle-zone{flex:none; padding:8px 0 2px; display:grid; place-items:center}
+  .handle{width:32px; height:4px; border-radius:999px; background:var(--text-secondary); opacity:.4}
+  .phone[data-snap="full"] .handle-zone{display:none}
+
+  .compact{flex:none; display:none; align-items:center; gap:10px; padding:12px 16px;
+    border-bottom:1px solid var(--border); background:var(--surface-raised)}
+  .phone[data-snap="full"] .compact{display:flex}
+  .compact .close{width:36px; height:36px; border-radius:50%; display:grid; place-items:center;
+    background:var(--surface-base)}
+  .compact b{font-size:16px; letter-spacing:-.01em}
+  .compact .dot{width:8px; height:8px; border-radius:50%; background:var(--status-driving)}
+  .phone[data-status="parked"] .compact .dot{background:var(--status-parked)}
+  .phone[data-status="away"] .compact .dot{background:var(--status-away)}
+
+  .body{flex:1; overflow:hidden; padding:0 20px}
+  .phone[data-snap="full"] .body{overflow-y:auto}
+
+  /* peek block */
+  .peek-block{display:flex; flex-direction:column; gap:14px; padding-top:4px}
+  .phone[data-snap="half"] .peek-block, .phone[data-snap="full"] .peek-block{display:none}
+  .prow{display:flex; gap:14px; align-items:center}
+  .face{border-radius:50%; background:var(--surface-base); display:grid; place-items:center;
+    border:3px solid var(--status-driving); flex:none}
+  .phone[data-status="parked"] .face{border-color:var(--status-parked)}
+  .phone[data-status="away"] .face{border-color:var(--status-away)}
+  .peek-block .face{width:56px; height:56px; font-size:26px}
+
+  /* rich block (half + full) */
+  .rich{display:none; flex-direction:column; gap:16px; padding-bottom:96px}
+  .phone[data-snap="half"] .rich, .phone[data-snap="full"] .rich{display:flex}
+  .cover{aspect-ratio:16/9; border-radius:16px; position:relative; overflow:hidden;
+    background:
+      radial-gradient(120px 80px at 78% 24%, color-mix(in srgb, var(--status-warning) 55%, transparent), transparent 70%),
+      linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 80%, #7a1f00), color-mix(in srgb, var(--accent-primary) 35%, #2b0d00));
+    display:grid; place-items:center; font-size:64px}
+  .phone[data-status="away"] .cover{filter:grayscale(.55) brightness(.85)}
+  .cover .badge{position:absolute; top:12px; left:12px}
+  .idrow{display:flex; gap:14px; align-items:flex-start; margin-top:-38px; padding:0 6px; position:relative}
+  .idrow .face{width:72px; height:72px; font-size:32px; box-shadow:var(--shadow)}
+  .idtext{padding-top:42px}
+  .idtext h3{font-size:22px; font-weight:700; letter-spacing:-.015em}
+  .idtext .cat{font-size:13.5px; color:var(--text-secondary); margin-top:2px}
+  .meta{display:flex; align-items:center; gap:10px; margin-top:8px; font-size:13.5px;
+    color:var(--text-secondary); font-variant-numeric:tabular-nums; flex-wrap:wrap; padding:0 6px}
+
+  .chip{display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; padding:3px 9px; border-radius:999px}
+  .chip .cdot{width:7px; height:7px; border-radius:50%}
+  .chip.driving{color:var(--status-driving); background:color-mix(in srgb,var(--status-driving) 14%,transparent)} .chip.driving .cdot{background:var(--status-driving)}
+  .chip.parked{color:var(--status-parked); background:color-mix(in srgb,var(--status-parked) 14%,transparent)} .chip.parked .cdot{background:var(--status-parked)}
+  .chip.away{color:var(--status-away); background:color-mix(in srgb,var(--status-away) 14%,transparent)} .chip.away .cdot{background:var(--status-away)}
+
+  .actions4{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
+  .act{display:flex; flex-direction:column; align-items:center; gap:6px; font-size:11.5px; font-weight:600;
+    color:var(--text-secondary); padding:10px 4px; border-radius:12px; transition:background var(--motion-micro) var(--ease-in)}
+  .act .ic{width:44px; height:44px; border-radius:50%; display:grid; place-items:center;
+    background:var(--surface-base); border:1px solid var(--border); color:var(--accent-secondary);
+    transition:all var(--motion-micro) var(--ease-in)}
+  .act[aria-pressed="true"] .ic{background:var(--accent-secondary); color:#fff; border-color:var(--accent-secondary)}
+  .act[aria-pressed="true"]{color:var(--accent-secondary)}
+  .act svg{width:20px; height:20px}
+
+  .card{border:1px solid var(--border); border-radius:16px; padding:14px 16px; background:var(--surface-base)}
+  .queue-card{display:flex; flex-direction:column; gap:10px}
+  .phone[data-status="away"] .queue-card{display:none}
+  .queue-card .qhead{display:flex; justify-content:space-between; align-items:baseline; gap:8px}
+  .queue-card b{font-size:14.5px}
+  .queue-card .qsub{font-size:12.5px; color:var(--text-secondary)}
+  .ladder{display:flex; gap:6px}
+  .rung{flex:1; text-align:center; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums;
+    padding:8px 0 6px; border-radius:8px; border:1px solid var(--border); color:var(--text-secondary); position:relative}
+  .rung small{display:block; font-size:9.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; margin-top:2px}
+  .rung.taken{opacity:.45; text-decoration:line-through}
+  .rung.taken small{text-decoration:none}
+  .rung.next{border-color:var(--status-discount); color:var(--status-discount);
+    background:color-mix(in srgb, var(--status-discount) 10%, transparent)}
+
+  .special{display:flex; align-items:center; gap:12px; border:1px solid color-mix(in srgb,var(--status-warning) 45%, transparent);
+    background:color-mix(in srgb,var(--status-warning) 10%, transparent); border-radius:16px; padding:12px 16px}
+  .phone[data-status="away"] .special{opacity:.55}
+  .special .tag{font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--status-warning); border:1px solid currentColor; padding:2px 7px; border-radius:999px; flex:none}
+  .special b{font-size:14px}
+  .special span.price{margin-left:auto; font-weight:800; font-variant-numeric:tabular-nums; font-size:15px}
+
+  .rows{display:flex; flex-direction:column}
+  .row{display:flex; gap:12px; padding:11px 2px; font-size:13.5px; border-bottom:1px solid var(--border); align-items:baseline}
+  .row:last-child{border-bottom:0}
+  .row .k{color:var(--text-secondary); flex:none; width:76px}
+
+  .sect{display:flex; justify-content:space-between; align-items:baseline}
+  .sect h4{font-size:15px; font-weight:700; letter-spacing:-.01em}
+  .sect button{font-size:13px; font-weight:600; color:var(--accent-secondary)}
+  .menu-list{display:flex; flex-direction:column; gap:10px}
+  .mi{display:flex; gap:12px; align-items:center; border:1px solid var(--border); border-radius:12px; padding:10px;
+    background:var(--surface-base); text-align:left; width:100%}
+  .mi .thumb{width:64px; height:48px; border-radius:8px; flex:none; display:grid; place-items:center; font-size:24px;
+    background:color-mix(in srgb, var(--accent-primary) 14%, var(--surface-raised))}
+  .mi b{font-size:14px; display:block}
+  .mi small{font-size:12px; color:var(--text-secondary)}
+  .mi .price{margin-left:auto; font-weight:800; font-variant-numeric:tabular-nums; font-size:14px}
+
+  .gallery{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
+  .g{aspect-ratio:1; border-radius:12px; display:grid; place-items:center; font-size:26px;
+    background:color-mix(in srgb, var(--accent-primary) 12%, var(--surface-base)); border:1px solid var(--border)}
+
+  .agg{display:flex; align-items:baseline; gap:10px}
+  .agg .big{font-size:34px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+  .agg .stars{color:var(--status-warning); font-size:15px}
+  .agg small{color:var(--text-secondary); font-size:13px}
+  .review{display:flex; flex-direction:column; gap:6px}
+  .review .rh{display:flex; justify-content:space-between; font-size:13px}
+  .review .rh b{font-weight:650}
+  .review .rh span{color:var(--text-secondary); font-variant-numeric:tabular-nums}
+  .review .stars{color:var(--status-warning); font-size:12px}
+  .review p{font-size:13.5px; color:var(--text-secondary)}
+
+  /* sticky CTA */
+  .cta-bar{position:absolute; left:0; right:0; bottom:0; z-index:4; padding:14px 20px 28px;
+    background:linear-gradient(transparent, var(--surface-raised) 32%); display:flex; gap:10px}
+  .btn{height:48px; padding:0 20px; border-radius:8px; font-size:15px; font-weight:700; flex:1;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    transition:filter var(--motion-micro) var(--ease-in)}
+  .btn:active{filter:brightness(.92)}
+  .btn.primary{background:var(--accent-primary); color:#fff}
+  .btn.secondary{border:1.5px solid var(--text-secondary); color:var(--text-primary)}
+  .btn.secondary[disabled]{opacity:.4; pointer-events:none}
+  .peek-block .btn{height:44px; font-size:14px}
+
+  .toast{position:absolute; left:50%; bottom:104px; transform:translateX(-50%) translateY(8px); z-index:9;
+    background:var(--surface-raised); border:1px solid var(--border); box-shadow:var(--shadow);
+    border-radius:12px; padding:10px 16px; font-size:13px; font-weight:600; opacity:0;
+    transition:opacity var(--motion-standard) var(--ease-in), transform var(--motion-standard) var(--ease-in);
+    pointer-events:none; white-space:nowrap; max-width:90%}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  /* annotations */
+  .notes{display:flex; flex-direction:column; gap:14px}
+  .note{background:var(--surface-raised); border:1px solid var(--border); border-radius:16px; padding:18px 20px}
+  .note h2{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:700}
+  .note ul{margin:10px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px}
+  .note li{font-size:13.5px; display:flex; gap:8px}
+  .note li b{font-weight:650}
+  .note li::before{content:""; flex:none; width:6px; height:6px; border-radius:50%; background:var(--accent-secondary); margin-top:6px}
+  .note p{font-size:13.5px; color:var(--text-secondary); margin-top:10px}
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition-duration:1ms!important}
+  }
+</style>
+
+<div class="wrap">
+  <header class="page-head">
+    <div class="eyebrow">StreetServe · Design phase · Screen 2 of 77</div>
+    <h1>C-14 — Business Profile Sheet</h1>
+    <p>The SheetStack surface every transaction starts from. Use the switchers to move between the three snap points (§2.6f) and to see how the entire sheet adapts to the business's status — the same rule established on C-10's pins, carried through.</p>
+  </header>
+
+  <div class="studio">
+    <section class="stage" aria-label="Screen mockup">
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Snap point">
+          <span>Snap</span>
+          <button aria-pressed="false" data-snap="peek">Peek</button>
+          <button aria-pressed="true"  data-snap="half">Half</button>
+          <button aria-pressed="false" data-snap="full">Full</button>
+        </div>
+        <div class="seg" role="group" aria-label="Business status">
+          <span>Status</span>
+          <button aria-pressed="true"  data-status="driving">Driving</button>
+          <button aria-pressed="false" data-status="parked">Parked</button>
+          <button aria-pressed="false" data-status="away">Closed</button>
+        </div>
+      </div>
+
+      <div class="phone" id="phone" data-snap="half" data-status="driving">
+        <div class="statusbar"><span>9:41</span><div class="notch"></div><span>▮▮▮ ▉</span></div>
+        <div class="mapbg" aria-hidden="true">
+          <svg viewBox="0 0 390 760" preserveAspectRatio="xMidYMid slice">
+            <rect width="390" height="760" fill="var(--map-ground)"/>
+            <g stroke="var(--map-road)" stroke-width="10" fill="none"><path d="M60 0 V760"/><path d="M195 0 V760"/><path d="M320 0 V760"/><path d="M0 200 H390"/><path d="M0 420 H390"/></g>
+            <g fill="var(--map-block)"><rect x="72" y="212" width="111" height="60" rx="6"/><rect x="207" y="212" width="101" height="60" rx="6"/><rect x="72" y="300" width="111" height="60" rx="6"/><rect x="207" y="300" width="101" height="60" rx="6"/></g>
+          </svg>
+        </div>
+        <div class="scrim" id="scrim"></div>
+
+        <div class="sheet" role="dialog" aria-label="Taco Loco profile">
+          <div class="handle-zone" id="handle" title="Drag up"><div class="handle"></div></div>
+
+          <div class="compact">
+            <button class="close" id="closeFull" aria-label="Close profile">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <b>Taco Loco</b><span class="dot" aria-hidden="true"></span>
+          </div>
+
+          <div class="body">
+            <!-- PEEK -->
+            <div class="peek-block">
+              <div class="prow">
+                <span class="face">🌮</span>
+                <div>
+                  <h3 style="font-size:18px; font-weight:700">Taco Loco</h3>
+                  <div class="meta" style="padding:0; margin-top:3px">
+                    <span class="chip driving js-chip"><span class="cdot"></span><span class="js-statusword">Driving</span></span>
+                    <span>★ 4.8 (124)</span><span class="js-eta">2 min away</span>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex; gap:10px">
+                <button class="btn primary js-primary">Wave Down</button>
+                <button class="btn secondary">Directions</button>
+              </div>
+            </div>
+
+            <!-- HALF + FULL -->
+            <div class="rich">
+              <div class="cover">🌮<span class="badge chip driving js-chip"><span class="cdot"></span><span class="js-statusword">Driving</span></span></div>
+              <div class="idrow">
+                <span class="face">🌮</span>
+                <div class="idtext"><h3>Taco Loco</h3><div class="cat">Mexican Food Truck</div></div>
+              </div>
+              <div class="meta"><span>★ 4.8 (124 reviews)</span><span>·</span><span class="js-eta">2 min away</span></div>
+
+              <div class="actions4">
+                <button class="act"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7L12 2z"/></svg></span>Directions</button>
+                <button class="act" id="followBtn" aria-pressed="false"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21C7 16.5 3 13 3 8.8 3 6 5.2 4 7.8 4c1.6 0 3.2.8 4.2 2.2C13 4.8 14.6 4 16.2 4 18.8 4 21 6 21 8.8c0 4.2-4 7.7-9 12.2z"/></svg></span><span id="followLabel">Follow</span></button>
+                <button class="act" id="notifyBtn"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></span>Notify Me</button>
+                <button class="act"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-8 8H4l2-3.2A8 8 0 1 1 21 12z"/></svg></span>Message</button>
+              </div>
+
+              <div class="card queue-card">
+                <div class="qhead"><b>3 in line right now</b><span class="qsub">next spot locks in 15% off</span></div>
+                <div class="ladder" aria-label="Line-up discount ladder">
+                  <span class="rung taken">5%<small>1st · gone</small></span>
+                  <span class="rung taken">10%<small>2nd · gone</small></span>
+                  <span class="rung next">15%<small>you'd be 4th</small></span>
+                  <span class="rung">cap<small>vendor set</small></span>
+                </div>
+              </div>
+
+              <div class="special"><span class="tag">Today's Special</span><b>$2 Street Tacos 🔥</b><span class="price">$2.00</span></div>
+
+              <div class="card rows">
+                <div class="row"><span class="k">About</span><span>Authentic Mexican street tacos made fresh daily. Family recipe, three generations strong.</span></div>
+                <div class="row"><span class="k">Hours</span><span>10:00 AM – 9:00 PM</span></div>
+                <div class="row"><span class="k">Location</span><span class="js-locline">Heading your way — near Main St &amp; 5th Ave</span></div>
+              </div>
+
+              <div class="sect"><h4>Menu</h4><button id="menuAll">View full menu →</button></div>
+              <div class="menu-list">
+                <button class="mi"><span class="thumb">🌮</span><span><b>Street Tacos (3)</b><small>Carne asada · al pastor · pollo</small></span><span class="price">$8.50</span></button>
+                <button class="mi"><span class="thumb">🌯</span><span><b>Super Burrito</b><small>Rice, beans, crema, your choice of meat</small></span><span class="price">$11.00</span></button>
+                <button class="mi"><span class="thumb">🥤</span><span><b>Agua Fresca</b><small>Horchata · jamaica · tamarindo</small></span><span class="price">$4.00</span></button>
+              </div>
+
+              <div class="sect"><h4>Photos</h4><button>See all →</button></div>
+              <div class="gallery"><span class="g">🌮</span><span class="g">🚚</span><span class="g">🫔</span><span class="g">🍋</span></div>
+
+              <div class="sect"><h4>Reviews</h4><button>See all 124 →</button></div>
+              <div class="agg"><span class="big">4.8</span><span class="stars">★★★★★</span><small>124 verified purchases</small></div>
+              <div class="card review">
+                <div class="rh"><b>Maria G.</b><span>2 days ago</span></div>
+                <div class="stars">★★★★★</div>
+                <p>Waved them down on my lunch break — they were at my corner in 5 minutes. Al pastor is unreal.</p>
+              </div>
+              <div class="card review">
+                <div class="rh"><b>DeShawn W.</b><span>1 week ago</span></div>
+                <div class="stars">★★★★☆</div>
+                <p>Got 10% off for being second in line. The line-up discount thing is genius honestly.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="cta-bar js-ctabar">
+            <button class="btn primary js-primary">Wave Down</button>
+            <button class="btn secondary js-order">Order</button>
+          </div>
+        </div>
+
+        <div class="toast" id="toast"></div>
+      </div>
+
+      <p class="hint">Tap the drag handle to pull up · scrim tap collapses · try Closed status</p>
+    </section>
+
+    <aside class="notes" aria-label="Design annotations">
+      <div class="note">
+        <h2>Snap behavior (§2.6f)</h2>
+        <ul>
+          <li><b>Peek</b> — identity + status + Wave Down/Directions. Identical to what C-10 established; no new learning.</li>
+          <li><b>Half</b> — adds cover, action row, the queue/discount card, and Today's Special. Content clipped, not scrollable — pull to full for the rest.</li>
+          <li><b>Full</b> — edge-to-edge, scrollable; drag handle disappears, compact header (close + name + status dot) takes over. Sticky CTA bar persists at every snap.</li>
+          <li><b>Dismiss</b> — scrim tap or drag down from half; full requires the header close.</li>
+        </ul>
+      </div>
+
+      <div class="note">
+        <h2>Queue &amp; discount card</h2>
+        <ul>
+          <li>The line-up discount engine surfaced pre-decision: consumed tiers strike through, the customer's would-be tier highlights in <b>--status-discount</b> violet.</li>
+          <li>Copy is possessive and time-bound ("you'd be 4th", "locks in 15%") — the FOMO is the feature.</li>
+          <li>Hidden entirely when Closed: never show a queue that can't be joined.</li>
+        </ul>
+      </div>
+
+      <div class="note">
+        <h2>Action row semantics</h2>
+        <ul>
+          <li><b>Follow</b> toggles in place (filled = following) — ongoing relationship, feeds Favorites (Flow 2b).</li>
+          <li><b>Notify Me</b> stays one-shot — fires a confirmation toast, no persistent state on the button. The two are deliberately different shapes so users learn the difference.</li>
+          <li><b>Directions</b> deep-links to native maps at the business's live location; <b>Message</b> opens a scoped thread (C-33).</li>
+        </ul>
+      </div>
+
+      <div class="note">
+        <h2>Status-adaptive rules</h2>
+        <ul>
+          <li>One source of truth drives cover treatment, chip, location line, queue card visibility, and CTA swap (Wave Down ⇄ Notify Me) — switch to <b>Closed</b> to see all five change together.</li>
+          <li>Order disables when Closed; Today's Special dims but stays visible (tomorrow's reason to come back).</li>
+          <li>Location line phrasing per status: "Heading your way — near…" / "Parked — Main St &amp; 5th Ave" / "Closed — opens tomorrow 10 AM".</li>
+        </ul>
+      </div>
+
+      <div class="note">
+        <h2>Handoff notes</h2>
+        <ul>
+          <li>Cover 16:9, menu thumbs 4:3, gallery 1:1 (§2.6g); emoji are placeholder art.</li>
+          <li>Reviews show "verified purchases" — transaction-gated per the review-manipulation rule (Security §4).</li>
+          <li>Menu rows push C-15; Order opens C-21 with this business's menu.</li>
+          <li>Full spec: <b>docs/13-screen-design-specs.md § C-14</b>.</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const phone=$('#phone'), toast=$('#toast');
+  const SNAPS=['peek','half','full'];
+
+  const STATUS={
+    driving:{word:'Driving', eta:'2 min away', loc:'Heading your way — near Main St & 5th Ave', cta:'Wave Down', order:true},
+    parked:{word:'Parked', eta:'0.3 mi away', loc:'Parked — Main St & 5th Ave', cta:'Wave Down', order:true},
+    away:{word:'Closed', eta:'opens 10 AM', loc:'Closed — opens tomorrow 10 AM', cta:'Notify Me', order:false}
+  };
+
+  function setSnap(s){
+    phone.dataset.snap=s;
+    $$('.seg [data-snap]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.snap===s));
+  }
+  function setStatus(s){
+    phone.dataset.status=s;
+    $$('.seg [data-status]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.status===s));
+    const d=STATUS[s];
+    $$('.js-statusword').forEach(e=>e.textContent=d.word);
+    $$('.js-chip').forEach(e=>e.className=e.className.replace(/\b(driving|parked|away)\b/,'')+' '+s);
+    $$('.js-eta').forEach(e=>e.textContent=d.eta);
+    $('.js-locline').textContent=d.loc;
+    $$('.js-primary').forEach(e=>e.textContent=d.cta);
+    const order=$('.js-order');
+    if(order) d.order ? order.removeAttribute('disabled') : order.setAttribute('disabled','');
+  }
+
+  $$('.seg [data-snap]').forEach(b=>b.addEventListener('click',()=>setSnap(b.dataset.snap)));
+  $$('.seg [data-status]').forEach(b=>b.addEventListener('click',()=>setStatus(b.dataset.status)));
+
+  $('#handle').addEventListener('click',()=>{
+    const i=SNAPS.indexOf(phone.dataset.snap);
+    setSnap(SNAPS[Math.min(i+1, SNAPS.length-1)]);
+  });
+  $('#scrim').addEventListener('click',()=>setSnap('peek'));
+  $('#closeFull').addEventListener('click',()=>setSnap('peek'));
+
+  const follow=$('#followBtn');
+  follow.addEventListener('click',()=>{
+    const on=follow.getAttribute('aria-pressed')!=='true';
+    follow.setAttribute('aria-pressed', on);
+    $('#followLabel').textContent=on?'Following':'Follow';
+    show(on?'Following Taco Loco — added to Favorites':'Unfollowed Taco Loco');
+  });
+  $('#notifyBtn').addEventListener('click',()=>show('We’ll alert you next time they’re near you'));
+  $('#menuAll').addEventListener('click',()=>show('Opens full menu (C-15)'));
+  $$('.mi').forEach(m=>m.addEventListener('click',()=>show('Opens item detail (C-15)')));
+  $$('.js-primary').forEach(b=>b.addEventListener('click',()=>{
+    show(phone.dataset.status==='away' ? 'We’ll alert you next time they’re near you' : 'Wave sent — waiting for vendor (C-18)');
+  }));
+  const order=$('.js-order');
+  order.addEventListener('click',()=>show('Opens order review (C-21)'));
+
+  let tt;
+  function show(msg){ toast.textContent=msg; toast.classList.add('show');
+    clearTimeout(tt); tt=setTimeout(()=>toast.classList.remove('show'),4000); }
+
+  setStatus('driving');
+</script>

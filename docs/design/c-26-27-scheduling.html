@@ -1,0 +1,435 @@
+<title>StreetServe — C-26/27 Booking Flow &amp; Detail</title>
+<style>
+  :root{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --border:rgba(91,94,104,.28); --shadow:0 12px 32px rgba(20,21,26,.14);
+    --motion-micro:100ms; --motion-standard:200ms; --motion-sheet:300ms;
+    --ease-in:cubic-bezier(.2,0,0,1);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-base:#0E0F12; --surface-raised:#17181C;
+      --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+      --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+      --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+      --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+      --border:rgba(156,159,168,.22); --shadow:0 12px 32px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --surface-base:#0E0F12; --surface-raised:#17181C;
+    --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+    --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+    --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+    --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+    --border:rgba(156,159,168,.22); --shadow:0 12px 32px rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"]{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --border:rgba(91,94,104,.28); --shadow:0 12px 32px rgba(20,21,26,.14);
+  }
+
+  *{box-sizing:border-box; margin:0}
+  html,body{background:var(--surface-base); color:var(--text-primary);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.4}
+  button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+  :is(button,[tabindex]):focus-visible{outline:2px solid var(--accent-secondary); outline-offset:2px; border-radius:8px}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:40px 20px 80px; display:flex; flex-direction:column; gap:28px}
+  .page-head .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:600}
+  .page-head h1{font-size:32px; font-weight:700; letter-spacing:-.02em; text-wrap:balance; margin-top:6px}
+  .page-head p{color:var(--text-secondary); max-width:64ch; margin-top:8px; font-size:15px}
+
+  .studio{display:grid; grid-template-columns:minmax(0,460px) minmax(280px,1fr); gap:36px; align-items:start}
+  @media (max-width:900px){ .studio{grid-template-columns:1fr} }
+  .stage{display:flex; flex-direction:column; gap:14px; align-items:center}
+  .controls{display:flex; flex-direction:column; gap:8px; align-items:center}
+  .seg{display:flex; gap:4px; background:var(--surface-raised); border:1px solid var(--border); border-radius:999px; padding:4px; flex-wrap:wrap; justify-content:center}
+  .seg span.lbl{align-self:center; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-secondary); padding:0 6px 0 10px}
+  .seg button{padding:7px 12px; border-radius:999px; font-size:12.5px; font-weight:600; color:var(--text-secondary);
+    transition:background var(--motion-micro) var(--ease-in), color var(--motion-micro) var(--ease-in)}
+  .seg button[aria-pressed="true"]{background:var(--accent-secondary); color:#fff}
+  .sim{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; min-height:34px}
+  .sim button{font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:999px;
+    border:1.5px dashed var(--text-secondary); color:var(--text-secondary)}
+  .sim button:hover{color:var(--text-primary); border-color:var(--text-primary)}
+  .sim .lbl{align-self:center; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-secondary)}
+  .hint{font-size:13px; color:var(--text-secondary)}
+
+  .phone{width:min(390px,100%); height:800px; border-radius:44px; background:var(--surface-base);
+    border:1px solid var(--border); box-shadow:var(--shadow); overflow:hidden; position:relative;
+    display:flex; flex-direction:column}
+  .statusbar{height:44px; flex:none; display:flex; align-items:center; justify-content:space-between;
+    padding:0 24px; font-size:14px; font-weight:600; position:relative; z-index:6}
+  .notch{position:absolute; left:50%; top:10px; transform:translateX(-50%); width:110px; height:26px;
+    border-radius:999px; background:var(--text-primary); opacity:.92}
+
+  .screen{position:absolute; inset:44px 0 0; display:none; flex-direction:column}
+  .screen.on{display:flex}
+  .navhead{display:flex; align-items:center; gap:10px; padding:10px 16px; flex:none}
+  .navhead .back{width:38px; height:38px; border-radius:50%; background:var(--surface-raised);
+    border:1px solid var(--border); display:grid; place-items:center; flex:none}
+  .navhead b{font-size:16px; letter-spacing:-.01em}
+  .navhead .sub{font-size:12px; color:var(--text-secondary); display:block; margin-top:1px}
+  .navhead .stepdots{margin-left:auto; display:flex; gap:5px}
+  .navhead .stepdots i{width:6px; height:6px; border-radius:50%; background:var(--border)}
+  .navhead .stepdots i.done{background:var(--status-driving)}
+  .navhead .stepdots i.now{background:var(--accent-secondary); width:16px; border-radius:3px}
+
+  .scroll{flex:1; overflow-y:auto; padding:0 20px 20px; display:flex; flex-direction:column; gap:14px}
+  .btnbar{flex:none; padding:12px 20px 26px; background:linear-gradient(transparent, var(--surface-raised) 30%); display:flex; flex-direction:column; gap:8px}
+  .btn{height:48px; width:100%; padding:0 20px; border-radius:8px; font-size:15px; font-weight:700;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px; transition:filter var(--motion-micro) var(--ease-in)}
+  .btn:active{filter:brightness(.92)}
+  .btn.primary{background:var(--accent-primary); color:#fff}
+  .btn.secondary{border:1.5px solid var(--text-secondary); color:var(--text-primary)}
+  .btn.ghost-danger{color:var(--status-danger); font-weight:600; height:auto; padding:10px}
+  .btn[disabled]{opacity:.45; pointer-events:none}
+  .num{font-variant-numeric:tabular-nums}
+  .card{border:1px solid var(--border); border-radius:16px; padding:14px 16px; background:var(--surface-raised)}
+  .chip{display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; padding:3px 9px; border-radius:999px}
+  .chip.green{color:var(--status-driving); background:color-mix(in srgb,var(--status-driving) 13%,transparent)}
+  .chip.warn{color:var(--status-warning); background:color-mix(in srgb,var(--status-warning) 13%,transparent)}
+  .chip.blue{color:var(--accent-secondary); background:color-mix(in srgb,var(--accent-secondary) 13%,transparent)}
+  .chip.danger{color:var(--status-danger); background:color-mix(in srgb,var(--status-danger) 13%,transparent)}
+
+  /* C-26 step 1: service */
+  .bizmini{display:flex; gap:10px; align-items:center}
+  .bizmini .face{width:44px; height:44px; border-radius:50%; background:var(--surface-base); display:grid; place-items:center;
+    font-size:20px; border:2.5px solid var(--status-parked); flex:none}
+  .bizmini b{font-size:15px}
+  .bizmini small{font-size:12px; color:var(--text-secondary)}
+  .svc{display:flex; gap:12px; align-items:center; border:1.5px solid var(--border); border-radius:14px; padding:12px 14px}
+  .svc[aria-pressed="true"]{border-color:var(--accent-secondary); background:color-mix(in srgb,var(--accent-secondary) 7%,transparent)}
+  .svc .ic{font-size:20px}
+  .svc .info{flex:1}
+  .svc b{font-size:14px; display:block}
+  .svc small{font-size:12px; color:var(--text-secondary)}
+  .svc .price{font-weight:800; font-size:14px}
+
+  /* C-26 step 2: date/time */
+  .daypicker{display:flex; gap:8px; overflow-x:auto}
+  .day{flex:none; width:56px; display:flex; flex-direction:column; align-items:center; gap:2px; border:1.5px solid var(--border);
+    border-radius:12px; padding:10px 4px; font-size:12px; font-weight:700; color:var(--text-secondary)}
+  .day .dow{font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.03em}
+  .day[aria-pressed="true"]{border-color:var(--accent-secondary); color:var(--accent-secondary); background:color-mix(in srgb,var(--accent-secondary) 8%,transparent)}
+  .day[disabled]{opacity:.3}
+  .timegrid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+  .time{border:1.5px solid var(--border); border-radius:10px; padding:10px 4px; text-align:center; font-size:13px; font-weight:600; color:var(--text-secondary)}
+  .time[aria-pressed="true"]{border-color:var(--accent-secondary); color:var(--accent-secondary); background:color-mix(in srgb,var(--accent-secondary) 8%,transparent)}
+  .time[disabled]{opacity:.3; text-decoration:line-through}
+
+  /* C-26 step 3: recurring/confirm */
+  .togglerow{display:flex; align-items:center; justify-content:space-between; gap:10px}
+  .switch{width:44px; height:26px; border-radius:999px; background:var(--border); position:relative; transition:background var(--motion-standard) var(--ease-in); flex:none}
+  .switch::after{content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:var(--surface-raised); transition:transform var(--motion-standard) var(--ease-in); box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .switch[aria-checked="true"]{background:var(--accent-secondary)}
+  .switch[aria-checked="true"]::after{transform:translateX(18px)}
+  .summaryrow{display:flex; justify-content:space-between; font-size:13.5px; padding:8px 0; border-bottom:1px solid var(--border)}
+  .summaryrow:last-child{border-bottom:0}
+
+  /* confirmed */
+  #s-confirmed{align-items:center; justify-content:center; text-align:center; gap:16px; padding:0 30px}
+  .bigcheck{width:88px; height:88px; border-radius:50%; display:grid; place-items:center; background:color-mix(in srgb,var(--status-driving) 15%,var(--surface-raised)); color:var(--status-driving)}
+  #s-confirmed h3{font-size:21px; font-weight:800}
+  #s-confirmed p{font-size:13.5px; color:var(--text-secondary); max-width:28ch}
+  .remindchip{display:flex; gap:8px; font-size:12px; color:var(--text-secondary)}
+
+  /* C-27 detail */
+  .apptcard{display:flex; flex-direction:column; gap:10px}
+  .apptcard .toprow{display:flex; justify-content:space-between; align-items:flex-start}
+  .apptcard h3{font-size:18px; font-weight:800; letter-spacing:-.01em}
+  .apptcard .when{font-size:14px; color:var(--text-secondary); font-variant-numeric:tabular-nums}
+  .reminderlist{display:flex; flex-direction:column}
+  .rem{display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px}
+  .rem:last-child{border-bottom:0}
+  .rem .c{width:22px; height:22px; border-radius:50%; display:grid; place-items:center; font-size:11px; flex:none}
+  .rem.sent .c{background:var(--status-driving); color:#fff}
+  .rem.pending .c{border:2px solid var(--border); color:var(--text-secondary)}
+  .rem small{color:var(--text-secondary); margin-left:auto; font-size:11.5px}
+
+  .toast{position:absolute; left:50%; bottom:20px; transform:translateX(-50%) translateY(8px); z-index:9;
+    background:var(--surface-raised); border:1px solid var(--border); box-shadow:var(--shadow);
+    border-radius:12px; padding:10px 16px; font-size:13px; font-weight:600; opacity:0;
+    transition:opacity var(--motion-standard) var(--ease-in), transform var(--motion-standard) var(--ease-in);
+    pointer-events:none; white-space:nowrap; max-width:90%}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  .notes{display:flex; flex-direction:column; gap:14px}
+  .note{background:var(--surface-raised); border:1px solid var(--border); border-radius:16px; padding:18px 20px}
+  .note h2{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:700}
+  .note ul{margin:10px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px}
+  .note li{font-size:13.5px; display:flex; gap:8px}
+  .note li b{font-weight:650}
+  .note li::before{content:""; flex:none; width:6px; height:6px; border-radius:50%; background:var(--accent-secondary); margin-top:6px}
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition-duration:1ms!important}
+  }
+</style>
+
+<div class="wrap">
+  <header class="page-head">
+    <div class="eyebrow">StreetServe · Design phase · Screens 24–25 of 77</div>
+    <h1>C-26 / C-27 — Booking Flow &amp; Detail</h1>
+    <p>Scheduling completes the trio of customer transaction types alongside Wave Down (spontaneous) and Direct Order (pickup now). Booked with a mobile service business — Detail Boss — since scheduling matters most for services people plan around, not impulse food-truck stops. Try the vendor's "propose alternate time" and "cancels" branches in the simulate controls on C-27.</p>
+  </header>
+
+  <div class="studio">
+    <section class="stage" aria-label="Screen mockup">
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Jump to screen">
+          <button aria-pressed="true"  data-go="service">C-26·1 Service</button>
+          <button aria-pressed="false" data-go="slot">C-26·2 Slot</button>
+          <button aria-pressed="false" data-go="review">C-26·3 Review</button>
+          <button aria-pressed="false" data-go="confirmed">Confirmed</button>
+          <button aria-pressed="false" data-go="detail">C-27 Detail</button>
+        </div>
+        <div class="sim" id="sim"></div>
+      </div>
+
+      <div class="phone" id="phone">
+        <div class="statusbar"><span>9:41</span><div class="notch"></div><span>▮▮▮ ▉</span></div>
+
+        <!-- C-26 STEP 1: SERVICE -->
+        <div class="screen on" id="s-service">
+          <div class="navhead">
+            <button class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button>
+            <div><b>Book Detail Boss</b><span class="sub">Choose a service</span></div>
+            <div class="stepdots"><i class="now"></i><i></i><i></i></div>
+          </div>
+          <div class="scroll">
+            <div class="card bizmini"><span class="face">🚗</span><div><b>Detail Boss</b><small>Mobile Detailing · ★ 4.7 (73)</small></div></div>
+            <button class="svc" aria-pressed="true" data-svc="Full Detail" data-price="$85"><span class="ic">✨</span><span class="info"><b>Full Detail</b><small>Interior + exterior · ~90 min</small></span><span class="price num">$85</span></button>
+            <button class="svc" data-svc="Exterior Wash &amp; Wax" data-price="$45"><span class="ic">🧽</span><span class="info"><b>Exterior Wash &amp; Wax</b><small>~40 min</small></span><span class="price num">$45</span></button>
+            <button class="svc" data-svc="Interior Deep Clean" data-price="$55"><span class="ic">🧼</span><span class="info"><b>Interior Deep Clean</b><small>~50 min</small></span><span class="price num">$55</span></button>
+          </div>
+          <div class="btnbar"><button class="btn primary" id="toSlot">Continue</button></div>
+        </div>
+
+        <!-- C-26 STEP 2: SLOT -->
+        <div class="screen" id="s-slot">
+          <div class="navhead">
+            <button class="back" id="backService"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button>
+            <div><b>Pick a time</b><span class="sub" id="slotSub">Full Detail · $85</span></div>
+            <div class="stepdots"><i class="done"></i><i class="now"></i><i></i></div>
+          </div>
+          <div class="scroll">
+            <div class="daypicker">
+              <button class="day" aria-pressed="true">Today<span>Jul 4</span></button>
+              <button class="day">Sat<span class="dow"></span><span>Jul 5</span></button>
+              <button class="day">Sun<span>Jul 6</span></button>
+              <button class="day">Mon<span>Jul 7</span></button>
+              <button class="day">Tue<span>Jul 8</span></button>
+              <button class="day" disabled>Wed<span>Jul 9</span></button>
+            </div>
+            <p style="font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary)">Available times</p>
+            <div class="timegrid">
+              <button class="time">9:00 AM</button>
+              <button class="time" aria-pressed="true">11:30 AM</button>
+              <button class="time" disabled>1:00 PM</button>
+              <button class="time">2:30 PM</button>
+              <button class="time">4:00 PM</button>
+              <button class="time" disabled>5:30 PM</button>
+            </div>
+          </div>
+          <div class="btnbar"><button class="btn primary" id="toReview">Continue</button></div>
+        </div>
+
+        <!-- C-26 STEP 3: REVIEW -->
+        <div class="screen" id="s-review">
+          <div class="navhead">
+            <button class="back" id="backSlot"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button>
+            <div><b>Review &amp; confirm</b></div>
+            <div class="stepdots"><i class="done"></i><i class="done"></i><i class="now"></i></div>
+          </div>
+          <div class="scroll">
+            <div class="card">
+              <div class="summaryrow"><span>Service</span><b>Full Detail</b></div>
+              <div class="summaryrow"><span>When</span><b class="num">Today, 11:30 AM</b></div>
+              <div class="summaryrow"><span>Where</span><b>We'll come to you</b></div>
+              <div class="summaryrow"><span>Price</span><b class="num">$85.00</b></div>
+            </div>
+            <div class="card togglerow">
+              <div><b style="font-size:13.5px">Make this recurring</b><br><small style="color:var(--text-secondary); font-size:12px">Every 4 weeks, same time</small></div>
+              <div class="switch" id="recurSwitch" role="switch" aria-checked="false" tabindex="0"></div>
+            </div>
+            <p style="font-size:12px; color:var(--text-secondary)">You'll get reminders 24 hours and 1 hour before your appointment.</p>
+          </div>
+          <div class="btnbar"><button class="btn primary" id="confirmBooking">Confirm booking · <span class="num">$85.00</span></button></div>
+        </div>
+
+        <!-- CONFIRMED -->
+        <div class="screen" id="s-confirmed">
+          <div class="bigcheck"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="m4.5 12.5 5 5 10-11"/></svg></div>
+          <h3>You're booked!</h3>
+          <p>Detail Boss will come to you <b>today at 11:30 AM</b> for your Full Detail.</p>
+          <div class="remindchip"><span class="chip green">✓ Added to calendar</span><span class="chip blue">🔔 Reminders set</span></div>
+          <div style="height:8px"></div>
+          <button class="btn secondary" style="width:auto; padding:0 20px" id="toDetailFromConfirm">View booking</button>
+        </div>
+
+        <!-- C-27 DETAIL -->
+        <div class="screen" id="s-detail">
+          <div class="navhead">
+            <button class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button>
+            <b>Your booking</b>
+          </div>
+          <div class="scroll">
+            <div class="card apptcard" id="apptCard">
+              <div class="toprow">
+                <div><h3>Full Detail</h3><div class="when" id="apptWhen">Today · 11:30 AM</div></div>
+                <span class="chip green" id="apptStatus">Confirmed</span>
+              </div>
+              <div class="bizmini"><span class="face">🚗</span><div><b>Detail Boss</b><small>Mobile Detailing · we'll come to you</small></div></div>
+            </div>
+
+            <div class="card" id="proposalCard" style="display:none">
+              <div class="chip warn" style="margin-bottom:8px">Vendor proposed a new time</div>
+              <p style="font-size:13.5px">Detail Boss can't make 11:30 AM today — they've proposed <b class="num">2:30 PM today</b> instead.</p>
+              <div style="display:flex; gap:8px; margin-top:12px">
+                <button class="btn secondary" style="height:40px; font-size:13px" id="declineProposal">Pick another time</button>
+                <button class="btn primary" style="height:40px; font-size:13px" id="acceptProposal">Accept 2:30 PM</button>
+              </div>
+            </div>
+
+            <div class="card" id="cancelledCard" style="display:none">
+              <div class="chip danger" style="margin-bottom:8px">Cancelled by vendor</div>
+              <p style="font-size:13.5px">Detail Boss cancelled this booking. As an apology, they've offered <b>15% off</b> your next visit.</p>
+              <button class="btn primary" style="margin-top:12px; height:42px; font-size:13.5px">Rebook with 15% off</button>
+            </div>
+
+            <div class="card">
+              <p style="font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary); margin-bottom:6px">Reminders</p>
+              <div class="reminderlist">
+                <div class="rem sent"><span class="c">✓</span><span>24-hour reminder</span><small>Sent yesterday</small></div>
+                <div class="rem pending"><span class="c">◷</span><span>1-hour reminder</span><small>Sends at 10:30 AM</small></div>
+              </div>
+            </div>
+          </div>
+          <div class="btnbar" id="detailBtnBar">
+            <button class="btn secondary" id="rescheduleBtn">Reschedule</button>
+            <button class="btn ghost-danger" id="cancelBtn" style="align-self:center">Cancel booking</button>
+          </div>
+        </div>
+
+        <div class="toast" id="toast"></div>
+      </div>
+
+      <p class="hint">Walk C-26 → Confirmed → C-27, or jump directly · simulate vendor actions below</p>
+    </section>
+
+    <aside class="notes" aria-label="Design annotations">
+      <div class="note">
+        <h2>C-26 — three single-focus steps</h2>
+        <ul>
+          <li>WizardFlow discipline: service, then time, then review — never all three on one screen. Step dots in the header track progress the same way S-02's verification wizard does, one shared pattern across the whole design system.</li>
+          <li>Unavailable time slots are shown struck-through rather than hidden — a customer should see the full schedule shape (busy vs. open), not wonder why 1 PM is simply missing.</li>
+          <li>Recurring toggle is a plain switch, off by default — a one-time booking should never accidentally become a subscription.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>Mobile-specific framing</h2>
+        <ul>
+          <li>"Where: We'll come to you" is stated plainly in the review step — the single biggest difference between booking a mobile service and booking a normal storefront appointment, so it can't be assumed or missed.</li>
+          <li>Confirmation screen explicitly says "add to calendar" + "reminders set" as two distinct confirmed actions (FR-7.2's 24h/1h reminder requirement), not a single vague "you're all set."</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>C-27 — the vendor doesn't just accept silently</h2>
+        <ul>
+          <li>Per FR-7.1, a vendor can accept, propose an alternate time, or decline — this detail screen models all three as distinct card states (simulate below), not just a binary confirmed/cancelled.</li>
+          <li><b>Proposed alternate time</b> puts the decision back in the customer's hands with two clear options, never auto-accepts on the customer's behalf.</li>
+          <li><b>Vendor cancellation</b> pairs the bad news with a concrete compensation offer in the same card (Flow 6's edge case: "potential compensation... e.g., discount on rebook") — never just an apology with no next step.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>Reminder transparency</h2>
+        <ul>
+          <li>Reminder list shows sent vs. pending explicitly with real send times — makes the 24h/1h promise from the confirmation screen verifiable after the fact, not just a claim.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>Handoff notes</h2>
+        <ul>
+          <li>Booking writes to `bookings` (Database §2): scheduled_at, status, recurrence_rule, reminder_sent_24h/1h flags — the detail screen's reminder list reads directly from those two boolean fields.</li>
+          <li>Vendor propose-alternate is a status transition the vendor dashboard (V-07 Bookings Calendar) initiates; this screen is the customer-facing mirror of that action.</li>
+          <li>Full spec: <b>docs/13-screen-design-specs.md § C-26–C-27</b>.</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const phone=$('#phone'), toast=$('#toast'); let tt;
+
+  const SIMS={ detail:[['Vendor proposes new time','PROPOSE'],['Vendor cancels','CANCEL'],['Reset to confirmed','RESET']] };
+
+  function go(id){
+    $$('.screen').forEach(s=>s.classList.remove('on'));
+    $('#s-'+id).classList.add('on');
+    $$('.seg [data-go]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.go===id));
+    const sim=$('#sim'); sim.innerHTML='';
+    const list = SIMS[id] || [];
+    if(list.length){
+      const l=document.createElement('span'); l.className='lbl'; l.textContent='Simulate:'; sim.appendChild(l);
+      list.forEach(([label,action])=>{
+        const b=document.createElement('button'); b.textContent=label;
+        b.addEventListener('click',()=>runSim(action));
+        sim.appendChild(b);
+      });
+    }
+  }
+  function runSim(action){
+    const appt=$('#apptCard'), prop=$('#proposalCard'), canc=$('#cancelledCard'), bar=$('#detailBtnBar');
+    if(action==='PROPOSE'){
+      $('#apptStatus').textContent='Pending'; $('#apptStatus').className='chip warn';
+      prop.style.display='block'; canc.style.display='none'; bar.style.display='flex';
+      show('Vendor proposed a new time');
+    } else if(action==='CANCEL'){
+      appt.style.display='none'; prop.style.display='none'; canc.style.display='block'; bar.style.display='none';
+      show('Booking cancelled by vendor');
+    } else {
+      appt.style.display='flex'; prop.style.display='none'; canc.style.display='none'; bar.style.display='flex';
+      $('#apptStatus').textContent='Confirmed'; $('#apptStatus').className='chip green';
+      show('Reset to confirmed');
+    }
+  }
+
+  $$('.seg [data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
+
+  $$('.svc').forEach(s=>s.addEventListener('click',()=>{
+    $$('.svc').forEach(x=>x.setAttribute('aria-pressed','false')); s.setAttribute('aria-pressed','true');
+    $('#slotSub').textContent = s.dataset.svc+' · '+s.dataset.price;
+  }));
+  $('#toSlot').addEventListener('click',()=>go('slot'));
+  $('#backService').addEventListener('click',()=>go('service'));
+  $$('.day:not([disabled])').forEach(d=>d.addEventListener('click',()=>{ $$('.day').forEach(x=>x.setAttribute('aria-pressed','false')); d.setAttribute('aria-pressed','true'); }));
+  $$('.time:not([disabled])').forEach(t=>t.addEventListener('click',()=>{ $$('.time').forEach(x=>x.setAttribute('aria-pressed','false')); t.setAttribute('aria-pressed','true'); }));
+  $('#toReview').addEventListener('click',()=>go('review'));
+  $('#backSlot').addEventListener('click',()=>go('slot'));
+
+  const sw=$('#recurSwitch');
+  sw.addEventListener('click',()=>sw.setAttribute('aria-checked', sw.getAttribute('aria-checked')!=='true'));
+  sw.addEventListener('keydown',(e)=>{ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); sw.click(); } });
+
+  $('#confirmBooking').addEventListener('click',()=>go('confirmed'));
+  $('#toDetailFromConfirm').addEventListener('click',()=>go('detail'));
+  $('#rescheduleBtn').addEventListener('click',()=>{ show('Opens slot picker (C-26 step 2) pre-filled'); go('slot'); });
+  $('#cancelBtn').addEventListener('click',()=>{ show('Booking cancelled — no charge'); go('service'); });
+  $('#declineProposal').addEventListener('click',()=>{ show('Opens slot picker to choose another time'); go('slot'); });
+  $('#acceptProposal').addEventListener('click',()=>{ runSim('RESET'); $('#apptWhen').textContent='Today · 2:30 PM'; show('Accepted 2:30 PM'); });
+
+  function show(msg){ toast.textContent=msg; toast.classList.add('show');
+    clearTimeout(tt); tt=setTimeout(()=>toast.classList.remove('show'),3600); }
+</script>

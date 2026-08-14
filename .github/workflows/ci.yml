@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      # A-1: every endpoint in the registry must have a caller, and no api call may hardcode a path.
+      # This ran only inside `npm run verify` locally, which meant it did not run on a PR at all.
+      - name: Reachability gate
+        run: npm run reachability
+
+      # 6.1: production dependencies only, with reviewed exceptions that EXPIRE. `npm audit
+      # --audit-level=high` on the whole tree fails on Storybook and webpack advisories that never
+      # reach a user, and a gate people learn to skip is not a gate.
+      - name: Dependency CVE gate
+        run: npm run audit:deps
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+        env:
+          # Build must succeed without real secrets — the shell boots without Clerk keys.
+          NEXT_PUBLIC_API_URL: http://localhost:8080/api/v1
+          NEXT_PUBLIC_SOCKET_URL: http://localhost:8080
+
+      # P-2: the budgets existed and only ever ran on someone's laptop, which is the same as not
+      # existing — a regression reaches main whenever the person who remembers to run them is busy.
+      - name: Bundle budgets
+        run: npm run budgets
+
+      - name: PWA manifest + service worker check
+        run: npm run check:pwa
+
+      # Kept even on failure: when a budget trips, the manifest is what tells you WHICH chunk grew.
+      - name: Upload build manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-manifest
+          path: .next/app-build-manifest.json
+          if-no-files-found: warn
+
+      - name: Build Storybook
+        run: npm run build-storybook
+
+  # Lighthouse is a separate job: it needs a real Chrome and a served build, it is the slowest thing
+  # in CI, and it must not be able to delay the fast feedback the verify job gives. Its PWA and
+  # accessibility assertions are errors; performance stays a warning, because a shared CI runner's
+  # throttling is noisy enough that a hard performance gate would train people to ignore failures —
+  # which costs more than the gate is worth.
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8080/api/v1
+          NEXT_PUBLIC_SOCKET_URL: http://localhost:8080
+          # The audited routes must render without a backend, or Lighthouse measures a wall of error
+          # states rather than the app. Demo mode is what makes `/map/list` and a business profile
+          # real with nothing running behind them.
+          NEXT_PUBLIC_MAP_DEMO: 'true'
+
+      - name: Lighthouse CI
+        run: npx --yes @lhci/cli@0.14.x autorun
+        env:
+          NEXT_PUBLIC_MAP_DEMO: 'true'
+
+      - name: Upload Lighthouse results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-results
+          path: .lighthouseci
+          if-no-files-found: ignore

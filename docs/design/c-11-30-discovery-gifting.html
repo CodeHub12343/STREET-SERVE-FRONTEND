@@ -1,0 +1,499 @@
+<title>StreetServe — C-11–C-30 Discovery, Content &amp; Gifting</title>
+<style>
+  :root{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF; --surface-sunken:#F1F0ED;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --map-ground:#ECEAE4; --map-block:#E2E0D9; --map-road:#FFFFFF; --map-water:#D8E4EE; --map-park:#DCE6DA;
+    --border:rgba(91,94,104,.28); --shadow:0 12px 32px rgba(20,21,26,.14);
+    --motion-micro:100ms; --motion-standard:200ms; --motion-sheet:300ms; --ease-in:cubic-bezier(.2,0,0,1);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-base:#0E0F12; --surface-raised:#17181C; --surface-sunken:#0A0B0D;
+      --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+      --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+      --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+      --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+      --map-ground:#101216; --map-block:#171A20; --map-road:#232833; --map-water:#14202E; --map-park:#14201A;
+      --border:rgba(156,159,168,.22); --shadow:0 12px 32px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --surface-base:#0E0F12; --surface-raised:#17181C; --surface-sunken:#0A0B0D;
+    --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+    --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+    --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+    --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+    --map-ground:#101216; --map-block:#171A20; --map-road:#232833; --map-water:#14202E; --map-park:#14201A;
+    --border:rgba(156,159,168,.22); --shadow:0 12px 32px rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"]{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF; --surface-sunken:#F1F0ED;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --map-ground:#ECEAE4; --map-block:#E2E0D9; --map-road:#FFFFFF; --map-water:#D8E4EE; --map-park:#DCE6DA;
+    --border:rgba(91,94,104,.28); --shadow:0 12px 32px rgba(20,21,26,.14);
+  }
+
+  *{box-sizing:border-box; margin:0}
+  html,body{background:var(--surface-base); color:var(--text-primary); font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.4}
+  button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+  :is(button,[tabindex],input):focus-visible{outline:2px solid var(--accent-secondary); outline-offset:2px; border-radius:8px}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:40px 20px 80px; display:flex; flex-direction:column; gap:28px}
+  .page-head .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:600}
+  .page-head h1{font-size:32px; font-weight:700; letter-spacing:-.02em; text-wrap:balance; margin-top:6px}
+  .page-head p{color:var(--text-secondary); max-width:64ch; margin-top:8px; font-size:15px}
+
+  .studio{display:grid; grid-template-columns:minmax(0,460px) minmax(280px,1fr); gap:36px; align-items:start}
+  @media (max-width:900px){ .studio{grid-template-columns:1fr} }
+  .stage{display:flex; flex-direction:column; gap:14px; align-items:center}
+  .seg{display:flex; gap:4px; background:var(--surface-raised); border:1px solid var(--border); border-radius:999px; padding:4px; flex-wrap:wrap; justify-content:center}
+  .seg button{padding:6px 10px; border-radius:999px; font-size:11.5px; font-weight:600; color:var(--text-secondary); transition:background var(--motion-micro) var(--ease-in), color var(--motion-micro) var(--ease-in)}
+  .seg button[aria-pressed="true"]{background:var(--accent-secondary); color:#fff}
+  .hint{font-size:13px; color:var(--text-secondary)}
+
+  .phone{width:min(390px,100%); height:800px; border-radius:44px; background:var(--surface-base); border:1px solid var(--border); box-shadow:var(--shadow); overflow:hidden; position:relative; display:flex; flex-direction:column}
+  .statusbar{height:44px; flex:none; display:flex; align-items:center; justify-content:space-between; padding:0 24px; font-size:14px; font-weight:600; position:relative; z-index:6}
+  .notch{position:absolute; left:50%; top:10px; transform:translateX(-50%); width:110px; height:26px; border-radius:999px; background:var(--text-primary); opacity:.92}
+
+  .screen{position:absolute; inset:44px 0 0; display:none; flex-direction:column}
+  .screen.on{display:flex}
+  .navhead{display:flex; align-items:center; gap:10px; padding:10px 16px; flex:none}
+  .navhead .back{width:38px; height:38px; border-radius:50%; background:var(--surface-raised); border:1px solid var(--border); display:grid; place-items:center; flex:none}
+  .navhead b{font-size:16px; letter-spacing:-.01em}
+  .navhead .sub{font-size:12px; color:var(--text-secondary); display:block}
+  .scroll{flex:1; overflow-y:auto; padding:0 16px 22px; display:flex; flex-direction:column; gap:12px}
+  .btnbar{flex:none; padding:12px 18px 26px; background:linear-gradient(transparent, var(--surface-raised) 30%); display:flex; flex-direction:column; gap:8px}
+  .btn{height:48px; padding:0 18px; border-radius:10px; font-size:14.5px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%}
+  .btn:active{filter:brightness(.92)}
+  .btn.primary{background:var(--accent-primary); color:#fff}
+  .btn.secondary{border:1.5px solid var(--text-secondary); color:var(--text-primary)}
+  .btn.small{height:38px; font-size:13px; width:auto; padding:0 14px}
+  .btn[disabled]{opacity:.45; pointer-events:none}
+  .num{font-variant-numeric:tabular-nums}
+  .card{border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); overflow:hidden}
+  .chip{display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:3px 8px; border-radius:999px}
+  .chip .dot{width:6px; height:6px; border-radius:50%}
+  .chip.driving{color:var(--status-driving); background:color-mix(in srgb,var(--status-driving) 13%,transparent)} .chip.driving .dot{background:var(--status-driving)}
+  .chip.parked{color:var(--status-parked); background:color-mix(in srgb,var(--status-parked) 13%,transparent)} .chip.parked .dot{background:var(--status-parked)}
+  .chip.away{color:var(--status-away); background:color-mix(in srgb,var(--status-away) 13%,transparent)} .chip.away .dot{background:var(--status-away)}
+  .chip.warn{color:var(--status-warning); background:color-mix(in srgb,var(--status-warning) 13%,transparent)}
+  .chip.disc{color:var(--status-discount); background:color-mix(in srgb,var(--status-discount) 13%,transparent)}
+  .chip.free{color:var(--status-driving); background:color-mix(in srgb,var(--status-driving) 13%,transparent)}
+
+  /* search / list rows */
+  .searchbar{display:flex; align-items:center; gap:10px; height:44px; padding:0 14px; background:var(--surface-raised); border:1px solid var(--border); border-radius:999px; color:var(--text-secondary); font-size:14px; margin:0 0 2px}
+  .searchbar input{flex:1; border:0; background:none; font-size:14px; color:var(--text-primary)}
+  .bizrow{display:flex; gap:12px; align-items:center; padding:11px 12px; text-align:left; width:100%}
+  .bizrow .face{width:44px; height:44px; border-radius:50%; background:var(--surface-sunken); display:grid; place-items:center; font-size:19px; border:2.5px solid var(--status-driving); flex:none}
+  .bizrow.parked .face{border-color:var(--status-parked)} .bizrow.away .face{border-color:var(--status-away); filter:grayscale(.5); opacity:.7}
+  .bizrow .info{flex:1; min-width:0}
+  .bizrow b{font-size:14px; display:block}
+  .bizrow small{font-size:12px; color:var(--text-secondary)}
+  .bizrow .rt{text-align:right; font-size:12px; color:var(--text-secondary); font-variant-numeric:tabular-nums}
+  .sectlabel{font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text-secondary); padding:6px 6px 0}
+  .recent{display:flex; gap:8px; flex-wrap:wrap}
+  .recent button{font-size:12.5px; font-weight:600; color:var(--text-secondary); border:1px solid var(--border); border-radius:999px; padding:6px 12px}
+  .sortbar{display:flex; gap:6px}
+  .sortbar button{font-size:12px; font-weight:600; color:var(--text-secondary); border:1px solid var(--border); border-radius:999px; padding:6px 12px}
+  .sortbar button[aria-pressed="true"]{border-color:var(--accent-secondary); color:var(--accent-secondary); background:color-mix(in srgb,var(--accent-secondary) 8%,transparent)}
+  .viewtoggle{margin-left:auto; display:flex; gap:2px; border:1px solid var(--border); border-radius:8px; padding:2px}
+  .viewtoggle button{width:30px; height:26px; border-radius:6px; display:grid; place-items:center; color:var(--text-secondary)}
+  .viewtoggle button[aria-pressed="true"]{background:var(--surface-sunken); color:var(--text-primary)}
+
+  /* category browser */
+  .catgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .cattile{display:flex; flex-direction:column; gap:8px; padding:16px 14px; border:1px solid var(--border); border-radius:14px; text-align:left; background:var(--surface-raised)}
+  .cattile .ic{font-size:26px}
+  .cattile b{font-size:13.5px}
+  .cattile small{font-size:11.5px; color:var(--text-secondary)}
+  .catgroup{font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text-secondary); padding:8px 6px 2px}
+
+  /* menu */
+  .mi{display:flex; gap:12px; align-items:center; padding:11px 12px; border-bottom:1px solid var(--border); text-align:left; width:100%}
+  .mi:last-child{border-bottom:0}
+  .mi .thumb{width:60px; height:46px; border-radius:9px; flex:none; display:grid; place-items:center; font-size:24px; background:color-mix(in srgb,var(--accent-primary) 12%,var(--surface-sunken))}
+  .mi .info{flex:1}
+  .mi b{font-size:14px; display:block}
+  .mi small{font-size:12px; color:var(--text-secondary)}
+  .mi .price{font-weight:800; font-variant-numeric:tabular-nums; font-size:14px}
+  .special-banner{display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:12px; background:color-mix(in srgb,var(--status-warning) 11%,transparent); border:1px solid color-mix(in srgb,var(--status-warning) 40%,transparent)}
+  .special-banner .tag{font-size:9.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--status-warning); border:1px solid currentColor; border-radius:999px; padding:2px 7px; flex:none}
+  .special-banner b{font-size:13.5px}
+  .special-banner .price{margin-left:auto; font-weight:800; font-variant-numeric:tabular-nums}
+
+  /* reviews */
+  .agg{display:flex; align-items:center; gap:14px; padding:6px 2px}
+  .agg .big{font-size:40px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+  .agg .stars{color:var(--status-warning); font-size:15px}
+  .agg small{font-size:12px; color:var(--text-secondary)}
+  .barline{display:flex; align-items:center; gap:8px; font-size:11px; color:var(--text-secondary)}
+  .barline .track{flex:1; height:6px; border-radius:999px; background:var(--surface-sunken); overflow:hidden}
+  .barline .fill{height:100%; background:var(--status-warning); border-radius:999px}
+  .review{padding:12px; border:1px solid var(--border); border-radius:12px; display:flex; flex-direction:column; gap:6px}
+  .review .rh{display:flex; justify-content:space-between; font-size:13px}
+  .review .rh b{font-weight:650}
+  .review .rh .vp{font-size:10px; font-weight:700; color:var(--status-driving); background:color-mix(in srgb,var(--status-driving) 12%,transparent); border-radius:999px; padding:2px 7px}
+  .review .stars{color:var(--status-warning); font-size:12px}
+  .review p{font-size:13px; color:var(--text-secondary)}
+  .composer{display:flex; flex-direction:column; gap:10px; padding:14px; border:1.5px solid var(--accent-secondary); border-radius:14px; background:color-mix(in srgb,var(--accent-secondary) 5%,transparent)}
+  .composer .starsrow{display:flex; gap:6px; font-size:26px; color:var(--border)}
+  .composer .starsrow button.on{color:var(--status-warning)}
+  .composer textarea{border:1px solid var(--border); border-radius:10px; padding:10px; font-size:13px; font-family:inherit; resize:none; height:60px; background:var(--surface-raised); color:var(--text-primary)}
+
+  /* block party */
+  #s-block .bp-map{position:absolute; inset:44px 0 0; background:var(--map-ground)}
+  #s-block .bp-map svg{width:100%; height:100%}
+  .bp-halo{position:absolute; border-radius:50%; border:2px dashed var(--accent-primary); background:color-mix(in srgb,var(--accent-primary) 8%,transparent); animation:halo 3s ease-in-out infinite}
+  @keyframes halo{50%{transform:scale(1.06); opacity:.7}}
+  .bp-pin{position:absolute; width:40px; height:40px; border-radius:50%; background:var(--surface-raised); display:grid; place-items:center; font-size:18px; border:3px solid var(--status-driving); transform:translate(-50%,-50%); box-shadow:0 3px 8px rgba(0,0,0,.25)}
+  .bp-sheet{position:absolute; left:0; right:0; bottom:0; z-index:3; background:var(--surface-raised); border-radius:18px 18px 0 0; box-shadow:0 -8px 30px rgba(0,0,0,.3); padding:8px 18px 24px; max-height:56%; display:flex; flex-direction:column; gap:10px}
+  .bp-handle{width:32px; height:4px; border-radius:999px; background:var(--text-secondary); opacity:.4; margin:2px auto 4px}
+  .bp-title{display:flex; align-items:center; gap:8px}
+  .bp-title h3{font-size:18px; font-weight:800; letter-spacing:-.01em}
+
+  /* gifting flow */
+  .giftcard-preview{border-radius:16px; padding:22px 18px; text-align:center; color:#fff; background:linear-gradient(135deg, color-mix(in srgb,var(--accent-primary) 88%,#7a1f00), color-mix(in srgb,var(--accent-primary) 42%,#2b0d00))}
+  .giftcard-preview .g{font-size:40px}
+  .giftcard-preview h3{font-size:17px; font-weight:800; margin-top:6px}
+  .giftcard-preview p{font-size:12.5px; opacity:.9; margin-top:2px}
+  .field{display:flex; flex-direction:column; gap:5px}
+  .field label{font-size:12px; font-weight:700; color:var(--text-secondary)}
+  .field input,.field textarea{border:1.5px solid var(--border); border-radius:10px; padding:11px 12px; font-size:14px; background:var(--surface-raised); color:var(--text-primary); font-family:inherit}
+  .redeemcode{font-size:30px; font-weight:800; letter-spacing:.18em; font-variant-numeric:tabular-nums; text-align:center; padding:16px; border:2px dashed var(--accent-primary); border-radius:14px; color:var(--accent-primary)}
+  .qrbox{width:140px; height:140px; border-radius:14px; background:var(--surface-sunken); display:grid; place-items:center; font-size:56px; margin:0 auto; border:1px solid var(--border)}
+
+  /* spot me */
+  .trustpanel{display:flex; align-items:center; gap:12px; padding:14px; border:1px solid var(--border); border-radius:14px}
+  .trustpanel .ring{width:52px; height:52px; border-radius:50%; display:grid; place-items:center; font-weight:800; font-size:15px; background:conic-gradient(var(--status-driving) 0 82%, var(--border) 82% 100%)}
+  .trustpanel .ring span{width:42px; height:42px; border-radius:50%; background:var(--surface-raised); display:grid; place-items:center; font-size:14px}
+  .stepper{display:flex; align-items:center; justify-content:center; gap:18px; padding:8px}
+  .stepper button{width:40px; height:40px; border-radius:50%; border:1.5px solid var(--border); font-size:18px; font-weight:700}
+  .stepper .n{font-size:26px; font-weight:800; min-width:64px; text-align:center; font-variant-numeric:tabular-nums}
+
+  /* orders history */
+  .filterchips{display:flex; gap:6px; overflow-x:auto; padding-bottom:2px}
+  .fchip{flex:none; font-size:12.5px; font-weight:600; color:var(--text-secondary); border:1px solid var(--border); border-radius:999px; padding:6px 13px}
+  .fchip[aria-pressed="true"]{background:var(--text-primary); color:var(--surface-base); border-color:var(--text-primary)}
+  .ordrow{display:flex; gap:12px; align-items:center; padding:12px; text-align:left; width:100%}
+  .ordrow .face{width:40px; height:40px; border-radius:10px; background:var(--surface-sunken); display:grid; place-items:center; font-size:18px; flex:none}
+  .ordrow .info{flex:1; min-width:0}
+  .ordrow b{font-size:13.5px; display:block}
+  .ordrow small{font-size:11.5px; color:var(--text-secondary)}
+  .ordrow .rt{text-align:right}
+  .ordrow .amt{font-weight:800; font-variant-numeric:tabular-nums; font-size:14px}
+
+  .toast{position:absolute; left:50%; bottom:22px; transform:translateX(-50%) translateY(8px); z-index:9; background:var(--surface-raised); border:1px solid var(--border); box-shadow:var(--shadow); border-radius:12px; padding:10px 16px; font-size:13px; font-weight:600; opacity:0; transition:opacity var(--motion-standard) var(--ease-in), transform var(--motion-standard) var(--ease-in); pointer-events:none; white-space:nowrap; max-width:90%}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  .notes{display:flex; flex-direction:column; gap:14px}
+  .note{background:var(--surface-raised); border:1px solid var(--border); border-radius:16px; padding:18px 20px}
+  .note h2{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:700}
+  .note ul{margin:10px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px}
+  .note li{font-size:13.5px; display:flex; gap:8px}
+  .note li b{font-weight:650}
+  .note li::before{content:""; flex:none; width:6px; height:6px; border-radius:50%; background:var(--accent-secondary); margin-top:6px}
+
+  @media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation:none!important; transition-duration:1ms!important} }
+</style>
+
+<div class="wrap">
+  <header class="page-head">
+    <div class="eyebrow">StreetServe · Design phase · Screens 68–77 of 77 · FINAL customer package</div>
+    <h1>C-11 → C-30 — Discovery, Content &amp; Gifting</h1>
+    <p>The last ten customer screens: search, the accessibility list view, category browser, menu, reviews, Block Party, the unified orders history, and the gifting + Spot Me flows. This package completes 100% customer coverage — and all 77 screens.</p>
+  </header>
+
+  <div class="studio">
+    <section class="stage" aria-label="Screen mockup">
+      <div class="seg" role="group" aria-label="Jump to screen">
+        <button aria-pressed="true"  data-go="search">C-11</button>
+        <button aria-pressed="false" data-go="list">C-12</button>
+        <button aria-pressed="false" data-go="cats">C-13</button>
+        <button aria-pressed="false" data-go="menu">C-15</button>
+        <button aria-pressed="false" data-go="reviews">C-16</button>
+        <button aria-pressed="false" data-go="block">C-17</button>
+        <button aria-pressed="false" data-go="orders">C-25</button>
+        <button aria-pressed="false" data-go="gift">C-28</button>
+        <button aria-pressed="false" data-go="redeem">C-29</button>
+        <button aria-pressed="false" data-go="spotme">C-30</button>
+      </div>
+
+      <div class="phone" id="phone">
+        <div class="statusbar"><span>9:41</span><div class="notch"></div><span>▮▮▮ ▉</span></div>
+
+        <!-- C-11 SEARCH -->
+        <div class="screen on" id="s-search">
+          <div class="navhead"><button class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button>
+            <div class="searchbar" style="flex:1"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input value="taco" /></div></div>
+          <div class="scroll">
+            <div class="sectlabel">Results</div>
+            <div class="card">
+              <button class="bizrow"><span class="face">🌮</span><span class="info"><b>Taco Loco</b><small>Mexican Food Truck · ★ 4.8</small></span><span class="rt"><span class="chip driving"><span class="dot"></span>2 min</span></span></button>
+              <button class="bizrow parked"><span class="face">🌯</span><span class="info"><b>El Taco Rey</b><small>Food Truck · ★ 4.5</small></span><span class="rt"><span class="chip parked"><span class="dot"></span>0.5 mi</span></span></button>
+            </div>
+            <div class="sectlabel">Recent searches</div>
+            <div class="recent"><button>coffee</button><button>barber near me</button><button>ice cream</button><button>detailing</button></div>
+          </div>
+        </div>
+
+        <!-- C-12 LIST VIEW -->
+        <div class="screen" id="s-list">
+          <div class="navhead"><b>Nearby</b>
+            <div class="viewtoggle" style="margin-left:auto"><button aria-label="Map view"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 20-6 2V6l6-2 6 2 6-2v16l-6 2-6-2z"/></svg></button><button aria-pressed="true" aria-label="List view"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
+          </div>
+          <div class="scroll">
+            <div class="sortbar"><button aria-pressed="true">Distance</button><button>Status</button><button>Rating</button></div>
+            <div class="card">
+              <button class="bizrow"><span class="face">☕</span><span class="info"><b>Brew Crew</b><small>Coffee · ★ 4.7 · <span class="chip parked" style="padding:1px 6px"><span class="dot"></span>Parked</span></small></span><span class="rt"><b class="num" style="color:var(--text-primary)">1 min</b></span></button>
+              <button class="bizrow"><span class="face">🌮</span><span class="info"><b>Taco Loco</b><small>Food Truck · ★ 4.8 · <span class="chip driving" style="padding:1px 6px"><span class="dot"></span>Driving</span></small></span><span class="rt"><b class="num" style="color:var(--text-primary)">2 min</b></span></button>
+              <button class="bizrow parked"><span class="face">✂️</span><span class="info"><b>Fade Factory</b><small>Barber · ★ 4.6 · <span class="chip parked" style="padding:1px 6px"><span class="dot"></span>Parked</span></small></span><span class="rt"><b class="num" style="color:var(--text-primary)">3 min</b></span></button>
+              <button class="bizrow away"><span class="face">🧁</span><span class="info"><b>Sweet Treats</b><small>Desserts · ★ 4.8 · <span class="chip away" style="padding:1px 6px"><span class="dot"></span>Closed</span></small></span><span class="rt"><span style="font-size:11px">opens 4 PM</span></span></button>
+            </div>
+            <p style="font-size:11.5px; color:var(--text-secondary); text-align:center">List view is a full-parity alternative to the map — sortable, screen-reader friendly.</p>
+          </div>
+        </div>
+
+        <!-- C-13 CATEGORY BROWSER -->
+        <div class="screen" id="s-cats">
+          <div class="navhead"><button class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button><b>All categories</b></div>
+          <div class="scroll">
+            <div class="catgroup">Food &amp; drink</div>
+            <div class="catgrid">
+              <button class="cattile"><span class="ic">🌮</span><b>Food Trucks</b><small>12 nearby</small></button>
+              <button class="cattile"><span class="ic">☕</span><b>Coffee &amp; Tea</b><small>4 nearby</small></button>
+              <button class="cattile"><span class="ic">🍦</span><b>Ice Cream</b><small>3 nearby</small></button>
+              <button class="cattile"><span class="ic">🧁</span><b>Desserts</b><small>2 nearby</small></button>
+            </div>
+            <div class="catgroup">Services</div>
+            <div class="catgrid">
+              <button class="cattile"><span class="ic">✂️</span><b>Barbers</b><small>3 nearby</small></button>
+              <button class="cattile"><span class="ic">🚗</span><b>Detailing</b><small>2 nearby</small></button>
+              <button class="cattile"><span class="ic">🔧</span><b>Mechanics</b><small>1 nearby</small></button>
+              <button class="cattile"><span class="ic">🐶</span><b>Pet Grooming</b><small>2 nearby</small></button>
+            </div>
+            <div class="catgroup">Shopping</div>
+            <div class="catgrid">
+              <button class="cattile"><span class="ic">🧺</span><b>Crafts &amp; Goods</b><small>6 nearby</small></button>
+              <button class="cattile"><span class="ic">🌸</span><b>Flowers</b><small>1 nearby</small></button>
+            </div>
+            <p style="font-size:11.5px; color:var(--text-secondary); text-align:center; padding:4px">18 categories live in Modesto · more added as the pilot grows</p>
+          </div>
+        </div>
+
+        <!-- C-15 MENU -->
+        <div class="screen" id="s-menu">
+          <div class="navhead"><button class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button><div><b>Menu</b><span class="sub">Taco Loco</span></div></div>
+          <div class="scroll">
+            <div class="special-banner"><span class="tag">Today's Special</span><b>$2 Street Tacos 🔥</b><span class="price">$2.00</span></div>
+            <div class="sectlabel">Tacos &amp; burritos</div>
+            <div class="card">
+              <button class="mi" data-add><span class="thumb">🌮</span><span class="info"><b>Street Tacos (3)</b><small>Carne asada · al pastor · pollo</small></span><span class="price">$8.50</span></button>
+              <button class="mi" data-add><span class="thumb">🌯</span><span class="info"><b>Super Burrito</b><small>Rice, beans, crema, your meat</small></span><span class="price">$11.00</span></button>
+              <button class="mi" data-add><span class="thumb">🫔</span><span class="info"><b>Tamale (2)</b><small>Pork or veggie</small></span><span class="price">$7.00</span></button>
+            </div>
+            <div class="sectlabel">Drinks</div>
+            <div class="card">
+              <button class="mi" data-add><span class="thumb">🥤</span><span class="info"><b>Agua Fresca</b><small>Horchata · jamaica · tamarindo</small></span><span class="price">$4.00</span></button>
+            </div>
+          </div>
+          <div class="btnbar"><button class="btn primary" id="cartBtn" disabled>Add items to start an order</button></div>
+        </div>
+
+        <!-- C-16 REVIEWS -->
+        <div class="screen" id="s-reviews">
+          <div class="navhead"><button class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button><div><b>Reviews</b><span class="sub">Taco Loco · 124 reviews</span></div></div>
+          <div class="scroll">
+            <div class="agg"><span class="big num">4.8</span><div style="flex:1"><div class="stars">★★★★★</div><small>124 verified purchases</small>
+              <div class="barline" style="margin-top:6px"><span>5</span><div class="track"><div class="fill" style="width:84%"></div></div></div>
+              <div class="barline"><span>4</span><div class="track"><div class="fill" style="width:12%"></div></div></div>
+              <div class="barline"><span>3</span><div class="track"><div class="fill" style="width:3%"></div></div></div>
+            </div></div>
+            <div class="composer">
+              <b style="font-size:13.5px">You ordered here — leave a review</b>
+              <div class="starsrow" id="myStars"><button>★</button><button>★</button><button>★</button><button>★</button><button>★</button></div>
+              <textarea placeholder="How was it? (optional)"></textarea>
+              <button class="btn primary small" style="width:100%" id="postReview">Post review</button>
+            </div>
+            <div class="review"><div class="rh"><b>Maria G.</b><span class="vp">✓ Verified</span></div><div class="stars">★★★★★</div><p>Waved them down on my lunch break and they were at my corner in 5 minutes. Al pastor is unreal.</p></div>
+            <div class="review"><div class="rh"><b>DeShawn W.</b><span class="vp">✓ Verified</span></div><div class="stars">★★★★☆</div><p>Got 10% off for being second in line. The line-up discount thing is genius.</p></div>
+          </div>
+        </div>
+
+        <!-- C-17 BLOCK PARTY -->
+        <div class="screen" id="s-block">
+          <div class="bp-map"><svg viewBox="0 0 390 700" preserveAspectRatio="xMidYMid slice"><rect width="390" height="700" fill="var(--map-ground)"/>
+            <rect x="120" y="220" width="150" height="150" rx="12" fill="var(--map-park)"/>
+            <g stroke="var(--map-road)" stroke-width="10" fill="none"><path d="M70 0 V700"/><path d="M320 0 V700"/><path d="M0 200 H390"/><path d="M0 400 H390"/></g></svg>
+          </div>
+          <div class="bp-halo" style="left:100px; top:220px; width:190px; height:190px"></div>
+          <div class="bp-pin" style="left:150px; top:270px">🌮</div>
+          <div class="bp-pin" style="left:225px; top:300px; border-color:var(--status-parked)">☕</div>
+          <div class="bp-pin" style="left:180px; top:340px; border-color:var(--status-away)">🍦</div>
+          <div class="bp-sheet">
+            <div class="bp-handle"></div>
+            <div class="bp-title"><span style="font-size:22px">🎉</span><h3>Block Party at Graceada Park</h3></div>
+            <p style="font-size:13px; color:var(--text-secondary)">3 vendors just converged 0.4 mi away — tap any to wave down or grab the line-up discount.</p>
+            <div class="card" style="margin-top:2px">
+              <button class="bizrow"><span class="face">🌮</span><span class="info"><b>Taco Loco</b><small>$2 tacos today</small></span><span class="rt"><span class="chip disc">5% first</span></span></button>
+              <button class="bizrow parked"><span class="face">☕</span><span class="info"><b>Brew Crew</b><small>Cold brew on tap</small></span><span class="rt"><span class="chip disc">5% first</span></span></button>
+              <button class="bizrow away"><span class="face">🍦</span><span class="info"><b>Wonder Ice</b><small>Free samples</small></span><span class="rt"><span class="chip free">Free</span></span></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- C-25 ORDERS HISTORY -->
+        <div class="screen" id="s-orders">
+          <div class="navhead"><b>Orders</b></div>
+          <div class="scroll">
+            <div class="filterchips"><button class="fchip" aria-pressed="true">All</button><button class="fchip">Orders</button><button class="fchip">Waves</button><button class="fchip">Bookings</button><button class="fchip">Gifts</button></div>
+            <div class="sectlabel">Active</div>
+            <div class="card">
+              <button class="ordrow"><span class="face">🌮</span><span class="info"><b>Taco Loco</b><small>Order #1042 · <span style="color:var(--status-warning)">Preparing</span></small></span><span class="rt"><b class="amt">$18.00</b><br><small style="font-size:11px; color:var(--accent-secondary)">Track</small></span></button>
+              <button class="ordrow"><span class="face">🚗</span><span class="info"><b>Detail Boss</b><small>Booking · Today 11:30 AM</small></span><span class="rt"><span class="chip driving" style="padding:2px 7px"><span class="dot"></span>Confirmed</span></span></button>
+            </div>
+            <div class="sectlabel">Past</div>
+            <div class="card">
+              <button class="ordrow"><span class="face">☕</span><span class="info"><b>Brew Crew</b><small>Wave-down · Jul 2 · saved $1.20</small></span><span class="rt"><b class="amt">$5.80</b></span></button>
+              <button class="ordrow"><span class="face">🎁</span><span class="info"><b>Gift to Alicia</b><small>Wonder Ice · Redeemed Jun 30</small></span><span class="rt"><b class="amt">$8.00</b></span></button>
+              <button class="ordrow"><span class="face">🌮</span><span class="info"><b>Taco Loco</b><small>Order · Jun 28 · saved $3.15</small></span><span class="rt"><b class="amt">$18.00</b></span></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- C-28 GIFT FLOW -->
+        <div class="screen" id="s-gift">
+          <div class="navhead"><button class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button><div><b>Send a gift</b><span class="sub">Wonder Ice</span></div></div>
+          <div class="scroll">
+            <div class="giftcard-preview"><div class="g">🍦</div><h3>Wonder Ice — any single item</h3><p>Redeemable at the truck, on the move or at a stop</p></div>
+            <div class="field"><label>Send to</label><input placeholder="Contact name or phone" value="Alicia R." /></div>
+            <div class="field"><label>Add a note (optional)</label><textarea placeholder="Enjoy! 🍦" style="height:56px"></textarea></div>
+            <div class="card" style="padding:12px 14px; display:flex; justify-content:space-between; font-size:13.5px"><span>Gift total</span><b class="num">$8.00</b></div>
+            <p style="font-size:11.5px; color:var(--text-secondary); text-align:center">The recipient gets a redemption code. Unredeemed gifts refund to you after 14 days.</p>
+          </div>
+          <div class="btnbar"><button class="btn primary" id="payGift">Pay &amp; send gift · <span class="num">$8.00</span></button></div>
+        </div>
+
+        <!-- C-29 GIFT REDEMPTION -->
+        <div class="screen" id="s-redeem">
+          <div class="navhead"><button class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button><div><b>Your gift</b><span class="sub">from James</span></div></div>
+          <div class="scroll" style="align-items:center; text-align:center">
+            <div class="giftcard-preview" style="width:100%"><div class="g">🍦</div><h3>Wonder Ice — any single item</h3><p>"Enjoy! 🍦" — James</p></div>
+            <p style="font-size:13px; color:var(--text-secondary); margin-top:4px">Show this code at the truck, or let them scan the QR.</p>
+            <div class="redeemcode">7F–2K9</div>
+            <div class="qrbox">▦</div>
+            <span class="chip warn" style="margin-top:4px">Expires in 12 days</span>
+          </div>
+          <div class="btnbar"><button class="btn primary" id="markRedeemed">Mark as redeemed</button></div>
+        </div>
+
+        <!-- C-30 SPOT ME -->
+        <div class="screen" id="s-spotme">
+          <div class="navhead"><button class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button><div><b>Spot Me</b><span class="sub">Taco Loco</span></div></div>
+          <div class="scroll">
+            <div class="card" style="padding:14px; font-size:13px; color:var(--text-secondary)">Ask to receive now and pay back later. It's trust-based — repaying on time builds your Trust Score.</div>
+            <div class="sectlabel">Amount</div>
+            <div class="card"><div class="stepper"><button id="smMinus">–</button><span class="n num" id="smAmt">$12</span><button id="smPlus">+</button></div></div>
+            <div class="field" style="padding:0 2px"><label>Repay by</label><input value="Jul 8, 2026" /></div>
+            <div class="sectlabel">Your standing</div>
+            <div class="trustpanel"><div class="ring"><span>82</span></div><div><b style="font-size:14px">Trust Score 82</b><br><small style="font-size:12px; color:var(--text-secondary)">3 on-time repayments · vendors are likely to accept</small></div></div>
+            <p style="font-size:11.5px; color:var(--text-secondary); text-align:center">A late repayment affects your score — it's never sent to collections.</p>
+          </div>
+          <div class="btnbar"><button class="btn primary" id="reqSpot">Request Spot Me</button></div>
+        </div>
+
+        <div class="toast" id="toast"></div>
+      </div>
+
+      <p class="hint">Jump between all 10 screens above · add menu items · rate on reviews · step the Spot Me amount</p>
+    </section>
+
+    <aside class="notes" aria-label="Design annotations">
+      <div class="note">
+        <h2>C-11/12/13 — three ways into the same map data</h2>
+        <ul>
+          <li>Search surfaces live results with status + ETA inline, plus recent-search chips — most searches are a business name or a category, so both are one tap.</li>
+          <li><b>C-12 List view is the accessibility-mandated parity surface</b> (§1 UX rule): everything the map shows, as a sortable, screen-reader-friendly list — never a lesser fallback, a genuine equal with a map/list toggle.</li>
+          <li>Category browser shows the curated ~18 launch categories grouped by top-level tab, with live "N nearby" counts — honest about the pilot's real taxonomy size (Q8), not a fake 100-category grid.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>C-15/16 — menu &amp; reviews reuse C-14's pieces</h2>
+        <ul>
+          <li>The full menu is the expanded version of C-14's preview — Today's Special pinned on top, add-to-order building toward C-21. One consistent menu component, two contexts.</li>
+          <li>Reviews lead with a rating distribution, and the composer is <b>gated to "you ordered here"</b> (transaction-verified) — the anti-manipulation rule (Security §4) made visible with the "Verified" badge on every review.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>C-17 — Block Party is a moment, and looks like one</h2>
+        <ul>
+          <li>A pulsing halo marks the convergence zone, and the sheet frames it as an event ("3 vendors just converged") with each vendor's hook and first-in-line discount — turning the FR-4.2 detection into something a customer wants to run toward.</li>
+          <li>Reuses the exact status rings and discount chips from everywhere else — no new vocabulary for a special moment.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>C-25 — one history, every interaction type</h2>
+        <ul>
+          <li>Orders, wave-downs, bookings, and gifts in a single unified feed with filter chips — matching the Database decision that a customer's history isn't split by transaction type. Active items (track, confirmed booking) float above past ones.</li>
+          <li>Past rows restate savings ("saved $3.15") — the discount payoff stays visible even in history.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>C-28/29 — gifting, both sides</h2>
+        <ul>
+          <li>Sender flow ends in a payment; the gift card preview makes the intangible (a mobile-vendor credit) feel like a real gift. Refund-after-14-days is stated up front (FR-6.1).</li>
+          <li>Recipient redemption offers <b>both a human-readable code and a QR</b> — a vendor on the move might not have a scanner handy, so the code is the reliable fallback. Expiry is always visible.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>C-30 — Spot Me leads with trust, not debt</h2>
+        <ul>
+          <li>The requester sees their own Trust Score and likelihood of acceptance before asking — sets honest expectations (FR-6.3), and the copy is explicit that late repayment is a reputation consequence, <b>never collections</b>, consistent with the platform ethos.</li>
+          <li>Gated by the 30-day / Bronze rule at the system level (PRD §3) — this screen only appears for eligible accounts.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>Milestone — all 77 screens complete</h2>
+        <ul>
+          <li>This package closes customer coverage at 38/38, and the app at <b>77/77</b> individually prototyped. Handoff refs: C-11/12 → `/map/nearby` search; C-16 → `POST /reviews` (transaction-gated); C-17 → `block_party_events`; C-25 → unified `orders`/`wave_downs`/`bookings`/`gifts`; C-28 → `gifts` + Stripe; C-30 → `spot_me_requests`.</li>
+          <li>Full spec: <b>docs/13-screen-design-specs.md § C-11–C-30</b>.</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const toast=$('#toast'); let tt;
+  function show(msg){ toast.textContent=msg; toast.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>toast.classList.remove('show'),3200); }
+  function go(id){ $$('.screen').forEach(s=>s.classList.remove('on')); $('#s-'+id).classList.add('on'); $$('.seg [data-go]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.go===id)); }
+  $$('.seg [data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
+
+  // C-15 menu
+  let cart=0;
+  $$('#s-menu [data-add]').forEach(m=>m.addEventListener('click',()=>{ cart++; const b=$('#cartBtn'); b.disabled=false; b.innerHTML='View order · '+cart+' item'+(cart>1?'s':''); show('Added to order'); }));
+
+  // C-16 reviews
+  $$('#myStars button').forEach((s,i,arr)=>s.addEventListener('click',()=>arr.forEach((x,j)=>x.classList.toggle('on', j<=i))));
+  $('#postReview').addEventListener('click',()=>show('Review posted — thanks!'));
+
+  // C-30 spot me
+  let sm=12;
+  $('#smMinus').addEventListener('click',()=>{ if(sm>2){sm-=2; $('#smAmt').textContent='$'+sm;} });
+  $('#smPlus').addEventListener('click',()=>{ if(sm<30){sm+=2; $('#smAmt').textContent='$'+sm;} });
+  $('#reqSpot').addEventListener('click',()=>show('Spot Me request sent to Taco Loco'));
+
+  // misc
+  $('#payGift')?.addEventListener('click',()=>{ show('Gift sent — Alicia gets a code'); go('redeem'); });
+  $('#markRedeemed')?.addEventListener('click',()=>show('Gift redeemed ✓'));
+  $$('.fchip').forEach(c=>c.addEventListener('click',()=>{ $$('.fchip').forEach(x=>x.setAttribute('aria-pressed','false')); c.setAttribute('aria-pressed','true'); }));
+  $$('.sortbar button').forEach(c=>c.addEventListener('click',()=>{ $$('.sortbar button').forEach(x=>x.setAttribute('aria-pressed','false')); c.setAttribute('aria-pressed','true'); }));
+  $$('.viewtoggle button').forEach(c=>c.addEventListener('click',()=>{ if(c.getAttribute('aria-label')==='Map view') show('Switches back to the C-10 map'); }));
+</script>

@@ -1,0 +1,444 @@
+<title>StreetServe — Admin / Trust &amp; Safety Console (A-01–A-07)</title>
+<style>
+  :root{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF; --surface-sunken:#F1F0ED;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF; --admin-accent:#5B5BD6;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --border:rgba(91,94,104,.24); --shadow:0 12px 32px rgba(20,21,26,.12);
+    --motion-micro:100ms; --motion-standard:200ms; --ease-in:cubic-bezier(.2,0,0,1);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-base:#0E0F12; --surface-raised:#17181C; --surface-sunken:#0A0B0D;
+      --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+      --accent-primary:#FF6B45; --accent-secondary:#4C8DFF; --admin-accent:#8B8BF0;
+      --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+      --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+      --border:rgba(156,159,168,.18); --shadow:0 12px 32px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --surface-base:#0E0F12; --surface-raised:#17181C; --surface-sunken:#0A0B0D;
+    --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+    --accent-primary:#FF6B45; --accent-secondary:#4C8DFF; --admin-accent:#8B8BF0;
+    --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+    --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+    --border:rgba(156,159,168,.18); --shadow:0 12px 32px rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"]{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF; --surface-sunken:#F1F0ED;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF; --admin-accent:#5B5BD6;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --border:rgba(91,94,104,.24); --shadow:0 12px 32px rgba(20,21,26,.12);
+  }
+
+  *{box-sizing:border-box; margin:0}
+  html,body{background:var(--surface-base); color:var(--text-primary);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.4}
+  button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+  :is(button,[tabindex]):focus-visible{outline:2px solid var(--admin-accent); outline-offset:2px; border-radius:8px}
+
+  .wrap{max-width:1240px; margin:0 auto; padding:40px 20px 80px; display:flex; flex-direction:column; gap:24px}
+  .page-head .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:600}
+  .page-head h1{font-size:32px; font-weight:700; letter-spacing:-.02em; text-wrap:balance; margin-top:6px}
+  .page-head p{color:var(--text-secondary); max-width:70ch; margin-top:8px; font-size:15px}
+
+  .controls{display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between}
+  .seg{display:flex; gap:4px; background:var(--surface-raised); border:1px solid var(--border); border-radius:999px; padding:4px; flex-wrap:wrap}
+  .seg button{padding:7px 12px; border-radius:999px; font-size:12.5px; font-weight:600; color:var(--text-secondary);
+    transition:background var(--motion-micro) var(--ease-in), color var(--motion-micro) var(--ease-in)}
+  .seg button[aria-pressed="true"]{background:var(--admin-accent); color:#fff}
+
+  .browser{border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:var(--shadow); background:var(--surface-base); max-width:1180px; margin:0 auto}
+  .chrome{height:38px; background:var(--surface-sunken); display:flex; align-items:center; gap:8px; padding:0 14px; border-bottom:1px solid var(--border)}
+  .chrome i{width:10px; height:10px; border-radius:50%; background:var(--border)}
+  .chrome .url{margin-left:10px; font-size:11px; color:var(--text-secondary); background:var(--surface-raised); border-radius:999px; padding:3px 12px}
+
+  .dash{display:flex; height:680px}
+  .sidebar{width:224px; flex:none; border-right:1px solid var(--border); background:var(--surface-raised); display:flex; flex-direction:column}
+  .sidebar .brand{display:flex; align-items:center; gap:10px; padding:16px 16px 14px; font-weight:800; font-size:15px; border-bottom:1px solid var(--border)}
+  .sidebar .brand .logo{width:30px; height:30px; border-radius:9px; background:var(--admin-accent); flex:none; display:grid; place-items:center; color:#fff; font-size:15px}
+  .navitem{display:flex; align-items:center; gap:10px; padding:11px 16px; font-size:13.5px; font-weight:600; color:var(--text-secondary); border-left:3px solid transparent; text-align:left; white-space:nowrap; width:100%}
+  .navitem[aria-current="page"]{color:var(--admin-accent); border-left-color:var(--admin-accent); background:color-mix(in srgb,var(--admin-accent) 6%,transparent)}
+  .navgroup-label{font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:var(--text-secondary); padding:14px 16px 4px}
+
+  .mainarea{flex:1; display:flex; flex-direction:column; min-width:0}
+  .topbar{height:56px; flex:none; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; padding:0 20px}
+  .topbar h2{font-size:15px; font-weight:700}
+  .topbar .roleSwitch{margin-left:auto; display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:var(--text-secondary); border:1px solid var(--border); border-radius:999px; padding:6px 12px}
+
+  .content{flex:1; overflow-y:auto; padding:20px; display:none; flex-direction:column; gap:16px}
+  .content.on{display:flex}
+  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:12px}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  .card{border:1px solid var(--border); border-radius:14px; padding:16px; background:var(--surface-raised)}
+  .num{font-variant-numeric:tabular-nums}
+  .kpi small{font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--text-secondary); display:block; margin-bottom:6px}
+  .kpi b{font-size:24px; font-weight:800; letter-spacing:-.01em}
+  .kpi .delta{font-size:11.5px; font-weight:600; color:var(--status-driving); margin-top:4px; display:block}
+  .kpi .delta.warn{color:var(--status-warning)}
+  .kpi .delta.bad{color:var(--status-danger)}
+
+  .btn{height:36px; padding:0 14px; border-radius:8px; font-size:13px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; gap:6px}
+  .btn.primary{background:var(--admin-accent); color:#fff}
+  .btn.secondary{border:1.5px solid var(--text-secondary); color:var(--text-primary)}
+  .btn.approve{background:var(--status-driving); color:#fff}
+  .btn.danger{background:var(--status-danger); color:#fff}
+  .btn.ghost-danger{color:var(--status-danger); font-weight:600}
+  .btn.small{height:30px; font-size:12px; padding:0 10px}
+  .chip{display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:3px 8px; border-radius:999px}
+  .chip.warn{color:var(--status-warning); background:color-mix(in srgb,var(--status-warning) 13%,transparent)}
+  .chip.green{color:var(--status-driving); background:color-mix(in srgb,var(--status-driving) 13%,transparent)}
+  .chip.blue{color:var(--accent-secondary); background:color-mix(in srgb,var(--accent-secondary) 13%,transparent)}
+  .chip.danger{color:var(--status-danger); background:color-mix(in srgb,var(--status-danger) 13%,transparent)}
+  .chip.gold{color:#B7791F; background:color-mix(in srgb,#F79009 16%,transparent)}
+  .chip.gray{color:var(--text-secondary); background:var(--surface-sunken)}
+
+  table{width:100%; border-collapse:collapse; font-size:12.5px}
+  th{text-align:left; font-size:10px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--text-secondary); padding:8px 10px; border-bottom:1px solid var(--border)}
+  td{padding:9px 10px; border-bottom:1px solid var(--border); vertical-align:middle}
+  tr:last-child td{border-bottom:0}
+  .avatarname{display:flex; align-items:center; gap:8px}
+  .av{width:26px; height:26px; border-radius:50%; background:var(--surface-sunken); display:grid; place-items:center; font-size:12px}
+  .slabar{width:60px; height:5px; border-radius:999px; background:var(--border); overflow:hidden; display:inline-block; vertical-align:middle}
+  .slabar .fill{height:100%; border-radius:999px}
+  .rowbtn{cursor:pointer}
+  .rowbtn:hover{background:var(--surface-sunken)}
+
+  /* A-02 case detail */
+  .casesplit{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  .evidence{display:flex; gap:8px; flex-wrap:wrap}
+  .evthumb{width:56px; height:56px; border-radius:8px; background:var(--surface-sunken); display:grid; place-items:center; font-size:22px; border:1px solid var(--border)}
+  .timeline{display:flex; flex-direction:column; gap:0}
+  .tl{display:flex; gap:10px}
+  .tl .rail{display:flex; flex-direction:column; align-items:center}
+  .tl .d{width:20px; height:20px; border-radius:50%; background:var(--surface-sunken); border:2px solid var(--border); flex:none; display:grid; place-items:center; font-size:9px}
+  .tl .ln{width:2px; flex:1; background:var(--border); min-height:16px}
+  .tl:last-child .ln{display:none}
+  .tl .body{padding-bottom:14px; font-size:12.5px}
+  .tl .body small{color:var(--text-secondary); display:block; font-size:11px}
+
+  /* A-06 impact */
+  .impactstat{text-align:center; padding:6px}
+  .impactstat b{font-size:24px; font-weight:800; display:block}
+  .impactstat small{font-size:11px; color:var(--text-secondary)}
+  .privacy-note{display:flex; gap:8px; align-items:flex-start; font-size:12px; color:var(--text-secondary); background:color-mix(in srgb,var(--admin-accent) 7%,var(--surface-raised)); border:1px solid color-mix(in srgb,var(--admin-accent) 25%,var(--border)); border-radius:10px; padding:10px 12px}
+
+  .toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(8px); z-index:20;
+    background:var(--surface-raised); border:1px solid var(--border); box-shadow:var(--shadow);
+    border-radius:12px; padding:10px 16px; font-size:13px; font-weight:600; opacity:0;
+    transition:opacity .2s var(--ease-in), transform .2s var(--ease-in); pointer-events:none; white-space:nowrap}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  .notes{display:flex; flex-direction:column; gap:14px; max-width:1180px; margin:0 auto; width:100%}
+  .note{background:var(--surface-raised); border:1px solid var(--border); border-radius:16px; padding:18px 20px}
+  .note h2{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:700}
+  .note ul{margin:10px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px}
+  .note li{font-size:13.5px; display:flex; gap:8px}
+  .note li b{font-weight:650}
+  .note li::before{content:""; flex:none; width:6px; height:6px; border-radius:50%; background:var(--admin-accent); margin-top:6px}
+  .hint{font-size:13px; color:var(--text-secondary); text-align:center}
+
+  @media (prefers-reduced-motion:reduce){ *,*::before,*::after{transition-duration:1ms!important} }
+</style>
+
+<div class="wrap">
+  <header class="page-head">
+    <div class="eyebrow">StreetServe · Design phase · Screens 47–53 of 77 · Admin / Trust &amp; Safety · FINAL PACKAGE</div>
+    <h1>A-01 → A-07 — Admin &amp; Trust &amp; Safety Console</h1>
+    <p>The internal console that keeps the marketplace honest: city health at a glance, dispute arbitration, category/license review, fraud triage, user management, the Shelter Program's impact reporting, and sponsor records. Violet accent marks it as internal — never a surface any customer, vendor, or seller sees. This completes all 77 screens.</p>
+  </header>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Jump to screen">
+      <button aria-pressed="true"  data-go="ops">A-01 Ops</button>
+      <button aria-pressed="false" data-go="disputes">A-02 Disputes</button>
+      <button aria-pressed="false" data-go="category">A-03 Category/License</button>
+      <button aria-pressed="false" data-go="fraud">A-04 Fraud Flags</button>
+      <button aria-pressed="false" data-go="users">A-05 Users</button>
+      <button aria-pressed="false" data-go="shelter">A-06 Shelter</button>
+      <button aria-pressed="false" data-go="sponsors">A-07 Sponsors</button>
+    </div>
+  </div>
+
+  <div class="browser">
+    <div class="chrome"><i></i><i></i><i></i><span class="url">admin.streetserve.com · Trust &amp; Safety</span></div>
+    <div class="dash">
+      <aside class="sidebar">
+        <div class="brand"><span class="logo">🛡️</span>Trust &amp; Safety</div>
+        <div class="navgroup-label">Monitor</div>
+        <button class="navitem" data-nav="ops" aria-current="page">Ops Overview</button>
+        <button class="navitem" data-nav="fraud">Fraud Flags <span class="chip danger" style="margin-left:auto">5</span></button>
+        <div class="navgroup-label">Resolve</div>
+        <button class="navitem" data-nav="disputes">Disputes <span class="chip warn" style="margin-left:auto">3</span></button>
+        <button class="navitem" data-nav="category">Category &amp; License <span class="chip warn" style="margin-left:auto">4</span></button>
+        <button class="navitem" data-nav="users">User Management</button>
+        <div class="navgroup-label">Programs</div>
+        <button class="navitem" data-nav="shelter">Shelter Partners</button>
+        <button class="navitem" data-nav="sponsors">Sponsors</button>
+      </aside>
+
+      <div class="mainarea">
+        <div class="topbar"><h2 id="topTitle">Ops Overview — Modesto, CA</h2><div class="roleSwitch">🛡️ Sam R. · Trust &amp; Safety</div></div>
+
+        <!-- A-01 OPS -->
+        <div class="content on" id="c-ops">
+          <div class="grid4">
+            <div class="card kpi"><small>Active now</small><b class="num">142</b><span class="delta">38 vendors · 21 sellers live</span></div>
+            <div class="card kpi"><small>Wave-downs / hr</small><b class="num">64</b><span class="delta">92% accept rate</span></div>
+            <div class="card kpi"><small>GMV today</small><b class="num">$4,820</b><span class="delta">↑ 8% vs avg</span></div>
+            <div class="card kpi"><small>Dispute rate</small><b class="num">0.4%</b><span class="delta">per 1k txns · healthy</span></div>
+          </div>
+          <div class="grid3">
+            <div class="card kpi"><small>Pending license reviews</small><b class="num">4</b><span class="delta warn">oldest: 1 day</span></div>
+            <div class="card kpi"><small>Open fraud flags</small><b class="num">5</b><span class="delta bad">2 high severity</span></div>
+            <div class="card kpi"><small>Payout holds</small><b class="num">3</b><span class="delta warn">dispute-related</span></div>
+          </div>
+          <div class="card">
+            <b style="font-size:13.5px">Needs attention now</b>
+            <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px">
+              <div style="display:flex; align-items:center; gap:10px; font-size:13px"><span class="chip danger">High</span>Possible ping-farming: 3 new accounts, same device fingerprint <button class="btn small secondary" style="margin-left:auto" data-jump="fraud">Review</button></div>
+              <div style="display:flex; align-items:center; gap:10px; font-size:13px"><span class="chip warn">SLA</span>Dispute #4471 — resolution due in 6 hours <button class="btn small secondary" style="margin-left:auto" data-jump="disputes">Open</button></div>
+              <div style="display:flex; align-items:center; gap:10px; font-size:13px"><span class="chip warn">License</span>Fade Factory (Barber) permit awaiting review <button class="btn small secondary" style="margin-left:auto" data-jump="category">Review</button></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- A-02 DISPUTES -->
+        <div class="content" id="c-disputes">
+          <div class="card" style="padding:0">
+            <table>
+              <tr><th>Case</th><th>Type</th><th>Parties</th><th>Opened</th><th>SLA</th><th></th></tr>
+              <tr class="rowbtn" data-case="1"><td>#4471</td><td>Consignment</td><td>Rosa L. ↔ Grace Church</td><td class="num">2d ago</td><td><span class="slabar"><span class="fill" style="width:88%; background:var(--status-danger)"></span></span> 6h</td><td><button class="btn small primary">Open</button></td></tr>
+              <tr class="rowbtn"><td>#4470</td><td>Spot Me default</td><td>Chris P. ↔ Taco Loco</td><td class="num">1d ago</td><td><span class="slabar"><span class="fill" style="width:55%; background:var(--status-warning)"></span></span> 2d</td><td><button class="btn small secondary">Open</button></td></tr>
+              <tr class="rowbtn"><td>#4469</td><td>Order refund</td><td>Priya S. ↔ Wonder Ice</td><td class="num">4h ago</td><td><span class="slabar"><span class="fill" style="width:20%; background:var(--status-driving)"></span></span> 4d</td><td><button class="btn small secondary">Open</button></td></tr>
+            </table>
+          </div>
+          <div class="card" id="caseDetail">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px">
+              <div><b style="font-size:15px">Case #4471 — Consignment dispute</b><br><small style="color:var(--text-secondary); font-size:12px">Rosa L. (seller) ↔ Grace Community Church (hub) · $50 declared value</small></div>
+              <span class="chip danger">SLA: 6h left</span>
+            </div>
+            <div class="casesplit">
+              <div>
+                <p style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary); margin-bottom:8px">Evidence</p>
+                <div class="evidence"><span class="evthumb">📷</span><span class="evthumb">📷</span><span class="evthumb">🧾</span></div>
+                <p style="font-size:12px; color:var(--text-secondary); margin-top:8px">Hub claims 2 bracelet sets returned damaged. Seller submitted checkout-time condition photos showing items intact.</p>
+              </div>
+              <div>
+                <p style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary); margin-bottom:8px">Timeline</p>
+                <div class="timeline">
+                  <div class="tl"><div class="rail"><span class="d">✓</span><span class="ln"></span></div><div class="body">Checked out · condition photos captured<small>Jul 1, 2:14 PM</small></div></div>
+                  <div class="tl"><div class="rail"><span class="d">✓</span><span class="ln"></span></div><div class="body">Returned · hub flagged damage<small>Jul 4, 5:40 PM</small></div></div>
+                  <div class="tl"><div class="rail"><span class="d">!</span><span class="ln"></span></div><div class="body">Dispute opened by hub<small>Jul 4, 5:52 PM</small></div></div>
+                  <div class="tl"><div class="rail"><span class="d">•</span></div><div class="body">Awaiting your resolution<small>Trust Score change held until resolved</small></div></div>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap">
+              <button class="btn approve" data-resolve="seller">Rule for seller</button>
+              <button class="btn danger" data-resolve="hub">Rule for hub</button>
+              <button class="btn secondary" data-resolve="split">Split liability</button>
+              <button class="btn secondary" data-resolve="evidence">Request more evidence</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- A-03 CATEGORY/LICENSE -->
+        <div class="content" id="c-category">
+          <div class="grid2">
+            <div class="card">
+              <b style="font-size:13.5px; display:block; margin-bottom:8px">Pending license reviews</b>
+              <div style="display:flex; flex-direction:column; gap:8px">
+                <div style="display:flex; align-items:center; gap:10px; font-size:12.5px; padding:8px; border:1px solid var(--border); border-radius:10px">
+                  <span class="av">✂️</span><div style="flex:1"><b>Fade Factory</b><br><span style="color:var(--text-secondary)">Barber · cosmetology license</span></div>
+                  <button class="btn small ghost-danger" data-lic="rej1">Reject</button><button class="btn small approve" data-lic="app1">Approve</button>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; font-size:12.5px; padding:8px; border:1px solid var(--border); border-radius:10px">
+                  <span class="av">🌮</span><div style="flex:1"><b>Street Eats Co</b><br><span style="color:var(--text-secondary)">Food Truck · health permit</span></div>
+                  <button class="btn small ghost-danger" data-lic="rej2">Reject</button><button class="btn small approve" data-lic="app2">Approve</button>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <b style="font-size:13.5px; display:block; margin-bottom:8px">Category suggestions</b>
+              <div style="display:flex; align-items:center; gap:10px; font-size:12.5px; padding:8px; border:1px solid var(--border); border-radius:10px">
+                <div style="flex:1"><b>"Mobile Knife Sharpening"</b><br><span style="color:var(--text-secondary)">Suggested by Blade Bros · no license req.</span></div>
+                <button class="btn small ghost-danger">Reject</button><button class="btn small approve">Approve</button>
+              </div>
+              <p style="font-size:11.5px; color:var(--text-secondary); margin-top:10px">Launch taxonomy: <b>18</b> active categories · new ones require admin approval (never self-service).</p>
+            </div>
+          </div>
+          <div class="card">
+            <b style="font-size:13.5px; display:block; margin-bottom:8px">Active category taxonomy</b>
+            <table>
+              <tr><th>Category</th><th>Tab</th><th>License required</th><th>Regulated by</th><th></th></tr>
+              <tr><td>Food Truck</td><td>Food</td><td><span class="chip warn">Yes</span></td><td>County Health Dept</td><td><button class="btn small secondary">Edit</button></td></tr>
+              <tr><td>Mobile Barber</td><td>Services</td><td><span class="chip warn">Yes</span></td><td>State Cosmetology Board</td><td><button class="btn small secondary">Edit</button></td></tr>
+              <tr><td>Mobile Detailing</td><td>Services</td><td><span class="chip gray">No</span></td><td>—</td><td><button class="btn small secondary">Edit</button></td></tr>
+              <tr><td>Craft &amp; Consignment Goods</td><td>Shopping</td><td><span class="chip gray">No</span></td><td>—</td><td><button class="btn small secondary">Edit</button></td></tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- A-04 FRAUD FLAGS -->
+        <div class="content" id="c-fraud">
+          <div class="card" style="padding:0">
+            <table>
+              <tr><th>Severity</th><th>Signal</th><th>Accounts</th><th>Detected</th><th></th></tr>
+              <tr><td><span class="chip danger">High</span></td><td>Ping-farming: same device fingerprint</td><td>3 new accounts</td><td class="num">12m ago</td><td><button class="btn small danger" data-fraud="1">Review &amp; hold</button></td></tr>
+              <tr><td><span class="chip danger">High</span></td><td>Oversell attempt blocked ×4</td><td>Seller: J. Kim</td><td class="num">1h ago</td><td><button class="btn small secondary">Review</button></td></tr>
+              <tr><td><span class="chip warn">Med</span></td><td>Spot Me velocity: 6 requests / 10 min</td><td>Chris P.</td><td class="num">3h ago</td><td><button class="btn small secondary">Review</button></td></tr>
+              <tr><td><span class="chip warn">Med</span></td><td>New account · instant high-value checkout</td><td>Seller: A. Novak</td><td class="num">5h ago</td><td><button class="btn small secondary">Review</button></td></tr>
+              <tr><td><span class="chip gray">Low</span></td><td>Rapid follow/unfollow pattern</td><td>2 accounts</td><td class="num">Today</td><td><button class="btn small secondary">Dismiss</button></td></tr>
+            </table>
+          </div>
+          <div class="privacy-note">⚖️ <span><b>Human-in-the-loop by design:</b> flags surface for review — they never auto-ban. A wrongly-banned low-income seller is a real harm, so suspension always requires an explicit admin decision (Security §4).</span></div>
+        </div>
+
+        <!-- A-05 USERS -->
+        <div class="content" id="c-users">
+          <div class="card" style="display:flex; gap:8px; align-items:center">
+            <input placeholder="Search by name, email, or phone…" style="flex:1; height:36px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface-base); padding:0 12px; font-size:13px; color:var(--text-primary)" />
+            <button class="btn primary small">Search</button>
+          </div>
+          <div class="card" style="padding:0">
+            <table>
+              <tr><th>User</th><th>Roles</th><th>Verification</th><th>Trust</th><th>Status</th><th></th></tr>
+              <tr><td><div class="avatarname"><span class="av">🧑</span>Angela M.</div></td><td><span class="chip blue">Seller</span></td><td><span class="chip green">Silver · KYC ✓</span></td><td class="num">82</td><td><span class="chip green">Active</span></td><td><button class="btn small secondary">Manage</button></td></tr>
+              <tr><td><div class="avatarname"><span class="av">👨</span>Marcus T.</div></td><td><span class="chip blue">Seller</span></td><td><span class="chip gold">Shelter-cosigned</span></td><td class="num">71</td><td><span class="chip green">Active</span></td><td><button class="btn small secondary">Manage</button></td></tr>
+              <tr><td><div class="avatarname"><span class="av">🌮</span>Taco Loco (J. Diaz)</div></td><td><span class="chip blue">Vendor</span> <span class="chip blue">Hub</span></td><td><span class="chip green">Verified</span></td><td class="num">91</td><td><span class="chip green">Active</span></td><td><button class="btn small secondary">Manage</button></td></tr>
+              <tr><td><div class="avatarname"><span class="av">👤</span>J. Kim</div></td><td><span class="chip blue">Seller</span></td><td><span class="chip warn">Bronze</span></td><td class="num" style="color:var(--status-danger)">44</td><td><span class="chip danger">Flagged</span></td><td><button class="btn small ghost-danger" data-suspend>Suspend</button></td></tr>
+            </table>
+          </div>
+          <p style="font-size:11.5px; color:var(--text-secondary)">Verification is portable across a user's roles; Trust Scores are tracked separately per role (Q10). KYC documents are held by the provider, never stored here.</p>
+        </div>
+
+        <!-- A-06 SHELTER -->
+        <div class="content" id="c-shelter">
+          <div class="privacy-note">🔒 <span><b>Privacy-first reporting:</b> this view shows aggregate outcomes only. No individual resident's transaction detail is exposed — shelters and StreetServe report impact without surveilling participants (FR-12.3).</span></div>
+          <div class="grid3">
+            <div class="card impactstat"><b class="num">3</b><small>Active shelter partners</small></div>
+            <div class="card impactstat"><b class="num">27</b><small>Residents earning</small></div>
+            <div class="card impactstat"><b class="num" style="color:var(--status-driving)">$6,240</b><small>Total resident earnings (90 days)</small></div>
+          </div>
+          <div class="card" style="padding:0">
+            <table>
+              <tr><th>Partner</th><th>Status</th><th>Residents enrolled</th><th>Active earners (30d)</th><th>Cosigned exposure</th></tr>
+              <tr><td>Modesto Gospel Mission</td><td><span class="chip green">Verified</span></td><td class="num">14</td><td class="num">11</td><td class="num">$420</td></tr>
+              <tr><td>Hope Shelter Collective</td><td><span class="chip green">Verified</span></td><td class="num">9</td><td class="num">7</td><td class="num">$280</td></tr>
+              <tr><td>New Beginnings House</td><td><span class="chip warn">Pending review</span></td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- A-07 SPONSORS -->
+        <div class="content" id="c-sponsors">
+          <div class="card"><span class="chip gray">Pilot: manual record-keeping (no self-serve dashboard yet — Roadmap Q9)</span></div>
+          <div class="card" style="padding:0">
+            <table>
+              <tr><th>Sponsor</th><th>Tier</th><th>Placement</th><th>Attributed signups</th><th>Impressions</th></tr>
+              <tr><td><div class="avatarname"><span class="av">🍦</span>Wonder Ice</div></td><td><span class="chip gold">National launch partner</span></td><td>Logo · hero</td><td class="num">312</td><td class="num">18,400</td></tr>
+              <tr><td><div class="avatarname"><span class="av">➕</span>Add sponsor</div></td><td colspan="4" style="color:var(--text-secondary)">Record a new sponsor and their UTM-tagged landing link</td></tr>
+            </table>
+          </div>
+          <p style="font-size:11.5px; color:var(--text-secondary)">Reporting is manual UTM + shared report for the pilot. A self-serve sponsor dashboard is deferred to V1.x until sponsor volume justifies it.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="hint">Switch screens above · open dispute case #4471 and resolve it · approve a license on A-03 · try a fraud hold on A-04</p>
+
+  <aside class="notes" aria-label="Design annotations">
+    <div class="note">
+      <h2>Internal, and it looks it</h2>
+      <ul>
+        <li>Violet accent (not orange/green/blue) plus a shield mark signals "internal Trust &amp; Safety tool" — visually unmistakable from any customer/vendor/hub surface, so a screenshot is instantly recognizable as an internal console, never mistaken for something a user sees.</li>
+        <li>Nav groups by admin intent: Monitor / Resolve / Programs — the console is organized around what a Trust &amp; Safety operator is trying to *do*, not around the data models.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>A-01 — triage before detail</h2>
+      <ul>
+        <li>KPI row leads with marketplace-health vitals (active users, accept rate, GMV, dispute rate), but the "Needs attention now" card is the real point — it routes an operator straight into the specific dispute/fraud/license item that's most urgent, deep-linking into the other screens.</li>
+        <li>Dispute rate is shown as a headline health metric (0.4% / 1k txns) — the success metric named in the Product Vision doc, made operationally visible.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>A-02 — the dispute console enforces FR-10.3</h2>
+      <ul>
+        <li>SLA bars turn red as the 5-business-day target approaches (case #4471 at 88%) — the resolution clock is a first-class visual, since disputes are the one place slow resolution directly erodes trust on both sides.</li>
+        <li>Evidence + a full chain-of-custody timeline sit side by side — condition photos from checkout (S-06) vs. return (S-09) are exactly the artifacts that resolve a consignment dispute fairly, and the AI Vision Verification future feature would slot in here.</li>
+        <li>Four resolution paths (rule for either party / split / request more) — and critically, the timeline explicitly states <b>"Trust Score change held until resolved"</b>, making FR-10.3 (never pre-empt a score change) visible in the UI itself.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>A-03 — the compliance backbone</h2>
+      <ul>
+        <li>License review queue is where the `requires_license` gate from vendor onboarding (V-01) actually gets a human decision — approving here is what unblocks a vendor going live.</li>
+        <li>Category suggestions are admin-approved, never self-service (Roadmap Q8) — and the taxonomy table is where `requires_license`/`regulated_by` metadata is actually set, the single source that drives gating everywhere else.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>A-04 — flags inform, humans decide</h2>
+      <ul>
+        <li>An explicit design statement, not just a policy: the console surfaces fraud signals but <b>never auto-bans</b> — the privacy note names the real stakes (a wrongly-banned low-income seller is a genuine harm). Every suspension is an explicit admin action (Security §4).</li>
+        <li>Severity-ranked so high-signal items (device-fingerprint ping-farming, repeated oversell attempts) rise above low-signal noise.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>A-06 — impact reporting that doesn't surveil</h2>
+      <ul>
+        <li>The Shelter Program view is <b>aggregate-only by design</b> (FR-12.3) — counts and totals, never an individual resident's transactions. The privacy note makes that guarantee explicit at the top, because the whole program's dignity depends on not surveilling the people it's meant to help.</li>
+        <li>"Cosigned exposure" column shows each partner's capped liability (Q4) — the shelter's risk is bounded and visible, never open-ended.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>A-07 — honest about MVP scope</h2>
+      <ul>
+        <li>Explicitly labeled manual/record-keeping for the pilot (Roadmap Q9) — the self-serve sponsor dashboard is deferred, and the screen says so rather than pretending a richer product exists.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>Handoff notes &amp; milestone</h2>
+      <ul>
+        <li>A-02 resolution writes to `disputes` (status, resolution, resolved_at) and only then triggers held Trust Score / payout changes (FR-10.2/10.3); A-03 approvals flip `license_documents.status` and `category_suggestions.status`; A-05 suspend sets `users.status`.</li>
+        <li>Least-privilege: support-agent vs. full-admin role tiers (Product Vision doc) mean not every operator sees every action — e.g., payout holds and user suspension may be gated to senior roles.</li>
+        <li><b>This is screen 53 of 53 designed across the whole app — all 77 catalogued screens' design language is now established (MVP + the V1.x screens shown for continuity).</b> Full spec: <b>docs/13-screen-design-specs.md § A-01–A-07</b>.</li>
+      </ul>
+    </div>
+  </aside>
+</div>
+
+<script>
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const toast=document.createElement('div'); toast.className='toast'; toast.id='toast'; document.body.appendChild(toast);
+  let tt; function show(msg){ toast.textContent=msg; toast.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>toast.classList.remove('show'),3400); }
+
+  const TITLES={ops:'Ops Overview — Modesto, CA', disputes:'Dispute Queue', category:'Category & License Review', fraud:'Fraud Flags', users:'User Management', shelter:'Shelter Partner Program', sponsors:'Sponsors'};
+  function goTo(id){
+    $$('.content').forEach(c=>c.classList.remove('on'));
+    $('#c-'+id).classList.add('on');
+    $$('.seg [data-go]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.go===id));
+    $$('.navitem[data-nav]').forEach(n=>n.toggleAttribute('aria-current', n.dataset.nav===id));
+    $('#topTitle').textContent = TITLES[id];
+  }
+  $$('.seg [data-go]').forEach(b=>b.addEventListener('click',()=>goTo(b.dataset.go)));
+  $$('.navitem[data-nav]').forEach(n=>n.addEventListener('click',()=>goTo(n.dataset.nav)));
+  $$('[data-jump]').forEach(b=>b.addEventListener('click',()=>goTo(b.dataset.jump)));
+
+  $$('[data-resolve]').forEach(b=>b.addEventListener('click',()=>{
+    const map={seller:'Ruled for seller — Trust Score restored, no penalty', hub:'Ruled for hub — seller charged declared value, Trust Score adjusted', split:'Split liability recorded', evidence:'Requested more evidence — case paused, SLA extended'};
+    show(map[b.dataset.resolve]);
+    $('#caseDetail').style.opacity='.5';
+  }));
+  $$('[data-lic]').forEach(b=>b.addEventListener('click',()=>{ const app=b.dataset.lic.startsWith('app'); show(app?'License approved — vendor can now go live':'License rejected — vendor notified with reason'); b.closest('div[style*="border"]').remove(); }));
+  $$('[data-fraud]').forEach(b=>b.addEventListener('click',()=>show('Accounts placed on payout hold pending review — not banned')));
+  $$('[data-suspend]').forEach(b=>b.addEventListener('click',()=>show('Suspension requires confirmation + reason — logged to audit trail')));
+</script>

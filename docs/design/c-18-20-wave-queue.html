@@ -1,0 +1,468 @@
+<title>StreetServe — C-18/19/20 Wave Down & Queue</title>
+<style>
+  :root{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --map-ground:#ECEAE4; --map-block:#E2E0D9; --map-road:#FFFFFF;
+    --border:rgba(91,94,104,.28); --shadow:0 12px 32px rgba(20,21,26,.14);
+    --motion-micro:100ms; --motion-standard:200ms; --motion-sheet:300ms;
+    --ease-in:cubic-bezier(.2,0,0,1);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-base:#0E0F12; --surface-raised:#17181C;
+      --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+      --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+      --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+      --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+      --map-ground:#101216; --map-block:#171A20; --map-road:#232833;
+      --border:rgba(156,159,168,.22); --shadow:0 12px 32px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --surface-base:#0E0F12; --surface-raised:#17181C;
+    --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+    --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+    --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+    --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+    --map-ground:#101216; --map-block:#171A20; --map-road:#232833;
+    --border:rgba(156,159,168,.22); --shadow:0 12px 32px rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"]{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --map-ground:#ECEAE4; --map-block:#E2E0D9; --map-road:#FFFFFF;
+    --border:rgba(91,94,104,.28); --shadow:0 12px 32px rgba(20,21,26,.14);
+  }
+
+  *{box-sizing:border-box; margin:0}
+  html,body{background:var(--surface-base); color:var(--text-primary);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.4}
+  button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+  :is(button,[tabindex],input):focus-visible{outline:2px solid var(--accent-secondary); outline-offset:2px; border-radius:8px}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:40px 20px 80px; display:flex; flex-direction:column; gap:28px}
+  .page-head .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:600}
+  .page-head h1{font-size:32px; font-weight:700; letter-spacing:-.02em; text-wrap:balance; margin-top:6px}
+  .page-head p{color:var(--text-secondary); max-width:64ch; margin-top:8px; font-size:15px}
+
+  .studio{display:grid; grid-template-columns:minmax(0,460px) minmax(280px,1fr); gap:36px; align-items:start}
+  @media (max-width:900px){ .studio{grid-template-columns:1fr} }
+  .stage{display:flex; flex-direction:column; gap:14px; align-items:center}
+  .controls{display:flex; flex-direction:column; gap:8px; align-items:center}
+  .seg{display:flex; gap:4px; background:var(--surface-raised); border:1px solid var(--border); border-radius:999px; padding:4px; flex-wrap:wrap; justify-content:center}
+  .seg button{padding:7px 12px; border-radius:999px; font-size:12.5px; font-weight:600; color:var(--text-secondary);
+    transition:background var(--motion-micro) var(--ease-in), color var(--motion-micro) var(--ease-in)}
+  .seg button[aria-pressed="true"]{background:var(--accent-secondary); color:#fff}
+  .sim{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; min-height:34px}
+  .sim button{font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:999px;
+    border:1.5px dashed var(--text-secondary); color:var(--text-secondary)}
+  .sim button:hover{color:var(--text-primary); border-color:var(--text-primary)}
+  .sim .lbl{align-self:center; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-secondary)}
+  .hint{font-size:13px; color:var(--text-secondary)}
+
+  .phone{width:min(390px,100%); height:800px; border-radius:44px; background:var(--surface-base);
+    border:1px solid var(--border); box-shadow:var(--shadow); overflow:hidden; position:relative;
+    display:flex; flex-direction:column}
+  .statusbar{height:44px; flex:none; display:flex; align-items:center; justify-content:space-between;
+    padding:0 24px; font-size:14px; font-weight:600; position:relative; z-index:6}
+  .notch{position:absolute; left:50%; top:10px; transform:translateX(-50%); width:110px; height:26px;
+    border-radius:999px; background:var(--text-primary); opacity:.92}
+
+  .screen{position:absolute; inset:44px 0 0; display:none; flex-direction:column}
+  .screen.on{display:flex}
+
+  /* shared bits */
+  .mapbg{position:absolute; inset:0; background:var(--map-ground)}
+  .mapbg svg{width:100%; height:100%}
+  .navhead{position:relative; z-index:4; display:flex; align-items:center; gap:10px; padding:8px 16px}
+  .navhead .back{width:38px; height:38px; border-radius:50%; background:var(--surface-raised);
+    border:1px solid var(--border); display:grid; place-items:center}
+  .navhead b{font-size:16px; letter-spacing:-.01em}
+  .btn{height:48px; padding:0 20px; border-radius:8px; font-size:15px; font-weight:700;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px; transition:filter var(--motion-micro) var(--ease-in)}
+  .btn:active{filter:brightness(.92)}
+  .btn.primary{background:var(--accent-primary); color:#fff}
+  .btn.secondary{border:1.5px solid var(--text-secondary); color:var(--text-primary)}
+  .btn.ghost-danger{color:var(--status-danger); font-weight:600; height:auto; padding:10px}
+  .card{border:1px solid var(--border); border-radius:16px; padding:14px 16px; background:var(--surface-raised)}
+  .chip{display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; padding:3px 9px; border-radius:999px}
+  .chip.discount{color:var(--status-discount); background:color-mix(in srgb,var(--status-discount) 13%,transparent)}
+  .chip.green{color:var(--status-driving); background:color-mix(in srgb,var(--status-driving) 13%,transparent)}
+  .banner{display:flex; gap:10px; align-items:flex-start; border-radius:12px; padding:11px 14px; font-size:13px; font-weight:600;
+    border-left:3px solid var(--status-warning); background:color-mix(in srgb,var(--status-warning) 11%,var(--surface-raised))}
+  .banner.ok{border-left-color:var(--status-driving); background:color-mix(in srgb,var(--status-driving) 10%,var(--surface-raised))}
+  .face{width:48px; height:48px; border-radius:50%; background:var(--surface-base); display:grid; place-items:center;
+    font-size:22px; border:3px solid var(--status-driving); flex:none}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* C-18 confirm */
+  #s-confirm .sheet18{position:relative; z-index:4; margin-top:auto; background:var(--surface-raised);
+    border-radius:16px 16px 0 0; box-shadow:0 -8px 30px rgba(0,0,0,.3); padding:10px 20px 28px;
+    display:flex; flex-direction:column; gap:14px}
+  .handle{width:32px; height:4px; border-radius:999px; background:var(--text-secondary); opacity:.4; margin:0 auto}
+  .sheet18 h3{font-size:19px; font-weight:700; letter-spacing:-.01em}
+  .locrow{display:flex; gap:12px; align-items:center}
+  .locrow .k{font-size:12px; color:var(--text-secondary); font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+  .locrow b{font-size:14px}
+  .locrow button{margin-left:auto; font-size:13px; font-weight:600; color:var(--accent-secondary)}
+  .notefield{border:1px solid var(--border); border-radius:8px; min-height:44px; padding:12px 14px;
+    font-size:14px; color:var(--text-secondary); background:var(--surface-base)}
+  .promise{display:flex; flex-direction:column; gap:8px; font-size:13px; color:var(--text-secondary)}
+  .promise .li{display:flex; gap:8px; align-items:center}
+  .promise .li b{color:var(--text-primary)}
+  .pin18{position:absolute; z-index:3; transform:translate(-50%,-100%); display:flex; flex-direction:column; align-items:center; gap:3px}
+  .pin18 .face{width:44px; height:44px; font-size:20px}
+  .pin18 .tag{font-size:10.5px; font-weight:700; background:var(--surface-raised); border:1px solid var(--border);
+    border-radius:999px; padding:2px 8px}
+  .youdot{position:absolute; z-index:3; width:16px; height:16px; border-radius:50%; background:var(--accent-secondary);
+    border:3px solid var(--surface-raised); box-shadow:0 0 0 8px color-mix(in srgb,var(--accent-secondary) 18%,transparent)}
+
+  /* C-19 waiting */
+  #s-waiting{align-items:center; justify-content:center; gap:22px; padding:0 32px; text-align:center}
+  .pulse{width:110px; height:110px; border-radius:50%; display:grid; place-items:center; font-size:44px;
+    background:color-mix(in srgb,var(--accent-primary) 12%,var(--surface-raised)); position:relative}
+  .pulse::before,.pulse::after{content:""; position:absolute; inset:0; border-radius:50%;
+    border:2px solid var(--accent-primary); animation:ring 2.2s var(--ease-in) infinite}
+  .pulse::after{animation-delay:1.1s}
+  @keyframes ring{from{transform:scale(1); opacity:.7}to{transform:scale(1.7); opacity:0}}
+  #s-waiting h3{font-size:21px; font-weight:700; letter-spacing:-.015em}
+  #s-waiting .sub{font-size:14px; color:var(--text-secondary); max-width:30ch}
+  .count{font-size:40px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+  .count small{display:block; font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--text-secondary); margin-top:2px}
+
+  /* C-19 accepted */
+  #s-accepted .route{stroke:var(--accent-secondary); stroke-width:4; fill:none; stroke-dasharray:10 8; animation:dash 1.2s linear infinite}
+  @keyframes dash{to{stroke-dashoffset:-18}}
+  .accept-card{position:relative; z-index:4; margin-top:auto; background:var(--surface-raised);
+    border-radius:16px 16px 0 0; box-shadow:0 -8px 30px rgba(0,0,0,.3); padding:16px 20px 28px;
+    display:flex; flex-direction:column; gap:14px}
+  .acc-row{display:flex; gap:12px; align-items:center}
+  .acc-row h3{font-size:17px; font-weight:700}
+  .acc-row .eta{margin-left:auto; text-align:right}
+  .acc-row .eta b{font-size:24px; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+  .acc-row .eta small{display:block; font-size:11px; color:var(--text-secondary); font-weight:600}
+  .acc-actions{display:flex; gap:10px}
+  .acc-actions .btn{flex:1; height:44px; font-size:14px}
+
+  /* C-19 declined / expired */
+  #s-declined,#s-expired{padding:24px; gap:16px; justify-content:center}
+  .sadcard{display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px; padding:28px 20px}
+  .sadcard .glyph{font-size:40px}
+  .sadcard h3{font-size:19px; font-weight:700}
+  .sadcard p{font-size:13.5px; color:var(--text-secondary); max-width:32ch}
+  .altcard{display:flex; gap:12px; align-items:center}
+  .altcard b{display:block; font-size:14.5px}
+  .altcard small{font-size:12.5px; color:var(--text-secondary)}
+  .altcard .btn{margin-left:auto; height:40px; font-size:13px; padding:0 16px}
+
+  /* C-20 queue */
+  #s-queue,#s-turn{padding:12px 20px 28px; gap:14px}
+  .qpos{display:flex; flex-direction:column; align-items:center; gap:6px; padding:22px 16px}
+  .qpos .big{font-size:64px; font-weight:800; letter-spacing:-.03em; font-variant-numeric:tabular-nums; line-height:1}
+  .qpos .big small{font-size:20px; font-weight:700; color:var(--text-secondary)}
+  .qpos .word{font-size:14px; color:var(--text-secondary); font-weight:600}
+  .qdots{display:flex; gap:8px; margin-top:10px; align-items:center}
+  .qd{width:14px; height:14px; border-radius:50%; background:var(--text-secondary); opacity:.35}
+  .qd.served{opacity:.15}
+  .qd.you{width:20px; height:20px; background:var(--status-discount); opacity:1;
+    box-shadow:0 0 0 5px color-mix(in srgb,var(--status-discount) 22%,transparent)}
+  .qmeta{display:flex; justify-content:space-between; align-items:center; font-size:13.5px}
+  .qmeta .k{color:var(--text-secondary)}
+  .hold{font-size:12.5px; color:var(--text-secondary); text-align:center}
+  #s-turn{justify-content:center; text-align:center; align-items:center; gap:18px}
+  .bigcheck{width:96px; height:96px; border-radius:50%; display:grid; place-items:center;
+    background:color-mix(in srgb,var(--status-driving) 14%,var(--surface-raised)); color:var(--status-driving)}
+  #s-turn h3{font-size:24px; font-weight:800; letter-spacing:-.02em}
+  #s-turn p{font-size:14px; color:var(--text-secondary); max-width:30ch}
+
+  .toast{position:absolute; left:50%; bottom:40px; transform:translateX(-50%) translateY(8px); z-index:9;
+    background:var(--surface-raised); border:1px solid var(--border); box-shadow:var(--shadow);
+    border-radius:12px; padding:10px 16px; font-size:13px; font-weight:600; opacity:0;
+    transition:opacity var(--motion-standard) var(--ease-in), transform var(--motion-standard) var(--ease-in);
+    pointer-events:none; white-space:nowrap; max-width:90%}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  .notes{display:flex; flex-direction:column; gap:14px}
+  .note{background:var(--surface-raised); border:1px solid var(--border); border-radius:16px; padding:18px 20px}
+  .note h2{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:700}
+  .note ul{margin:10px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px}
+  .note li{font-size:13.5px; display:flex; gap:8px}
+  .note li b{font-weight:650}
+  .note li::before{content:""; flex:none; width:6px; height:6px; border-radius:50%; background:var(--accent-secondary); margin-top:6px}
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition-duration:1ms!important}
+  }
+</style>
+
+<div class="wrap">
+  <header class="page-head">
+    <div class="eyebrow">StreetServe · Design phase · Screens 3–5 of 77</div>
+    <h1>C-18 / C-19 / C-20 — Wave Down &amp; Queue Journey</h1>
+    <p>One continuous journey from the Wave Down button on C-14: confirm the request, wait for the vendor (with every branch — accept, decline, expire), then ride the queue to "you're up." Walk it in order inside the phone, or jump anywhere with the controls.</p>
+  </header>
+
+  <div class="studio">
+    <section class="stage" aria-label="Screen mockup">
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Jump to state">
+          <button aria-pressed="true"  data-go="confirm">C-18 Confirm</button>
+          <button aria-pressed="false" data-go="waiting">C-19 Waiting</button>
+          <button aria-pressed="false" data-go="accepted">C-19 Accepted</button>
+          <button aria-pressed="false" data-go="queue">C-20 In Line</button>
+          <button aria-pressed="false" data-go="turn">C-20 Your Turn</button>
+        </div>
+        <div class="sim" id="sim"></div>
+      </div>
+
+      <div class="phone" id="phone">
+        <div class="statusbar"><span>9:41</span><div class="notch"></div><span>▮▮▮ ▉</span></div>
+
+        <!-- C-18 CONFIRM -->
+        <div class="screen on" id="s-confirm">
+          <div class="mapbg" aria-hidden="true">
+            <svg viewBox="0 0 390 760" preserveAspectRatio="xMidYMid slice">
+              <rect width="390" height="760" fill="var(--map-ground)"/>
+              <g stroke="var(--map-road)" stroke-width="10" fill="none"><path d="M60 0 V760"/><path d="M195 0 V760"/><path d="M0 180 H390"/><path d="M0 360 H390"/></g>
+              <g fill="var(--map-block)"><rect x="72" y="192" width="111" height="60" rx="6"/><rect x="207" y="192" width="140" height="60" rx="6"/><rect x="72" y="272" width="111" height="60" rx="6"/></g>
+            </svg>
+          </div>
+          <div class="navhead">
+            <button class="back" aria-label="Back to profile"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button>
+            <b>Wave down Taco Loco</b>
+          </div>
+          <span class="pin18" style="left:28%; top:24%"><span class="face">🌮</span><span class="tag num">2 min away</span></span>
+          <span class="youdot" style="left:52%; top:36%"></span>
+          <div class="sheet18">
+            <div class="handle"></div>
+            <h3>Where should they find you?</h3>
+            <div class="locrow">
+              <div><div class="k">Your spot</div><b>Main St &amp; 5th Ave — NE corner</b></div>
+              <button>Adjust</button>
+            </div>
+            <div class="notefield">Anything they should know? (optional)</div>
+            <div class="promise">
+              <div class="li">⏱️ <span>Vendors respond within <b>5 minutes</b> — or your wave expires, no charge.</span></div>
+              <div class="li">🏷️ <span>If they accept, you join the line as <b>4th — 15% locked in</b>.</span></div>
+            </div>
+            <button class="btn primary" id="sendWave">Send Wave</button>
+          </div>
+        </div>
+
+        <!-- C-19 WAITING -->
+        <div class="screen" id="s-waiting">
+          <div class="pulse">🌮</div>
+          <h3>Waving down Taco Loco…</h3>
+          <p class="sub">They see your spot and your note. Hang tight.</p>
+          <div class="count"><span id="clock" class="num">4:58</span><small>before your wave expires</small></div>
+          <button class="btn ghost-danger" id="cancelWave">Cancel wave</button>
+        </div>
+
+        <!-- C-19 ACCEPTED -->
+        <div class="screen" id="s-accepted">
+          <div class="mapbg" aria-hidden="true">
+            <svg viewBox="0 0 390 760" preserveAspectRatio="xMidYMid slice">
+              <rect width="390" height="760" fill="var(--map-ground)"/>
+              <g stroke="var(--map-road)" stroke-width="10" fill="none"><path d="M60 0 V760"/><path d="M195 0 V760"/><path d="M0 180 H390"/><path d="M0 360 H390"/></g>
+              <g fill="var(--map-block)"><rect x="72" y="192" width="111" height="60" rx="6"/><rect x="207" y="192" width="140" height="60" rx="6"/></g>
+              <path class="route" d="M110 170 C 150 210, 170 240, 200 268"/>
+            </svg>
+          </div>
+          <div class="navhead"><span class="banner ok" style="flex:1">✅ Taco Loco accepted — they're heading your way</span></div>
+          <span class="pin18" style="left:28%; top:24%"><span class="face">🌮</span></span>
+          <span class="youdot" style="left:52%; top:38%"></span>
+          <div class="accept-card">
+            <div class="acc-row">
+              <span class="face">🌮</span>
+              <div><h3>Taco Loco</h3><span class="chip discount">You're 4th · 15% locked</span></div>
+              <div class="eta"><b class="num">7 min</b><small>arriving ~9:48 AM</small></div>
+            </div>
+            <div class="acc-actions">
+              <button class="btn secondary">Message</button>
+              <button class="btn secondary" id="toQueue">View line</button>
+            </div>
+            <button class="btn ghost-danger" style="align-self:center">Cancel wave</button>
+          </div>
+        </div>
+
+        <!-- C-19 DECLINED -->
+        <div class="screen" id="s-declined">
+          <div class="card sadcard">
+            <span class="glyph">😕</span>
+            <h3>Taco Loco can't make it</h3>
+            <p>"Slammed at our current stop — sorry!" Your card was never charged.</p>
+          </div>
+          <div class="card altcard">
+            <span class="face" style="border-color:var(--status-driving)">🍦</span>
+            <div><b>Wonder Ice</b><small>★ 4.9 · <span class="num">5 min away</span> · Driving</small></div>
+            <button class="btn primary" id="waveAlt">Wave</button>
+          </div>
+          <button class="btn secondary" id="backMap1">Back to map</button>
+        </div>
+
+        <!-- C-19 EXPIRED -->
+        <div class="screen" id="s-expired">
+          <div class="card sadcard">
+            <span class="glyph">⏳</span>
+            <h3>No answer this time</h3>
+            <p>Taco Loco didn't respond within 5 minutes, so your wave expired. Nothing was charged.</p>
+          </div>
+          <div class="card altcard">
+            <span class="face" style="border-color:var(--status-driving)">🍦</span>
+            <div><b>Wonder Ice</b><small>★ 4.9 · <span class="num">5 min away</span> · Driving</small></div>
+            <button class="btn primary" id="waveAlt2">Wave</button>
+          </div>
+          <button class="btn secondary" id="backMap2">Back to map</button>
+        </div>
+
+        <!-- C-20 QUEUE -->
+        <div class="screen" id="s-queue">
+          <div class="navhead" style="padding-left:0">
+            <button class="back" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button>
+            <b>Taco Loco — your place in line</b>
+          </div>
+          <div class="banner" id="popupBanner" style="display:none">⚠️ <span>Taco Loco switched to <b>Pop-Up</b> at their current stop — expect ~10 extra minutes. Your spot and discount are safe.</span></div>
+          <div class="card qpos">
+            <div class="big num" id="posBig">4<small>th</small></div>
+            <div class="word" id="posWord"><span class="num">3</span> ahead of you</div>
+            <div class="qdots" id="qdots"></div>
+          </div>
+          <div class="card" style="display:flex; flex-direction:column; gap:10px">
+            <div class="qmeta"><span class="k">Your discount</span><span class="chip discount">15% — locked at join</span></div>
+            <div class="qmeta"><span class="k">Vendor arrives</span><b class="num" id="qEta">~7 min</b></div>
+            <div class="qmeta"><span class="k">Now serving</span><b>Order #<span class="num" id="serving">12</span></b></div>
+          </div>
+          <div class="hold">Stepping away? Your spot holds for <b class="num">15 min</b> if you leave the area.</div>
+          <button class="btn ghost-danger" id="leaveLine" style="align-self:center">Leave the line</button>
+        </div>
+
+        <!-- C-20 YOUR TURN -->
+        <div class="screen" id="s-turn">
+          <div class="bigcheck"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="m4.5 12.5 5 5 10-11"/></svg></div>
+          <h3>You're up! 🌮</h3>
+          <p>Head to the window — your <b>15% discount applies automatically</b> at checkout.</p>
+          <span class="chip green">Saved by being 4th in line</span>
+          <button class="btn primary" style="width:100%" id="doneBtn">Got it</button>
+        </div>
+
+        <div class="toast" id="toast"></div>
+      </div>
+
+      <p class="hint">Walk it inside the phone, or jump/simulate with the controls above</p>
+    </section>
+
+    <aside class="notes" aria-label="Design annotations">
+      <div class="note">
+        <h2>Journey shape</h2>
+        <ul>
+          <li><b>C-18 → C-19 → C-20 is one commitment escalator</b>: confirm costs nothing, waiting is cancellable, and the queue is the only state with something to lose (your locked tier) — so the leave action gets progressively quieter (ghost-danger text, never a red button).</li>
+          <li>Every screen answers the same three questions: where's the vendor, what do I get, what can I do right now.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>SLA &amp; trust language (FR-2.2)</h2>
+        <ul>
+          <li>The 5-minute response promise is stated <b>before</b> sending, counted down <b>during</b> (tabular numerals, no anxiety-red until expiry), and honored <b>after</b> — decline and expiry both say "nothing was charged."</li>
+          <li>Failure states always come with a next move: the closest alternative vendor, one tap to re-wave (Flow 2 error state).</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>Discount locking (FR-3.3)</h2>
+        <ul>
+          <li>"15% locked in" appears at acceptance and never changes — the violet discount chip is the through-line across accepted → queue → your-turn.</li>
+          <li>The queue screen restates it as "locked at join" so cancellations ahead never make the user doubt their tier.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>Queue mechanics</h2>
+        <ul>
+          <li>Position rendered giant + dot rail: served dots fade, your dot is the violet one — glanceable from arm's length outdoors.</li>
+          <li><b>Pop-Up delay</b> arrives as a §2.6d warning banner (simulate it above): explains the delay AND reassures spot + discount are safe in the same breath (FR-4.1).</li>
+          <li>Hold-my-spot (15 min geofence grace, FR-3.4) stated passively — no action needed to keep it.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>Handoff notes</h2>
+        <ul>
+          <li>Countdown, ETA and positions all from server events (`/queue/:id` socket) — client never computes position locally (FR-3.2).</li>
+          <li>Accepted-state route line is decorative dashed accent; real routing ETA comes from the vendor's nav, not client-side estimation.</li>
+          <li>"You're up" fires a push + haptic; discount applies server-side at transaction (C-22), never as a code the user must show.</li>
+          <li>Full spec: <b>docs/13-screen-design-specs.md § C-18–C-20</b>.</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const toast=$('#toast'); let tt, clockTimer, secs=298, pos=4;
+
+  const SIMS={
+    confirm:[],
+    waiting:[['Vendor accepts','accepted'],['Vendor declines','declined'],['Wave expires','expired']],
+    accepted:[['Vendor arrives → join line','queue']],
+    declined:[], expired:[],
+    queue:[['Line advances', 'ADVANCE'],['Pop-Up delay','POPUP']],
+    turn:[]
+  };
+
+  function go(id){
+    $$('.screen').forEach(s=>s.classList.remove('on'));
+    $('#s-'+id).classList.add('on');
+    $$('.seg [data-go]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.go===id));
+    const sim=$('#sim'); sim.innerHTML='';
+    if(SIMS[id].length){
+      const l=document.createElement('span'); l.className='lbl'; l.textContent='Simulate:'; sim.appendChild(l);
+      SIMS[id].forEach(([label,target])=>{
+        const b=document.createElement('button'); b.textContent=label;
+        b.addEventListener('click',()=>{
+          if(target==='ADVANCE') return advance();
+          if(target==='POPUP'){ $('#popupBanner').style.display='flex'; show('Queue notified of Pop-Up delay'); return; }
+          go(target);
+        });
+        sim.appendChild(b);
+      });
+    }
+    clearInterval(clockTimer);
+    if(id==='waiting'){ secs=298; tick();
+      clockTimer=setInterval(()=>{ secs--; if(secs<=0){ go('expired'); } else tick(); },1000); }
+    if(id==='queue') renderQueue();
+  }
+  function tick(){ $('#clock').textContent=`${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`; }
+
+  function renderQueue(){
+    const ord=['1st','2nd','3rd','4th'];
+    $('#posBig').innerHTML = pos + '<small>'+ord[pos-1].slice(-2)+'</small>';
+    $('#posWord').innerHTML = pos===1 ? 'you’re next' : `<span class="num">${pos-1}</span> ahead of you`;
+    const dots=$('#qdots'); dots.innerHTML='';
+    for(let i=0;i<4-pos;i++){ const d=document.createElement('span'); d.className='qd served'; dots.appendChild(d); }
+    for(let i=0;i<pos-1;i++){ const d=document.createElement('span'); d.className='qd'; dots.appendChild(d); }
+    const you=document.createElement('span'); you.className='qd you'; dots.appendChild(you);
+    $('#serving').textContent = 12 + (4-pos);
+  }
+  function advance(){ if(pos>1){ pos--; renderQueue(); show(pos===1?'You’re next!':'Line moved — now '+pos+' in line'); if(pos===1) setTimeout(()=>go('turn'),1200); } }
+
+  $$('.seg [data-go]').forEach(b=>b.addEventListener('click',()=>{ pos=4; $('#popupBanner').style.display='none'; go(b.dataset.go); }));
+  $('#sendWave').addEventListener('click',()=>go('waiting'));
+  $('#cancelWave').addEventListener('click',()=>{ show('Wave cancelled — nothing charged'); go('confirm'); });
+  $('#toQueue').addEventListener('click',()=>go('queue'));
+  $('#waveAlt').addEventListener('click',()=>{ show('Waving Wonder Ice…'); go('waiting'); });
+  $('#waveAlt2').addEventListener('click',()=>{ show('Waving Wonder Ice…'); go('waiting'); });
+  $('#backMap1').addEventListener('click',()=>go('confirm'));
+  $('#backMap2').addEventListener('click',()=>go('confirm'));
+  $('#leaveLine').addEventListener('click',()=>{ show('Left the line — your 15% tier was released'); pos=4; go('confirm'); });
+  $('#doneBtn').addEventListener('click',()=>{ pos=4; go('confirm'); });
+
+  function show(msg){ toast.textContent=msg; toast.classList.add('show');
+    clearTimeout(tt); tt=setTimeout(()=>toast.classList.remove('show'),4000); }
+
+  go('confirm');
+</script>

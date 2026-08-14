@@ -1,0 +1,438 @@
+<title>StreetServe — Vendor Dashboard Part 1 (V-01/02/04/05/06)</title>
+<style>
+  :root{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF; --surface-sunken:#F1F0ED;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --border:rgba(91,94,104,.24); --shadow:0 12px 32px rgba(20,21,26,.12);
+    --motion-micro:100ms; --motion-standard:200ms; --ease-in:cubic-bezier(.2,0,0,1);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-base:#0E0F12; --surface-raised:#17181C; --surface-sunken:#0A0B0D;
+      --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+      --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+      --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+      --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+      --border:rgba(156,159,168,.18); --shadow:0 12px 32px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --surface-base:#0E0F12; --surface-raised:#17181C; --surface-sunken:#0A0B0D;
+    --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+    --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+    --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+    --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+    --border:rgba(156,159,168,.18); --shadow:0 12px 32px rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"]{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF; --surface-sunken:#F1F0ED;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --border:rgba(91,94,104,.24); --shadow:0 12px 32px rgba(20,21,26,.12);
+  }
+
+  *{box-sizing:border-box; margin:0}
+  html,body{background:var(--surface-base); color:var(--text-primary);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.4}
+  button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+  :is(button,[tabindex]):focus-visible{outline:2px solid var(--accent-secondary); outline-offset:2px; border-radius:8px}
+
+  .wrap{max-width:1240px; margin:0 auto; padding:40px 20px 80px; display:flex; flex-direction:column; gap:24px}
+  .page-head .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:600}
+  .page-head h1{font-size:32px; font-weight:700; letter-spacing:-.02em; text-wrap:balance; margin-top:6px}
+  .page-head p{color:var(--text-secondary); max-width:70ch; margin-top:8px; font-size:15px}
+
+  .controls{display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between}
+  .seg{display:flex; gap:4px; background:var(--surface-raised); border:1px solid var(--border); border-radius:999px; padding:4px; flex-wrap:wrap}
+  .seg button{padding:7px 12px; border-radius:999px; font-size:12.5px; font-weight:600; color:var(--text-secondary);
+    transition:background var(--motion-micro) var(--ease-in), color var(--motion-micro) var(--ease-in)}
+  .seg button[aria-pressed="true"]{background:var(--accent-secondary); color:#fff}
+  .sim{display:flex; gap:8px; flex-wrap:wrap}
+  .sim button{font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:999px;
+    border:1.5px dashed var(--text-secondary); color:var(--text-secondary)}
+  .sim button:hover{color:var(--text-primary); border-color:var(--text-primary)}
+  .sim .lbl{align-self:center; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-secondary)}
+
+  /* browser chrome */
+  .browser{border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:var(--shadow); background:var(--surface-base);
+    margin:0 auto; transition:max-width .3s var(--ease-in); max-width:1180px}
+  .browser.tablet{max-width:820px}
+  .browser.mobile{max-width:420px}
+  .chrome{height:38px; background:var(--surface-sunken); display:flex; align-items:center; gap:8px; padding:0 14px; border-bottom:1px solid var(--border)}
+  .chrome i{width:10px; height:10px; border-radius:50%; background:var(--border)}
+  .chrome .url{margin-left:10px; font-size:11px; color:var(--text-secondary); background:var(--surface-raised); border-radius:999px; padding:3px 12px}
+
+  .dash{display:flex; height:640px}
+  .sidebar{width:220px; flex:none; border-right:1px solid var(--border); background:var(--surface-raised); display:flex; flex-direction:column; transition:width .25s var(--ease-in)}
+  .browser.tablet .sidebar{width:68px}
+  .browser.mobile .sidebar{width:0; overflow:hidden; border:0}
+  .sidebar .brand{display:flex; align-items:center; gap:10px; padding:16px 16px 14px; font-weight:800; font-size:15px; border-bottom:1px solid var(--border)}
+  .sidebar .brand .logo{width:30px; height:30px; border-radius:9px; background:var(--accent-primary); flex:none; display:grid; place-items:center; color:#fff; font-size:14px}
+  .browser.tablet .brand span.label{display:none}
+  .navitem{display:flex; align-items:center; gap:12px; padding:11px 16px; font-size:13.5px; font-weight:600; color:var(--text-secondary); border-left:3px solid transparent; text-align:left; white-space:nowrap}
+  .navitem svg{width:18px; height:18px; flex:none}
+  .navitem[aria-current="page"]{color:var(--accent-secondary); border-left-color:var(--accent-secondary); background:color-mix(in srgb,var(--accent-secondary) 6%,transparent)}
+  .browser.tablet .navitem span.label{display:none}
+  .browser.tablet .navitem{justify-content:center; padding:12px 0}
+  .navgroup-label{font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:var(--text-secondary); padding:14px 16px 4px}
+  .browser.tablet .navgroup-label{display:none}
+
+  .mainarea{flex:1; display:flex; flex-direction:column; min-width:0}
+  .topbar{height:56px; flex:none; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; padding:0 20px}
+  .hamburger{display:none; width:34px; height:34px; border-radius:8px; border:1px solid var(--border); align-items:center; justify-content:center}
+  .browser.mobile .hamburger{display:flex}
+  .topbar h2{font-size:15px; font-weight:700}
+  .topbar .roleSwitch{margin-left:auto; display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:var(--text-secondary); border:1px solid var(--border); border-radius:999px; padding:6px 12px}
+  .browser.mobile .roleSwitch span.label{display:none}
+
+  .content{flex:1; overflow-y:auto; padding:20px; display:none; flex-direction:column; gap:16px}
+  .content.on{display:flex}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
+  .browser.tablet .grid3, .browser.mobile .grid3{grid-template-columns:1fr}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  .browser.mobile .grid2{grid-template-columns:1fr}
+
+  .card{border:1px solid var(--border); border-radius:14px; padding:16px; background:var(--surface-raised)}
+  .num{font-variant-numeric:tabular-nums}
+  .kpi small{font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--text-secondary); display:block; margin-bottom:6px}
+  .kpi b{font-size:26px; font-weight:800; letter-spacing:-.01em}
+  .kpi .delta{font-size:12px; font-weight:600; color:var(--status-driving); margin-top:4px; display:block}
+
+  .btn{height:38px; padding:0 16px; border-radius:8px; font-size:13.5px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; gap:7px}
+  .btn.primary{background:var(--accent-primary); color:#fff}
+  .btn.secondary{border:1.5px solid var(--text-secondary); color:var(--text-primary)}
+  .btn.small{height:32px; font-size:12.5px; padding:0 12px}
+  .chip{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:999px}
+  .chip .dot{width:7px; height:7px; border-radius:50%}
+  .chip.driving{color:var(--status-driving); background:color-mix(in srgb,var(--status-driving) 13%,transparent)} .chip.driving .dot{background:var(--status-driving)}
+  .chip.parked{color:var(--status-parked); background:color-mix(in srgb,var(--status-parked) 13%,transparent)} .chip.parked .dot{background:var(--status-parked)}
+  .chip.away{color:var(--status-away); background:color-mix(in srgb,var(--status-away) 13%,transparent)} .chip.away .dot{background:var(--status-away)}
+  .chip.warn{color:var(--status-warning); background:color-mix(in srgb,var(--status-warning) 13%,transparent)}
+  .chip.discount{color:var(--status-discount); background:color-mix(in srgb,var(--status-discount) 13%,transparent)}
+
+  /* V-02 live status */
+  .statustoggle{display:flex; gap:8px}
+  .stbtn{flex:1; border:1.5px solid var(--border); border-radius:12px; padding:14px 8px; text-align:center; font-size:13px; font-weight:700; color:var(--text-secondary); display:flex; flex-direction:column; gap:4px; align-items:center}
+  .stbtn .ic{font-size:20px}
+  .stbtn[aria-pressed="true"][data-st="driving"]{border-color:var(--status-driving); color:var(--status-driving); background:color-mix(in srgb,var(--status-driving) 8%,transparent)}
+  .stbtn[aria-pressed="true"][data-st="parked"]{border-color:var(--status-parked); color:var(--status-parked); background:color-mix(in srgb,var(--status-parked) 8%,transparent)}
+  .stbtn[aria-pressed="true"][data-st="away"]{border-color:var(--status-away); color:var(--status-away); background:color-mix(in srgb,var(--status-away) 8%,transparent)}
+  .popuprow{display:flex; align-items:center; justify-content:space-between; gap:10px}
+  .switch{width:44px; height:26px; border-radius:999px; background:var(--border); position:relative; flex:none}
+  .switch::after{content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:var(--surface-raised); transition:transform .2s var(--ease-in); box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .switch[aria-checked="true"]{background:var(--status-warning)}
+  .switch[aria-checked="true"]::after{transform:translateX(18px)}
+
+  /* V-04 queue table */
+  table{width:100%; border-collapse:collapse; font-size:13px}
+  th{text-align:left; font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--text-secondary); padding:8px 10px; border-bottom:1px solid var(--border)}
+  td{padding:10px; border-bottom:1px solid var(--border); vertical-align:middle}
+  tr:last-child td{border-bottom:0}
+  .avatarname{display:flex; align-items:center; gap:8px}
+  .av{width:28px; height:28px; border-radius:50%; background:var(--surface-sunken); display:grid; place-items:center; font-size:13px}
+
+  /* V-05 order kanban */
+  .kanban{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
+  .browser.mobile .kanban{grid-template-columns:1fr}
+  .kancol{display:flex; flex-direction:column; gap:8px}
+  .kancol h4{font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary); display:flex; justify-content:space-between}
+  .ordercard{border:1px solid var(--border); border-radius:10px; padding:10px 12px; background:var(--surface-raised); font-size:12.5px; cursor:grab}
+  .ordercard b{display:block; font-size:13px}
+  .ordercard small{color:var(--text-secondary)}
+  .ordercard .actrow{display:flex; gap:6px; margin-top:8px}
+
+  /* V-06 menu manager */
+  .menurow{display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border)}
+  .menurow:last-child{border-bottom:0}
+  .menurow .thumb{width:38px; height:38px; border-radius:8px; background:color-mix(in srgb,var(--accent-primary) 12%,var(--surface-sunken)); display:grid; place-items:center; font-size:17px; flex:none}
+  .menurow b{font-size:13.5px; display:block}
+  .menurow small{font-size:11.5px; color:var(--text-secondary)}
+  .starbtn{margin-left:auto; font-size:11.5px; font-weight:700; padding:5px 10px; border-radius:999px; border:1.5px solid var(--border); color:var(--text-secondary)}
+  .starbtn[aria-pressed="true"]{border-color:var(--status-warning); color:var(--status-warning); background:color-mix(in srgb,var(--status-warning) 10%,transparent)}
+  .smallswitch{width:34px; height:20px; border-radius:999px; background:var(--border); position:relative; flex:none}
+  .smallswitch::after{content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:var(--surface-raised); transition:transform .2s var(--ease-in)}
+  .smallswitch[aria-checked="true"]{background:var(--status-driving)}
+  .smallswitch[aria-checked="true"]::after{transform:translateX(14px)}
+
+  /* V-01 wizard */
+  .wizsteps{display:flex; gap:8px; margin-bottom:4px}
+  .wizsteps .s{flex:1; height:4px; border-radius:999px; background:var(--border)}
+  .wizsteps .s.done{background:var(--status-driving)}
+  .wizsteps .s.now{background:var(--accent-secondary)}
+  .field{display:flex; flex-direction:column; gap:5px}
+  .field label{font-size:12px; font-weight:700; color:var(--text-secondary)}
+  .field input,.field select{height:38px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface-base); padding:0 12px; font-size:13.5px; color:var(--text-primary)}
+  .licensewarn{display:flex; gap:8px; align-items:flex-start; font-size:12.5px; background:color-mix(in srgb,var(--status-warning) 10%,var(--surface-raised)); border:1px solid color-mix(in srgb,var(--status-warning) 35%,var(--border)); border-radius:10px; padding:10px 12px}
+
+  .toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(8px); z-index:20;
+    background:var(--surface-raised); border:1px solid var(--border); box-shadow:var(--shadow);
+    border-radius:12px; padding:10px 16px; font-size:13px; font-weight:600; opacity:0;
+    transition:opacity .2s var(--ease-in), transform .2s var(--ease-in); pointer-events:none; white-space:nowrap}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  .notes{display:flex; flex-direction:column; gap:14px; max-width:1180px; margin:0 auto; width:100%}
+  .note{background:var(--surface-raised); border:1px solid var(--border); border-radius:16px; padding:18px 20px}
+  .note h2{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:700}
+  .note ul{margin:10px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px}
+  .note li{font-size:13.5px; display:flex; gap:8px}
+  .note li b{font-weight:650}
+  .note li::before{content:""; flex:none; width:6px; height:6px; border-radius:50%; background:var(--accent-secondary); margin-top:6px}
+  .hint{font-size:13px; color:var(--text-secondary); text-align:center}
+
+  @media (prefers-reduced-motion:reduce){ *,*::before,*::after{transition-duration:1ms!important} }
+</style>
+
+<div class="wrap">
+  <header class="page-head">
+    <div class="eyebrow">StreetServe · Design phase · Screens 29–33 of 77 · Vendor dashboard, part 1 of 2</div>
+    <h1>V-01 / V-02 / V-04 / V-05 / V-06 — Vendor Core Operating Loop</h1>
+    <p>The first web-first (DashboardShell) screens: registration, the live-status home screen a vendor checks constantly, queue management, the order pipeline, and menu/Today's Special control. Use the width switcher to see the sidebar collapse per §2.6i (full → icon rail → hamburger).</p>
+  </header>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Jump to screen">
+      <button aria-pressed="true"  data-go="reg">V-01 Registration</button>
+      <button aria-pressed="false" data-go="status">V-02 Live Status</button>
+      <button aria-pressed="false" data-go="queue">V-04 Queue</button>
+      <button aria-pressed="false" data-go="orders">V-05 Orders</button>
+      <button aria-pressed="false" data-go="menu">V-06 Menu</button>
+    </div>
+    <div class="seg" role="group" aria-label="Viewport width">
+      <button aria-pressed="true"  data-w="desktop">Desktop ≥1280</button>
+      <button aria-pressed="false" data-w="tablet">Tablet 1024–1279</button>
+      <button aria-pressed="false" data-w="mobile">Mobile &lt;1024</button>
+    </div>
+  </div>
+
+  <div class="browser" id="browser">
+    <div class="chrome"><i></i><i></i><i></i><span class="url">dashboard.streetserve.com/vendor</span></div>
+    <div class="dash">
+      <aside class="sidebar">
+        <div class="brand"><span class="logo">S</span><span class="label">StreetServe</span></div>
+        <div class="navgroup-label">Operate</div>
+        <button class="navitem" data-nav="status" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><span class="label">Live Status</span></button>
+        <button class="navitem" data-nav="wave"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h4l2-6 4 12 2-6h4"/></svg><span class="label">Wave-Downs</span><span class="chip warn" style="margin-left:auto">3</span></button>
+        <button class="navitem" data-nav="queue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="12" r="2"/><circle cx="13" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg><span class="label">Queue</span></button>
+        <button class="navitem" data-nav="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h12l2 5H4l2-5zM4 7h16v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7z"/></svg><span class="label">Orders</span></button>
+        <div class="navgroup-label">Manage</div>
+        <button class="navitem" data-nav="menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span class="label">Menu</span></button>
+        <button class="navitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg><span class="label">Bookings</span></button>
+        <button class="navitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-8 8H4l2-3.2A8 8 0 1 1 21 12z"/></svg><span class="label">Messages</span></button>
+        <div class="navgroup-label">Grow</div>
+        <button class="navitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg><span class="label">Analytics</span></button>
+        <button class="navitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/></svg><span class="label">Payouts</span></button>
+        <button class="navitem" data-nav="reg" style="margin-top:auto; border-top:1px solid var(--border)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7L12 2z"/></svg><span class="label">Business Setup</span></button>
+      </aside>
+
+      <div class="mainarea">
+        <div class="topbar">
+          <button class="hamburger" id="hamburger" aria-label="Menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+          <h2 id="topTitle">Business Setup</h2>
+          <div class="roleSwitch">🚗 <span class="label">Taco Loco · Vendor</span></div>
+        </div>
+
+        <!-- V-01 REGISTRATION -->
+        <div class="content on" id="c-reg">
+          <div class="wizsteps"><span class="s done"></span><span class="s now"></span><span class="s"></span></div>
+          <div class="card" style="max-width:480px">
+            <p style="font-size:11px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--text-secondary); margin-bottom:12px">Step 2 of 3 · Category &amp; compliance</p>
+            <div style="display:flex; flex-direction:column; gap:12px">
+              <div class="field"><label>Business name</label><input value="Taco Loco" /></div>
+              <div class="field"><label>Category</label><select><option>Food Truck</option><option>Mobile Detailing</option><option>Mobile Pet Grooming</option></select></div>
+              <div class="licensewarn">⚠️ <span><b>Food Truck</b> requires a valid health/mobile-vendor permit before you can go live. Upload it now — approval usually takes 1–2 business days.</span></div>
+              <div class="field"><label>Permit document</label><button class="btn secondary small" style="width:fit-content">Upload permit PDF</button></div>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; max-width:480px">
+            <button class="btn secondary">Back</button>
+            <button class="btn primary" id="submitPermit">Continue to Stripe setup</button>
+          </div>
+        </div>
+
+        <!-- V-02 LIVE STATUS -->
+        <div class="content" id="c-status">
+          <div class="grid3">
+            <div class="card kpi"><small>Current queue</small><b class="num">4</b><span class="delta">2 joined in the last 10 min</span></div>
+            <div class="card kpi"><small>Pending wave-downs</small><b class="num">3</b><span class="delta" style="color:var(--status-warning)">Oldest: 1m 40s left</span></div>
+            <div class="card kpi"><small>Orders in progress</small><b class="num">2</b><span class="delta">1 ready for pickup</span></div>
+          </div>
+          <div class="card">
+            <p style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-secondary); margin-bottom:10px">Your status</p>
+            <div class="statustoggle">
+              <button class="stbtn" data-st="driving"><span class="ic">🚚</span>Driving</button>
+              <button class="stbtn" aria-pressed="true" data-st="parked"><span class="ic">📍</span>Parked</button>
+              <button class="stbtn" data-st="away"><span class="ic">🌙</span>Away/Closed</button>
+            </div>
+          </div>
+          <div class="card popuprow">
+            <div><b style="font-size:13.5px">Pop-Up Mode</b><br><small style="color:var(--text-secondary); font-size:12px">Notifies your active queue you're staying put longer than expected</small></div>
+            <div class="switch" id="popupSw" role="switch" aria-checked="false" tabindex="0"></div>
+          </div>
+          <div class="grid2">
+            <div class="card"><b style="font-size:13.5px">Today's Special</b><p style="font-size:13px; color:var(--text-secondary); margin-top:6px">$2 Street Tacos 🔥 — visible to customers</p></div>
+            <div class="card"><b style="font-size:13.5px">Location</b><p style="font-size:13px; color:var(--text-secondary); margin-top:6px">Parked · Main St &amp; 5th Ave</p></div>
+          </div>
+        </div>
+
+        <!-- V-04 QUEUE -->
+        <div class="content" id="c-queue">
+          <div class="grid2" style="grid-template-columns:2fr 1fr">
+            <div class="card">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+                <b style="font-size:14px">Live queue — 4 waiting</b>
+                <button class="btn secondary small" id="popToggleBtn">Enable Pop-Up</button>
+              </div>
+              <table>
+                <tr><th>Customer</th><th>Position</th><th>Discount</th><th>Joined</th><th></th></tr>
+                <tr><td><div class="avatarname"><span class="av">👩</span>Maria G.</div></td><td class="num">1st</td><td><span class="chip discount">5%</span></td><td class="num">9:36 AM</td><td><button class="btn secondary small">Serve</button></td></tr>
+                <tr><td><div class="avatarname"><span class="av">🧑</span>DeShawn W.</div></td><td class="num">2nd</td><td><span class="chip discount">10%</span></td><td class="num">9:38 AM</td><td><button class="btn secondary small">Serve</button></td></tr>
+                <tr><td><div class="avatarname"><span class="av">👨</span>Chris P.</div></td><td class="num">3rd</td><td><span class="chip discount">15%</span></td><td class="num">9:41 AM</td><td><button class="btn secondary small">Serve</button></td></tr>
+                <tr><td><div class="avatarname"><span class="av">👩‍🦱</span>Alicia R.</div></td><td class="num">4th</td><td><span class="chip discount">15% cap</span></td><td class="num">9:44 AM</td><td><button class="btn secondary small">Serve</button></td></tr>
+              </table>
+            </div>
+            <div class="card">
+              <b style="font-size:13.5px">Discount schedule</b>
+              <p style="font-size:12px; color:var(--text-secondary); margin:8px 0 10px">1st: 5% · 2nd: 10% · 3rd+: 15% cap</p>
+              <button class="btn secondary small">Edit schedule</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- V-05 ORDERS -->
+        <div class="content" id="c-orders">
+          <div class="kanban">
+            <div class="kancol">
+              <h4>New <span class="num">2</span></h4>
+              <div class="ordercard"><b>Order #1042</b><small>2× Street Tacos · Maria G.</small><div class="actrow"><button class="btn primary small" data-move="prep">Accept</button><button class="btn secondary small">Decline</button></div></div>
+              <div class="ordercard"><b>Order #1043</b><small>1× Burrito, 1× Agua Fresca · Jordan K.</small><div class="actrow"><button class="btn primary small" data-move="prep">Accept</button><button class="btn secondary small">Decline</button></div></div>
+            </div>
+            <div class="kancol">
+              <h4>Preparing <span class="num" id="prepCount">1</span></h4>
+              <div class="ordercard" id="prepCard"><b>Order #1041</b><small>3× Street Tacos · DeShawn W.</small><div class="actrow"><button class="btn primary small" data-move="ready">Mark ready</button></div></div>
+            </div>
+            <div class="kancol">
+              <h4>Ready <span class="num" id="readyCount">1</span></h4>
+              <div class="ordercard" id="readyCard"><b>Order #1040</b><small>2× Agua Fresca · Priya S.</small><div class="actrow"><button class="btn secondary small">Mark picked up</button></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- V-06 MENU -->
+        <div class="content" id="c-menu">
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+              <b style="font-size:14px">Menu items</b>
+              <button class="btn primary small">+ Add item</button>
+            </div>
+            <div class="menurow"><span class="thumb">🌮</span><div><b>Street Tacos (3)</b><small class="num">$8.50</small></div><div class="smallswitch" role="switch" aria-checked="true" tabindex="0"></div><button class="starbtn" aria-pressed="true" id="specialBtn">★ Today's Special</button></div>
+            <div class="menurow"><span class="thumb">🌯</span><div><b>Super Burrito</b><small class="num">$11.00</small></div><div class="smallswitch" role="switch" aria-checked="true" tabindex="0"></div><button class="starbtn">Set as Special</button></div>
+            <div class="menurow"><span class="thumb">🥤</span><div><b>Agua Fresca</b><small class="num">$4.00</small></div><div class="smallswitch" role="switch" aria-checked="false" tabindex="0"></div><button class="starbtn">Set as Special</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="hint">Click sidebar items or the switcher above · try the width toggle to see the responsive sidebar collapse</p>
+
+  <aside class="notes" aria-label="Design annotations">
+    <div class="note">
+      <h2>Responsive dashboard grid (§2.6i)</h2>
+      <ul>
+        <li>Full sidebar with labels ≥1280px → icon-only rail 1024–1279px → hidden behind a hamburger &lt;1024px, exactly as specified. Try the width switcher above the browser frame.</li>
+        <li>KPI grids reflow 3→1 column and the order kanban 3→1 column at the same breakpoints — content never gets cramped just because the sidebar collapsed.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>V-01 — compliance gate lives in the wizard, not buried later</h2>
+      <ul>
+        <li>Selecting "Food Truck" immediately surfaces the license requirement inline — direct implementation of the `requires_license`/`regulated_by` category metadata (Database §1) and the launch-category compliance rule (Roadmap Q1). A vendor never discovers this requirement only after trying to go live.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>V-02 — the screen a vendor checks constantly</h2>
+      <ul>
+        <li>Three KPI cards (queue, wave-downs, orders) answer "what needs me right now" before anything else on the page — this is the vendor's home screen, so it leads with action-relevant numbers, not a general dashboard summary.</li>
+        <li>Status toggle uses the same three-state model (Driving/Parked/Away-Closed) as the customer-facing map — one shared vocabulary across both sides of the same feature, not a separate vendor-only status system.</li>
+        <li>Pop-Up Mode is a single, clearly-explained switch, not a status option — matches the Database doc's decision that Pop-Up is an event/flag, not a fourth stored status value.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>V-04 — the queue table is server-timestamp truth, read-only on order</h2>
+      <ul>
+        <li>Position and discount columns are never editable by the vendor — they're a direct read of server-authoritative queue state (FR-3.2), so a vendor can serve out of order operationally but can never manipulate whose discount applies.</li>
+        <li>"Serve" is the only queue action available per row — deliberately narrow, since the discount math and position are enforced server-side regardless of what a vendor clicks.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>V-05 — Kanban mirrors `orders.status` exactly</h2>
+      <ul>
+        <li>Three columns (New/Preparing/Ready) map directly to the order status enum (pending/accepted/ready) plus a completed/cancelled exit — no vendor-invented intermediate states that could drift from what the customer's C-23 tracker shows.</li>
+        <li>Try "Accept" on a New card and "Mark ready" on the Preparing card — both move the count badges live, mirroring exactly what the customer sees on their tracking screen in real time.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>V-06 — Today's Special is exclusive, not multi-select</h2>
+      <ul>
+        <li>Only one item can hold the Today's Special badge at a time (setting a new one should visually imply the old one is replaced) — matches `businesses.today_special_menu_item_id` being a single nullable FK (Database §1), not a list.</li>
+        <li>Availability toggle is separate from the Special flag — an item can be available but not featured, or (rarely) featured while temporarily marked unavailable if it's about to sell out.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>Handoff notes</h2>
+      <ul>
+        <li>V-01's permit upload posts to `license_documents` (Database §1); a vendor cannot toggle to Driving/Parked in V-02 until that row's `status = approved` — enforced server-side per the DB validation rules, matching the client-vs-server enforcement pattern established in the seller screens.</li>
+        <li>V-04/V-05 both subscribe to socket events (`/queue/:queueId`, order status channel) rather than polling — the same real-time backbone the customer-facing C-18–24 screens use, just viewed from the other side of the same events.</li>
+        <li>Full spec: <b>docs/13-screen-design-specs.md § V-01/02/04/05/06</b>.</li>
+      </ul>
+    </div>
+  </aside>
+</div>
+
+<script>
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const browser=$('#browser'), toast=document.createElement('div'); toast.className='toast'; toast.id='toast'; document.body.appendChild(toast);
+  let tt;
+  function show(msg){ toast.textContent=msg; toast.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>toast.classList.remove('show'),3200); }
+
+  const TITLES={reg:'Business Setup', status:'Live Status', queue:'Queue Management', orders:'Order Queue', menu:'Menu Manager'};
+  function goTo(id){
+    $$('.content').forEach(c=>c.classList.remove('on'));
+    $('#c-'+id).classList.add('on');
+    $$('.seg [data-go]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.go===id));
+    $$('.navitem[data-nav]').forEach(n=>n.toggleAttribute('aria-current', n.dataset.nav===id));
+    $('#topTitle').textContent = TITLES[id];
+  }
+  $$('.seg [data-go]').forEach(b=>b.addEventListener('click',()=>goTo(b.dataset.go)));
+  $$('.navitem[data-nav]').forEach(n=>n.addEventListener('click',()=>goTo(n.dataset.nav)));
+
+  $$('.seg [data-w]').forEach(b=>b.addEventListener('click',()=>{
+    $$('.seg [data-w]').forEach(x=>x.setAttribute('aria-pressed', x===b));
+    browser.className='browser ' + (b.dataset.w==='desktop'?'':b.dataset.w);
+  }));
+  $('#hamburger').addEventListener('click',()=>show('Opens sidebar as an overlay drawer on mobile'));
+
+  $('#submitPermit').addEventListener('click',()=>show('Permit submitted for review — pending approval'));
+
+  $$('.stbtn').forEach(b=>b.addEventListener('click',()=>{ $$('.stbtn').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); show('Status set to '+b.textContent.trim()); }));
+  const popupSw=$('#popupSw');
+  function togglePopup(){ const on=popupSw.getAttribute('aria-checked')!=='true'; popupSw.setAttribute('aria-checked', on); show(on?'Pop-Up Mode on — queue notified of delay':'Pop-Up Mode off'); }
+  popupSw.addEventListener('click',togglePopup);
+  $('#popToggleBtn').addEventListener('click',()=>{ togglePopup(); goTo('status'); });
+
+  $$('.smallswitch').forEach(s=>s.addEventListener('click',()=>{ s.setAttribute('aria-checked', s.getAttribute('aria-checked')!=='true'); }));
+  $$('.starbtn').forEach(s=>s.addEventListener('click',()=>{ $$('.starbtn').forEach(x=>{x.setAttribute('aria-pressed','false'); x.textContent='Set as Special';}); s.setAttribute('aria-pressed','true'); s.textContent='★ Today\'s Special'; show('Today\'s Special updated'); }));
+
+  $$('[data-move="prep"]').forEach(b=>b.addEventListener('click',(e)=>{
+    const card=e.target.closest('.ordercard'); card.remove();
+    show('Order accepted — moved to Preparing'); const n=$('#prepCount'); n.textContent=+n.textContent+1;
+  }));
+  $('#prepCard')?.querySelector('[data-move="ready"]')?.addEventListener('click',()=>{
+    show('Order marked ready — customer notified');
+  });
+</script>

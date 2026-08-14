@@ -1,0 +1,521 @@
+<title>StreetServe — C-01–C-09 Onboarding &amp; Auth</title>
+<style>
+  :root{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF; --surface-sunken:#F1F0ED;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --map-ground:#ECEAE4; --map-block:#E2E0D9; --map-road:#FFFFFF;
+    --border:rgba(91,94,104,.28); --shadow:0 12px 32px rgba(20,21,26,.14);
+    --motion-micro:100ms; --motion-standard:200ms; --motion-sheet:300ms;
+    --ease-in:cubic-bezier(.2,0,0,1);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-base:#0E0F12; --surface-raised:#17181C; --surface-sunken:#0A0B0D;
+      --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+      --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+      --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+      --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+      --map-ground:#101216; --map-block:#171A20; --map-road:#232833;
+      --border:rgba(156,159,168,.22); --shadow:0 12px 32px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --surface-base:#0E0F12; --surface-raised:#17181C; --surface-sunken:#0A0B0D;
+    --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+    --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+    --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+    --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+    --map-ground:#101216; --map-block:#171A20; --map-road:#232833;
+    --border:rgba(156,159,168,.22); --shadow:0 12px 32px rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"]{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF; --surface-sunken:#F1F0ED;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --map-ground:#ECEAE4; --map-block:#E2E0D9; --map-road:#FFFFFF;
+    --border:rgba(91,94,104,.28); --shadow:0 12px 32px rgba(20,21,26,.14);
+  }
+
+  *{box-sizing:border-box; margin:0}
+  html,body{background:var(--surface-base); color:var(--text-primary);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.4}
+  button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+  :is(button,[tabindex],input):focus-visible{outline:2px solid var(--accent-secondary); outline-offset:2px; border-radius:8px}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:40px 20px 80px; display:flex; flex-direction:column; gap:28px}
+  .page-head .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:600}
+  .page-head h1{font-size:32px; font-weight:700; letter-spacing:-.02em; text-wrap:balance; margin-top:6px}
+  .page-head p{color:var(--text-secondary); max-width:64ch; margin-top:8px; font-size:15px}
+
+  .studio{display:grid; grid-template-columns:minmax(0,460px) minmax(280px,1fr); gap:36px; align-items:start}
+  @media (max-width:900px){ .studio{grid-template-columns:1fr} }
+  .stage{display:flex; flex-direction:column; gap:14px; align-items:center}
+  .controls{display:flex; flex-direction:column; gap:8px; align-items:center}
+  .seg{display:flex; gap:4px; background:var(--surface-raised); border:1px solid var(--border); border-radius:999px; padding:4px; flex-wrap:wrap; justify-content:center}
+  .seg button{padding:7px 11px; border-radius:999px; font-size:12px; font-weight:600; color:var(--text-secondary);
+    transition:background var(--motion-micro) var(--ease-in), color var(--motion-micro) var(--ease-in)}
+  .seg button[aria-pressed="true"]{background:var(--accent-secondary); color:#fff}
+  .hint{font-size:13px; color:var(--text-secondary)}
+
+  .phone{width:min(390px,100%); height:800px; border-radius:44px; background:var(--surface-base);
+    border:1px solid var(--border); box-shadow:var(--shadow); overflow:hidden; position:relative; display:flex; flex-direction:column}
+  .statusbar{height:44px; flex:none; display:flex; align-items:center; justify-content:space-between;
+    padding:0 24px; font-size:14px; font-weight:600; position:relative; z-index:6}
+  .notch{position:absolute; left:50%; top:10px; transform:translateX(-50%); width:110px; height:26px; border-radius:999px; background:var(--text-primary); opacity:.92}
+
+  .screen{position:absolute; inset:44px 0 0; display:none; flex-direction:column}
+  .screen.on{display:flex}
+  .scroll{flex:1; overflow-y:auto; padding:0 24px; display:flex; flex-direction:column}
+  .btnbar{flex:none; padding:12px 24px 30px; display:flex; flex-direction:column; gap:10px}
+  .btn{height:50px; width:100%; padding:0 20px; border-radius:10px; font-size:15px; font-weight:700;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px; transition:filter var(--motion-micro) var(--ease-in)}
+  .btn:active{filter:brightness(.92)}
+  .btn.primary{background:var(--accent-primary); color:#fff}
+  .btn.secondary{border:1.5px solid var(--text-secondary); color:var(--text-primary)}
+  .btn.ghost{color:var(--accent-secondary); font-weight:600; height:auto; padding:8px}
+  .btn[disabled]{opacity:.4; pointer-events:none}
+  .num{font-variant-numeric:tabular-nums}
+  .navback{position:absolute; top:8px; left:16px; z-index:5; width:38px; height:38px; border-radius:50%;
+    background:var(--surface-raised); border:1px solid var(--border); display:grid; place-items:center}
+  .skip{position:absolute; top:16px; right:20px; z-index:5; font-size:13px; font-weight:600; color:var(--text-secondary)}
+
+  /* C-01 splash */
+  #s-splash{align-items:center; justify-content:center; gap:20px; background:
+    radial-gradient(70% 55% at 50% 30%, color-mix(in srgb,var(--accent-primary) 24%,transparent), transparent 70%)}
+  .logo-lockup{display:flex; flex-direction:column; align-items:center; gap:16px}
+  .logo-mark{width:96px; height:96px; border-radius:28px; display:grid; place-items:center; font-size:46px; color:#fff;
+    background:linear-gradient(135deg, color-mix(in srgb,var(--accent-primary) 92%,#7a1f00), color-mix(in srgb,var(--accent-primary) 45%,#2b0d00));
+    box-shadow:0 16px 40px color-mix(in srgb,var(--accent-primary) 30%,transparent); animation:rise .6s var(--ease-in)}
+  @keyframes rise{from{transform:translateY(12px) scale(.9); opacity:0}to{transform:none; opacity:1}}
+  .logo-lockup h2{font-size:30px; font-weight:800; letter-spacing:-.02em}
+  .logo-lockup .tagline{font-size:14px; font-weight:700; letter-spacing:.03em; color:var(--accent-primary)}
+  .splash-spin{position:absolute; bottom:56px; width:26px; height:26px; border-radius:50%; border:3px solid var(--border); border-top-color:var(--accent-primary); animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* C-02 welcome carousel */
+  #s-welcome{padding-top:20px}
+  .carousel{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:20px; padding:0 30px}
+  .slide-art{width:150px; height:150px; border-radius:32px; display:grid; place-items:center; font-size:66px;
+    background:color-mix(in srgb,var(--accent-secondary) 12%,var(--surface-raised)); border:1px solid var(--border)}
+  .slide-art.a2{background:color-mix(in srgb,var(--status-driving) 12%,var(--surface-raised))}
+  .slide-art.a3{background:color-mix(in srgb,var(--status-discount) 12%,var(--surface-raised))}
+  .carousel h2{font-size:24px; font-weight:800; letter-spacing:-.015em; text-wrap:balance}
+  .carousel p{font-size:14.5px; color:var(--text-secondary); max-width:30ch}
+  .dots{display:flex; gap:8px; justify-content:center; padding:8px 0}
+  .dots i{width:7px; height:7px; border-radius:50%; background:var(--border)}
+  .dots i.now{background:var(--accent-primary); width:20px; border-radius:4px}
+
+  /* shared form */
+  .formhead{padding:44px 0 20px}
+  .formhead h2{font-size:24px; font-weight:800; letter-spacing:-.015em; text-wrap:balance}
+  .formhead p{font-size:14px; color:var(--text-secondary); margin-top:8px; max-width:34ch}
+  .field{display:flex; flex-direction:column; gap:6px; margin-bottom:14px}
+  .field label{font-size:12.5px; font-weight:700; color:var(--text-secondary)}
+  .inputwrap{display:flex; align-items:center; gap:8px; height:50px; border:1.5px solid var(--border); border-radius:10px; padding:0 14px; background:var(--surface-raised)}
+  .inputwrap:focus-within{border-color:var(--accent-secondary)}
+  .inputwrap .cc{font-size:14px; font-weight:700; color:var(--text-secondary); padding-right:8px; border-right:1px solid var(--border)}
+  .inputwrap input{flex:1; border:0; background:none; font-size:15px; color:var(--text-primary); height:100%}
+  .inputwrap input::placeholder{color:var(--text-secondary)}
+  .legal{font-size:11.5px; color:var(--text-secondary); text-align:center; line-height:1.5; margin-top:4px}
+  .legal a{color:var(--accent-secondary); font-weight:600}
+  .switcher{display:flex; gap:4px; background:var(--surface-sunken); border-radius:999px; padding:4px; margin-bottom:20px}
+  .switcher button{flex:1; height:36px; border-radius:999px; font-size:13px; font-weight:700; color:var(--text-secondary)}
+  .switcher button[aria-pressed="true"]{background:var(--surface-raised); color:var(--text-primary); box-shadow:0 1px 3px rgba(0,0,0,.12)}
+
+  /* C-04 OTP */
+  .otpboxes{display:flex; gap:9px; justify-content:center; margin:8px 0 16px}
+  .otpbox{width:44px; height:54px; border:1.5px solid var(--border); border-radius:10px; display:grid; place-items:center; font-size:22px; font-weight:800; background:var(--surface-raised); font-variant-numeric:tabular-nums}
+  .otpbox.filled{border-color:var(--accent-secondary)}
+  .otpbox.err{border-color:var(--status-danger); animation:shake .3s}
+  @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+  .otperr{display:none; font-size:12.5px; color:var(--status-danger); font-weight:600; text-align:center; gap:5px; align-items:center; justify-content:center}
+  .otperr.show{display:flex}
+  .resend{font-size:13px; color:var(--text-secondary); text-align:center}
+  .resend b{color:var(--accent-secondary)}
+  .keypad{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:auto}
+  .key{height:52px; border-radius:10px; background:var(--surface-raised); border:1px solid var(--border); font-size:20px; font-weight:700}
+  .key.blank{background:none; border:0}
+
+  /* C-05 profile basics */
+  .avatar-pick{display:flex; flex-direction:column; align-items:center; gap:10px; padding:8px 0 18px}
+  .avatar-ring{width:88px; height:88px; border-radius:50%; background:var(--surface-sunken); display:grid; place-items:center; font-size:34px; border:2px dashed var(--border); position:relative}
+  .avatar-ring .cam{position:absolute; right:-2px; bottom:-2px; width:30px; height:30px; border-radius:50%; background:var(--accent-secondary); color:#fff; display:grid; place-items:center; font-size:14px; border:2px solid var(--surface-base)}
+  .avatar-pick small{font-size:12px; color:var(--text-secondary)}
+
+  /* C-06 role selector */
+  .roleopt{display:flex; gap:14px; align-items:center; border:1.5px solid var(--border); border-radius:14px; padding:16px; margin-bottom:10px; text-align:left; width:100%}
+  .roleopt[aria-pressed="true"]{border-color:var(--accent-primary); background:color-mix(in srgb,var(--accent-primary) 7%,transparent)}
+  .roleopt .ic{width:48px; height:48px; border-radius:12px; display:grid; place-items:center; font-size:24px; flex:none; background:var(--surface-sunken)}
+  .roleopt b{font-size:15px; display:block}
+  .roleopt small{font-size:12.5px; color:var(--text-secondary)}
+  .roleopt .check{margin-left:auto; width:22px; height:22px; border-radius:50%; border:2px solid var(--border); display:grid; place-items:center; color:#fff; flex:none}
+  .roleopt[aria-pressed="true"] .check{background:var(--accent-primary); border-color:var(--accent-primary)}
+  .addmore{font-size:12px; color:var(--text-secondary); text-align:center; margin-top:4px}
+
+  /* C-07/08 permission primer */
+  .primer{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:18px; padding:0 26px}
+  .primer .art{width:110px; height:110px; border-radius:28px; display:grid; place-items:center; font-size:52px; background:color-mix(in srgb,var(--accent-secondary) 12%,var(--surface-raised)); border:1px solid var(--border)}
+  .primer.notif .art{background:color-mix(in srgb,var(--status-warning) 14%,var(--surface-raised))}
+  .primer h2{font-size:23px; font-weight:800; letter-spacing:-.015em; text-wrap:balance}
+  .primer p{font-size:14px; color:var(--text-secondary); max-width:30ch}
+  .privacy-chip{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--text-secondary); background:var(--surface-sunken); border-radius:999px; padding:7px 13px}
+  .notifpreview{width:100%; max-width:290px; background:var(--surface-raised); border:1px solid var(--border); border-radius:14px; padding:12px 14px; display:flex; gap:10px; text-align:left; box-shadow:var(--shadow)}
+  .notifpreview .ic{width:34px; height:34px; border-radius:9px; background:var(--accent-primary); display:grid; place-items:center; font-size:16px; flex:none}
+  .notifpreview b{font-size:13px; display:block}
+  .notifpreview small{font-size:11.5px; color:var(--text-secondary)}
+
+  /* C-09 tutorial */
+  #s-tutorial{position:relative}
+  .tut-map{position:absolute; inset:44px 0 0; background:var(--map-ground)}
+  .tut-map svg{width:100%; height:100%}
+  .tut-pin{position:absolute; width:46px; height:46px; border-radius:50%; background:var(--surface-raised); display:grid; place-items:center; font-size:20px; border:3px solid var(--status-driving); transform:translate(-50%,-100%)}
+  .tut-scrim{position:absolute; inset:44px 0 0; background:rgba(0,0,0,.6); z-index:2}
+  .coach{position:absolute; z-index:3; background:var(--surface-raised); border-radius:16px; padding:16px 18px; box-shadow:var(--shadow); width:250px}
+  .coach b{font-size:14.5px; display:block; margin-bottom:4px}
+  .coach p{font-size:12.5px; color:var(--text-secondary)}
+  .coach .cbtns{display:flex; gap:8px; margin-top:12px; align-items:center}
+  .coach .cprog{font-size:11.5px; color:var(--text-secondary); margin-right:auto; font-variant-numeric:tabular-nums}
+  .coach .mini{height:34px; padding:0 14px; border-radius:8px; font-size:12.5px; font-weight:700}
+  .coach .mini.primary{background:var(--accent-primary); color:#fff}
+  .coach .mini.ghost{color:var(--text-secondary)}
+  .spot{position:absolute; z-index:2; border-radius:50%; box-shadow:0 0 0 9999px rgba(0,0,0,.6); pointer-events:none}
+
+  .toast{position:absolute; left:50%; bottom:30px; transform:translateX(-50%) translateY(8px); z-index:9;
+    background:var(--surface-raised); border:1px solid var(--border); box-shadow:var(--shadow); border-radius:12px; padding:10px 16px;
+    font-size:13px; font-weight:600; opacity:0; transition:opacity var(--motion-standard) var(--ease-in), transform var(--motion-standard) var(--ease-in); pointer-events:none; white-space:nowrap; max-width:90%}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  .notes{display:flex; flex-direction:column; gap:14px}
+  .note{background:var(--surface-raised); border:1px solid var(--border); border-radius:16px; padding:18px 20px}
+  .note h2{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:700}
+  .note ul{margin:10px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px}
+  .note li{font-size:13.5px; display:flex; gap:8px}
+  .note li b{font-weight:650}
+  .note li::before{content:""; flex:none; width:6px; height:6px; border-radius:50%; background:var(--accent-secondary); margin-top:6px}
+
+  @media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation:none!important; transition-duration:1ms!important} }
+</style>
+
+<div class="wrap">
+  <header class="page-head">
+    <div class="eyebrow">StreetServe · Design phase · Screens 54–62 of 77 · Customer onboarding &amp; auth</div>
+    <h1>C-01 → C-09 — Onboarding &amp; Authentication</h1>
+    <p>The first thing every real user sees: splash, value carousel, passwordless phone/email + OTP, profile basics, role intent, the two permission primers that earn location and notification access, and the first-run map tutorial. Walk it end to end, or jump to any screen.</p>
+  </header>
+
+  <div class="studio">
+    <section class="stage" aria-label="Screen mockup">
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Jump to screen">
+          <button aria-pressed="true"  data-go="splash">C-01</button>
+          <button aria-pressed="false" data-go="welcome">C-02</button>
+          <button aria-pressed="false" data-go="entry">C-03</button>
+          <button aria-pressed="false" data-go="otp">C-04</button>
+          <button aria-pressed="false" data-go="profile">C-05</button>
+          <button aria-pressed="false" data-go="role">C-06</button>
+          <button aria-pressed="false" data-go="loc">C-07</button>
+          <button aria-pressed="false" data-go="notif">C-08</button>
+          <button aria-pressed="false" data-go="tutorial">C-09</button>
+        </div>
+      </div>
+
+      <div class="phone" id="phone">
+        <div class="statusbar"><span>9:41</span><div class="notch"></div><span>▮▮▮ ▉</span></div>
+
+        <!-- C-01 SPLASH -->
+        <div class="screen on" id="s-splash">
+          <div class="logo-lockup">
+            <div class="logo-mark">🗺️</div>
+            <h2>StreetServe</h2>
+            <span class="tagline">See good, do good.</span>
+          </div>
+          <div class="splash-spin"></div>
+        </div>
+
+        <!-- C-02 WELCOME CAROUSEL -->
+        <div class="screen" id="s-welcome">
+          <button class="skip" id="skipWelcome">Skip</button>
+          <div class="carousel" id="carousel">
+            <div class="slide-art" id="slideArt">🗺️</div>
+            <h2 id="slideTitle">Your city, live on the map</h2>
+            <p id="slideBody">See every mobile business moving around you in real time. Wave one down and it comes to you.</p>
+          </div>
+          <div class="dots" id="dots"><i class="now"></i><i></i><i></i></div>
+          <div class="btnbar">
+            <button class="btn primary" id="carNext">Next</button>
+            <button class="btn ghost" id="haveAccount">I already have an account</button>
+          </div>
+        </div>
+
+        <!-- C-03 PHONE/EMAIL ENTRY -->
+        <div class="screen" id="s-entry">
+          <button class="navback" data-back="welcome"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button>
+          <div class="scroll">
+            <div class="formhead"><h2>Let's get you in</h2><p>We'll text you a code — no password to remember.</p></div>
+            <div class="switcher" role="group" aria-label="Method">
+              <button aria-pressed="true" id="mPhone">Phone</button>
+              <button aria-pressed="false" id="mEmail">Email</button>
+            </div>
+            <div class="field" id="phoneField">
+              <label>Phone number</label>
+              <div class="inputwrap"><span class="cc">🇺🇸 +1</span><input inputmode="tel" placeholder="(209) 555-0100" /></div>
+            </div>
+            <div class="field" id="emailField" style="display:none">
+              <label>Email address</label>
+              <div class="inputwrap"><input inputmode="email" placeholder="you@email.com" /></div>
+            </div>
+          </div>
+          <div class="btnbar">
+            <button class="btn primary" id="sendCode">Send code</button>
+            <p class="legal">By continuing you agree to our <a href="#" onclick="return false">Terms</a> &amp; <a href="#" onclick="return false">Privacy Policy</a>.</p>
+          </div>
+        </div>
+
+        <!-- C-04 OTP -->
+        <div class="screen" id="s-otp">
+          <button class="navback" data-back="entry"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button>
+          <div class="scroll">
+            <div class="formhead"><h2>Enter your code</h2><p>Sent to <b class="num">+1 (209) 555-0100</b>. <span style="color:var(--accent-secondary); font-weight:600">Change</span></p></div>
+            <div class="otpboxes" id="otpBoxes"><span class="otpbox"></span><span class="otpbox"></span><span class="otpbox"></span><span class="otpbox"></span><span class="otpbox"></span><span class="otpbox"></span></div>
+            <div class="otperr" id="otpErr">⚠️ That code didn't match — 2 tries left</div>
+            <p class="resend" id="resend">Resend code in <b class="num">0:28</b></p>
+          </div>
+          <div class="keypad" id="keypad" style="margin:0 24px 26px">
+            <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+            <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+            <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+            <button class="key blank"></button><button class="key" data-k="0">0</button><button class="key" data-k="del">⌫</button>
+          </div>
+        </div>
+
+        <!-- C-05 PROFILE BASICS -->
+        <div class="screen" id="s-profile">
+          <div class="scroll">
+            <div class="formhead"><h2>Nice to meet you</h2><p>Just the basics — you can add more later.</p></div>
+            <div class="avatar-pick">
+              <div class="avatar-ring">🙂<span class="cam">＋</span></div>
+              <small>Add a photo (optional)</small>
+            </div>
+            <div class="field"><label>Your name</label><div class="inputwrap"><input placeholder="James Bowser" value="James Bowser" /></div></div>
+            <div class="field"><label>City / area</label><div class="inputwrap"><span style="font-size:16px">📍</span><input placeholder="Modesto, CA" value="Modesto, CA" /></div></div>
+          </div>
+          <div class="btnbar"><button class="btn primary" id="profileNext">Continue</button></div>
+        </div>
+
+        <!-- C-06 ROLE INTENT -->
+        <div class="screen" id="s-role">
+          <div class="scroll">
+            <div class="formhead"><h2>What brings you here?</h2><p>Pick where to start — you can add the others anytime.</p></div>
+            <button class="roleopt" aria-pressed="true" data-role="find"><span class="ic">🗺️</span><span><b>Find businesses</b><small>Discover &amp; wave down vendors near me</small></span><span class="check">✓</span></button>
+            <button class="roleopt" data-role="sell"><span class="ic">💵</span><span><b>Earn as a seller</b><small>Sell consignment inventory, no capital needed</small></span><span class="check">✓</span></button>
+            <button class="roleopt" data-role="run"><span class="ic">🚚</span><span><b>Run a business</b><small>List my mobile business or become a hub</small></span><span class="check">✓</span></button>
+            <p class="addmore">All roles live on one account — switch anytime from your profile.</p>
+          </div>
+          <div class="btnbar"><button class="btn primary" id="roleNext">Continue</button></div>
+        </div>
+
+        <!-- C-07 LOCATION PRIMER -->
+        <div class="screen" id="s-loc">
+          <div class="primer">
+            <div class="art">📍</div>
+            <h2>See who's near you, right now</h2>
+            <p>StreetServe uses your location to show live vendors nearby and let them route to you when you wave down.</p>
+            <span class="privacy-chip">🔒 Your precise location is never shown to others</span>
+          </div>
+          <div class="btnbar">
+            <button class="btn primary" id="allowLoc">Allow location</button>
+            <button class="btn ghost" id="laterLoc">Not now</button>
+          </div>
+        </div>
+
+        <!-- C-08 NOTIFICATION PRIMER -->
+        <div class="screen" id="s-notif">
+          <div class="primer notif">
+            <div class="art">🔔</div>
+            <h2>Never miss a vendor nearby</h2>
+            <p>Get a heads-up when a favorite rolls into your area, your wave is accepted, or you're up next in line.</p>
+            <div class="notifpreview"><span class="ic">🌮</span><div><b>Taco Loco is 2 min away</b><small>Your favorite just went Driving near you</small></div></div>
+          </div>
+          <div class="btnbar">
+            <button class="btn primary" id="allowNotif">Turn on notifications</button>
+            <button class="btn ghost" id="laterNotif">Maybe later</button>
+          </div>
+        </div>
+
+        <!-- C-09 TUTORIAL -->
+        <div class="screen" id="s-tutorial">
+          <div class="tut-map">
+            <svg viewBox="0 0 390 700" preserveAspectRatio="xMidYMid slice">
+              <rect width="390" height="700" fill="var(--map-ground)"/>
+              <g stroke="var(--map-road)" stroke-width="10" fill="none"><path d="M70 0 V700"/><path d="M210 0 V700"/><path d="M330 0 V700"/><path d="M0 200 H390"/><path d="M0 380 H390"/><path d="M0 540 H390"/></g>
+              <g fill="var(--map-block)"><rect x="82" y="212" width="116" height="60" rx="6"/><rect x="222" y="212" width="96" height="60" rx="6"/><rect x="82" y="392" width="116" height="60" rx="6"/></g>
+            </svg>
+          </div>
+          <div class="tut-pin" style="left:32%; top:30%">🌮</div>
+          <div class="tut-pin" style="left:70%; top:44%; border-color:var(--status-parked)">☕</div>
+          <div class="tut-scrim" id="tutScrim"></div>
+          <div class="coach" id="coach" style="left:24px; top:200px">
+            <b id="coachTitle">Tap a pin to see a business</b>
+            <p id="coachBody">Every moving pin is a real mobile business. Tap one to view its menu, status, and wave it down.</p>
+            <div class="cbtns"><span class="cprog" id="coachProg">1 of 3</span><button class="mini ghost" id="coachSkip">Skip</button><button class="mini primary" id="coachNext">Next</button></div>
+          </div>
+        </div>
+
+        <div class="toast" id="toast"></div>
+      </div>
+
+      <p class="hint">Walk it with the on-screen buttons · type on the OTP keypad · the "0000" fail case is on the code screen</p>
+    </section>
+
+    <aside class="notes" aria-label="Design annotations">
+      <div class="note">
+        <h2>C-01/02 — brand first, friction never</h2>
+        <ul>
+          <li>Splash establishes the identity ("See good, do good") with a warm gradient and the logo lockup — a genuine brand moment, then straight into value, not a wall.</li>
+          <li>The 3-slide carousel maps exactly to the three user surfaces (find / earn / run), and "I already have an account" is always one tap away so returning users never sit through the pitch.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>C-03/04 — passwordless by design</h2>
+        <ul>
+          <li>Phone-first OTP (email as an equal toggle) — no password to create or forget, and phone verification doubles as the baseline anti-fraud signal every account needs (Security §4).</li>
+          <li>OTP failure is the one error state spec'd in the flows doc: the boxes shake red and show "2 tries left," counting down to the 3-failure lockout — never a silent or vague failure. Type <b>0000..</b> to see it.</li>
+          <li>Resend is time-gated with a visible countdown, standard anti-abuse for OTP.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>C-05/06 — minimal gate, additive roles</h2>
+        <ul>
+          <li>Profile asks only name + city; photo is explicitly optional — friction scales with money movement, not with browsing (the core onboarding principle from the UX doc), so nothing here blocks a user who just wants to look at the map.</li>
+          <li>Role intent sets a <em>starting</em> mode, and the copy states plainly that all roles live on one account and are addable later — reflecting the additive-roles identity model, so no one feels locked into a single choice.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>C-07/08 — earn the permission before asking</h2>
+        <ul>
+          <li>Both primers are pre-permission screens shown <em>before</em> the OS dialog — they explain the value and, critically, the privacy guarantee ("precise location never shown to others") so the actual OS prompt has context and a far higher accept rate.</li>
+          <li>Each has a real "Not now" path — declining location falls back to the city-level map (C-10's error state), never a dead end.</li>
+          <li>The notification primer previews an actual notification, so the user sees exactly what they're opting into (the fuzzing/precision policy flagged in the requirements is surfaced right here).</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>C-09 — coach marks, not a screen</h2>
+        <ul>
+          <li>The tutorial is an overlay on the live C-10 map (spotlight + coach card), not a separate fake screen — the user learns by looking at their real map, and it's fully skippable at every step.</li>
+          <li>Three beats only: tap a pin, wave down, watch the discount — the minimum to make the core loop legible, then out of the way.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>Handoff notes</h2>
+        <ul>
+          <li>C-03/04 call `POST /auth/register` → `POST /auth/verify-otp` (API §1); tokens issued only on OTP success. Managed auth provider (Auth0/Clerk) owns credential/session handling per Architecture §5.</li>
+          <li>C-06 role selection maps to a `user_roles` row; verification tiers are requested later, only when a role first touches money (Flow 1).</li>
+          <li>Location precision choice from C-07 writes to the user's privacy settings, honored by the map's pin-fuzzing logic (Security §2).</li>
+          <li>Full spec: <b>docs/13-screen-design-specs.md § C-01–C-09</b>.</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const phone=$('#phone'), toast=$('#toast'); let tt;
+  function show(msg){ toast.textContent=msg; toast.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>toast.classList.remove('show'),3400); }
+
+  const ORDER=['splash','welcome','entry','otp','profile','role','loc','notif','tutorial'];
+  function go(id){
+    $$('.screen').forEach(s=>s.classList.remove('on'));
+    $('#s-'+id).classList.add('on');
+    $$('.seg [data-go]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.go===id));
+    if(id==='otp'){ resetOtp(); }
+    if(id==='tutorial'){ tutStep=0; renderTut(); }
+  }
+  function next(from){ const i=ORDER.indexOf(from); if(i<ORDER.length-1) go(ORDER[i+1]); }
+  $$('.seg [data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
+  $$('[data-back]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.back)));
+
+  // C-01 auto-advance
+  let splashTimer;
+  function armSplash(){ clearTimeout(splashTimer); splashTimer=setTimeout(()=>{ if($('#s-splash').classList.contains('on')) go('welcome'); }, 1900); }
+  armSplash();
+
+  // C-02 carousel
+  const SLIDES=[
+    {art:'🗺️', cls:'', t:'Your city, live on the map', b:'See every mobile business moving around you in real time. Wave one down and it comes to you.'},
+    {art:'💵', cls:'a2', t:'Earn today, no capital', b:'Pick up consignment inventory from a hub near you, sell it, keep your cut. You owe nothing until you sell.'},
+    {art:'🎉', cls:'a3', t:'Show up first, save the most', b:'The earlier you get in line at any vendor, the bigger your discount. Pure FOMO, baked into every stop.'}
+  ];
+  let slide=0;
+  function renderSlide(){
+    const s=SLIDES[slide];
+    $('#slideArt').className='slide-art '+s.cls; $('#slideArt').textContent=s.art;
+    $('#slideTitle').textContent=s.t; $('#slideBody').textContent=s.b;
+    $$('#dots i').forEach((d,i)=>d.className=i===slide?'now':'');
+    $('#carNext').textContent = slide===SLIDES.length-1 ? 'Get started' : 'Next';
+  }
+  $('#carNext').addEventListener('click',()=>{ if(slide<SLIDES.length-1){ slide++; renderSlide(); } else go('entry'); });
+  $('#skipWelcome').addEventListener('click',()=>go('entry'));
+  $('#haveAccount').addEventListener('click',()=>{ show('Returning users: same phone/email + OTP'); go('entry'); });
+
+  // C-03 method toggle
+  $('#mPhone').addEventListener('click',()=>{ $('#mPhone').setAttribute('aria-pressed','true'); $('#mEmail').setAttribute('aria-pressed','false'); $('#phoneField').style.display='flex'; $('#emailField').style.display='none'; });
+  $('#mEmail').addEventListener('click',()=>{ $('#mEmail').setAttribute('aria-pressed','true'); $('#mPhone').setAttribute('aria-pressed','false'); $('#emailField').style.display='flex'; $('#phoneField').style.display='none'; });
+  $('#sendCode').addEventListener('click',()=>go('otp'));
+
+  // C-04 OTP
+  let otp='';
+  function resetOtp(){ otp=''; renderOtp(); $('#otpErr').classList.remove('show'); }
+  function renderOtp(){
+    $$('#otpBoxes .otpbox').forEach((b,i)=>{ b.textContent=otp[i]||''; b.className='otpbox'+(otp[i]?' filled':''); });
+  }
+  $$('#keypad .key[data-k]').forEach(k=>k.addEventListener('click',()=>{
+    const v=k.dataset.k;
+    if(v==='del'){ otp=otp.slice(0,-1); $('#otpErr').classList.remove('show'); }
+    else if(otp.length<6){ otp+=v; }
+    renderOtp();
+    if(otp.length===6){
+      if(otp==='000000'){ // fail case
+        $$('#otpBoxes .otpbox').forEach(b=>b.classList.add('err')); $('#otpErr').classList.add('show');
+        setTimeout(()=>{ otp=''; renderOtp(); }, 700);
+      } else { show('Verified ✓'); setTimeout(()=>go('profile'), 500); }
+    }
+  }));
+
+  // C-05
+  $('#profileNext').addEventListener('click',()=>go('role'));
+
+  // C-06 role
+  $$('.roleopt').forEach(r=>r.addEventListener('click',()=>{ $$('.roleopt').forEach(x=>x.setAttribute('aria-pressed','false')); r.setAttribute('aria-pressed','true'); }));
+  $('#roleNext').addEventListener('click',()=>go('loc'));
+
+  // C-07/08
+  $('#allowLoc').addEventListener('click',()=>{ show('Location allowed'); go('notif'); });
+  $('#laterLoc').addEventListener('click',()=>{ show('Using city-level map for now'); go('notif'); });
+  $('#allowNotif').addEventListener('click',()=>{ show('Notifications on'); go('tutorial'); });
+  $('#laterNotif').addEventListener('click',()=>go('tutorial'));
+
+  // C-09 tutorial
+  const TUT=[
+    {t:'Tap a pin to see a business', b:'Every moving pin is a real mobile business. Tap one to view its menu, status, and wave it down.', coach:{left:'24px', top:'200px'}},
+    {t:'Wave them down', b:'Send a wave to any moving vendor — they route to you or schedule a stop. You join the line automatically.', coach:{left:'110px', top:'330px'}},
+    {t:'Show up first, save the most', b:'The earlier you\'re in line, the bigger your discount — locked in the moment you join.', coach:{left:'24px', top:'430px'}}
+  ];
+  let tutStep=0;
+  function renderTut(){
+    const s=TUT[tutStep], c=$('#coach');
+    $('#coachTitle').textContent=s.t; $('#coachBody').textContent=s.b;
+    $('#coachProg').textContent=(tutStep+1)+' of 3';
+    c.style.left=s.coach.left; c.style.top=s.coach.top;
+    $('#coachNext').textContent = tutStep===TUT.length-1 ? 'Start exploring' : 'Next';
+  }
+  $('#coachNext').addEventListener('click',()=>{ if(tutStep<TUT.length-1){ tutStep++; renderTut(); } else { show('Welcome to StreetServe! → opens C-10 Map Home'); } });
+  $('#coachSkip').addEventListener('click',()=>show('Tutorial skipped → opens C-10 Map Home'));
+
+  go('splash');
+</script>

@@ -1,0 +1,499 @@
+<title>StreetServe — C-21/22/23/24 Order, Payment &amp; Receipt</title>
+<style>
+  :root{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --border:rgba(91,94,104,.28); --shadow:0 12px 32px rgba(20,21,26,.14);
+    --motion-micro:100ms; --motion-standard:200ms; --motion-sheet:300ms;
+    --ease-in:cubic-bezier(.2,0,0,1);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-base:#0E0F12; --surface-raised:#17181C;
+      --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+      --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+      --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+      --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+      --border:rgba(156,159,168,.22); --shadow:0 12px 32px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --surface-base:#0E0F12; --surface-raised:#17181C;
+    --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+    --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+    --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+    --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+    --border:rgba(156,159,168,.22); --shadow:0 12px 32px rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"]{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --border:rgba(91,94,104,.28); --shadow:0 12px 32px rgba(20,21,26,.14);
+  }
+
+  *{box-sizing:border-box; margin:0}
+  html,body{background:var(--surface-base); color:var(--text-primary);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.4}
+  button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+  :is(button,[tabindex]):focus-visible{outline:2px solid var(--accent-secondary); outline-offset:2px; border-radius:8px}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:40px 20px 80px; display:flex; flex-direction:column; gap:28px}
+  .page-head .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:600}
+  .page-head h1{font-size:32px; font-weight:700; letter-spacing:-.02em; text-wrap:balance; margin-top:6px}
+  .page-head p{color:var(--text-secondary); max-width:64ch; margin-top:8px; font-size:15px}
+
+  .studio{display:grid; grid-template-columns:minmax(0,460px) minmax(280px,1fr); gap:36px; align-items:start}
+  @media (max-width:900px){ .studio{grid-template-columns:1fr} }
+  .stage{display:flex; flex-direction:column; gap:14px; align-items:center}
+  .controls{display:flex; flex-direction:column; gap:8px; align-items:center}
+  .seg{display:flex; gap:4px; background:var(--surface-raised); border:1px solid var(--border); border-radius:999px; padding:4px; flex-wrap:wrap; justify-content:center}
+  .seg span.lbl{align-self:center; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-secondary); padding:0 6px 0 10px}
+  .seg button{padding:7px 12px; border-radius:999px; font-size:12.5px; font-weight:600; color:var(--text-secondary);
+    transition:background var(--motion-micro) var(--ease-in), color var(--motion-micro) var(--ease-in)}
+  .seg button[aria-pressed="true"]{background:var(--accent-secondary); color:#fff}
+  .sim{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; min-height:34px}
+  .sim button{font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:999px;
+    border:1.5px dashed var(--text-secondary); color:var(--text-secondary)}
+  .sim button:hover{color:var(--text-primary); border-color:var(--text-primary)}
+  .sim .lbl{align-self:center; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-secondary)}
+  .hint{font-size:13px; color:var(--text-secondary)}
+
+  .phone{width:min(390px,100%); height:800px; border-radius:44px; background:var(--surface-base);
+    border:1px solid var(--border); box-shadow:var(--shadow); overflow:hidden; position:relative;
+    display:flex; flex-direction:column}
+  .statusbar{height:44px; flex:none; display:flex; align-items:center; justify-content:space-between;
+    padding:0 24px; font-size:14px; font-weight:600; position:relative; z-index:6}
+  .notch{position:absolute; left:50%; top:10px; transform:translateX(-50%); width:110px; height:26px;
+    border-radius:999px; background:var(--text-primary); opacity:.92}
+
+  .screen{position:absolute; inset:44px 0 0; display:none; flex-direction:column}
+  .screen.on{display:flex}
+  .navhead{display:flex; align-items:center; gap:10px; padding:10px 16px; flex:none}
+  .navhead .back{width:38px; height:38px; border-radius:50%; background:var(--surface-raised);
+    border:1px solid var(--border); display:grid; place-items:center; flex:none}
+  .navhead b{font-size:16px; letter-spacing:-.01em}
+  .navhead .sub{font-size:12px; color:var(--text-secondary); display:block; margin-top:1px}
+
+  .scroll{flex:1; overflow-y:auto; padding:0 20px 20px; display:flex; flex-direction:column; gap:14px}
+  .btnbar{flex:none; padding:12px 20px 26px; background:linear-gradient(transparent, var(--surface-raised) 30%)}
+  .btn{height:48px; width:100%; padding:0 20px; border-radius:8px; font-size:15px; font-weight:700;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px; transition:filter var(--motion-micro) var(--ease-in)}
+  .btn:active{filter:brightness(.92)}
+  .btn.primary{background:var(--accent-primary); color:#fff}
+  .btn.secondary{border:1.5px solid var(--text-secondary); color:var(--text-primary)}
+  .btn.small{height:40px; font-size:13.5px}
+  .btn[disabled]{opacity:.45; pointer-events:none}
+  .num{font-variant-numeric:tabular-nums}
+
+  .card{border:1px solid var(--border); border-radius:16px; padding:14px 16px; background:var(--surface-raised)}
+  .chip{display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; padding:3px 9px; border-radius:999px}
+  .chip.discount{color:var(--status-discount); background:color-mix(in srgb,var(--status-discount) 13%,transparent)}
+  .chip.driving{color:var(--status-driving); background:color-mix(in srgb,var(--status-driving) 13%,transparent)}
+
+  /* C-21 cart */
+  .bizmini{display:flex; gap:10px; align-items:center}
+  .bizmini .face{width:40px; height:40px; border-radius:50%; background:var(--surface-base); display:grid; place-items:center;
+    font-size:18px; border:2px solid var(--status-driving); flex:none}
+  .bizmini b{font-size:14.5px}
+  .bizmini small{font-size:12px; color:var(--text-secondary)}
+  .item{display:flex; gap:12px; align-items:center}
+  .item .thumb{width:52px; height:52px; border-radius:10px; flex:none; display:grid; place-items:center; font-size:22px;
+    background:color-mix(in srgb,var(--accent-primary) 12%,var(--surface-base))}
+  .item .info{flex:1}
+  .item b{font-size:14px; display:block}
+  .item small{font-size:12px; color:var(--text-secondary)}
+  .stepper{display:flex; align-items:center; gap:10px}
+  .stepper button{width:28px; height:28px; border-radius:50%; border:1.5px solid var(--border); font-weight:700; font-size:15px}
+  .stepper .n{min-width:14px; text-align:center; font-weight:700}
+  .rows{display:flex; flex-direction:column}
+  .row{display:flex; justify-content:space-between; gap:12px; padding:9px 0; font-size:13.5px; border-bottom:1px solid var(--border)}
+  .row:last-child{border-bottom:0}
+  .row.total{font-size:16px; font-weight:800; padding-top:12px}
+  .row.discount{color:var(--status-discount); font-weight:700}
+  .tiprow{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .tipbtn{border:1.5px solid var(--border); border-radius:999px; padding:7px 14px; font-size:13px; font-weight:600; color:var(--text-secondary)}
+  .tipbtn[aria-pressed="true"]{border-color:var(--accent-secondary); color:var(--accent-secondary); background:color-mix(in srgb,var(--accent-secondary) 10%,transparent)}
+
+  /* C-22 payment */
+  .paym{display:flex; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid var(--border)}
+  .paym:last-child{border-bottom:0}
+  .paym .ic{width:38px; height:26px; border-radius:5px; background:var(--surface-base); border:1px solid var(--border);
+    display:grid; place-items:center; font-size:11px; font-weight:800}
+  .paym b{font-size:14px}
+  .paym .r{margin-left:auto; width:20px; height:20px; border-radius:50%; border:2px solid var(--border)}
+  .paym[aria-pressed="true"] .r{border-color:var(--accent-secondary); background:radial-gradient(circle,var(--accent-secondary) 42%, transparent 46%)}
+  .totalbanner{display:flex; justify-content:space-between; align-items:baseline}
+  .totalbanner b{font-size:22px; font-weight:800; letter-spacing:-.02em}
+
+  .spinner{width:52px; height:52px; border-radius:50%; border:4px solid var(--border); border-top-color:var(--accent-primary);
+    animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #s-processing{align-items:center; justify-content:center; gap:16px; text-align:center}
+  #s-processing p{font-size:14px; color:var(--text-secondary)}
+
+  .sadcard{display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px; padding:24px 18px}
+  .sadcard .glyph{font-size:36px}
+  .sadcard h3{font-size:17px; font-weight:700}
+  .sadcard p{font-size:13px; color:var(--text-secondary); max-width:30ch}
+
+  /* C-23 tracking */
+  .steps{display:flex; flex-direction:column; gap:0}
+  .step{display:flex; gap:14px}
+  .step .rail{display:flex; flex-direction:column; align-items:center}
+  .step .dot{width:26px; height:26px; border-radius:50%; background:var(--surface-base); border:2px solid var(--border);
+    display:grid; place-items:center; font-size:12px; color:var(--text-secondary); flex:none}
+  .step .line{width:2px; flex:1; background:var(--border); min-height:28px}
+  .step:last-child .line{display:none}
+  .step.done .dot{background:var(--status-driving); border-color:var(--status-driving); color:#fff}
+  .step.done .line{background:var(--status-driving)}
+  .step.active .dot{border-color:var(--accent-primary); color:var(--accent-primary); background:color-mix(in srgb,var(--accent-primary) 14%,var(--surface-base));
+    animation:stepglow 1.6s ease-in-out infinite}
+  @keyframes stepglow{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent-primary) 18%,transparent)}}
+  .step .content{padding-bottom:26px}
+  .step b{font-size:14px; display:block}
+  .step small{font-size:12px; color:var(--text-secondary)}
+  .etabig{display:flex; flex-direction:column; align-items:center; gap:4px; padding:18px}
+  .etabig .n{font-size:38px; font-weight:800; letter-spacing:-.02em}
+  .etabig small{font-size:12px; color:var(--text-secondary); font-weight:700; letter-spacing:.04em; text-transform:uppercase}
+
+  /* C-24 receipt */
+  .savedbanner{display:flex; align-items:center; gap:10px; border-radius:14px; padding:14px 16px;
+    background:color-mix(in srgb,var(--status-discount) 12%,var(--surface-raised)); border:1px solid color-mix(in srgb,var(--status-discount) 35%,var(--border))}
+  .savedbanner b{color:var(--status-discount); font-size:15px}
+  .disclosure summary{cursor:pointer; font-size:13px; font-weight:600; color:var(--accent-secondary); list-style:none; display:flex; align-items:center; gap:6px}
+  .disclosure summary::-webkit-details-marker{display:none}
+  .disclosure[open] summary svg{transform:rotate(180deg)}
+  .disclosure .inner{margin-top:10px; display:flex; flex-direction:column; gap:6px}
+  .starsrow{display:flex; gap:4px; font-size:22px; color:var(--border)}
+  .starsrow button{color:inherit; transition:color var(--motion-micro) var(--ease-in)}
+  .starsrow button.on, .starsrow button:hover, .starsrow button:hover ~ button{color:var(--status-warning)}
+
+  .toast{position:absolute; left:50%; bottom:20px; transform:translateX(-50%) translateY(8px); z-index:9;
+    background:var(--surface-raised); border:1px solid var(--border); box-shadow:var(--shadow);
+    border-radius:12px; padding:10px 16px; font-size:13px; font-weight:600; opacity:0;
+    transition:opacity var(--motion-standard) var(--ease-in), transform var(--motion-standard) var(--ease-in);
+    pointer-events:none; white-space:nowrap; max-width:90%}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  .notes{display:flex; flex-direction:column; gap:14px}
+  .note{background:var(--surface-raised); border:1px solid var(--border); border-radius:16px; padding:18px 20px}
+  .note h2{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:700}
+  .note ul{margin:10px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px}
+  .note li{font-size:13.5px; display:flex; gap:8px}
+  .note li b{font-weight:650}
+  .note li::before{content:""; flex:none; width:6px; height:6px; border-radius:50%; background:var(--accent-secondary); margin-top:6px}
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition-duration:1ms!important}
+  }
+</style>
+
+<div class="wrap">
+  <header class="page-head">
+    <div class="eyebrow">StreetServe · Design phase · Screens 6–9 of 77</div>
+    <h1>C-21 / C-22 / C-23 / C-24 — Order, Payment &amp; Receipt</h1>
+    <p>The transaction loop both the wave-down journey and the Direct Order flow feed into. Toggle context above the phone: <b>Order Ahead</b> gets the full pending→accepted→ready tracker; <b>At the Window</b> (arriving from a resolved queue) skips straight to payment → receipt, since the line already did the waiting.</p>
+  </header>
+
+  <div class="studio">
+    <section class="stage" aria-label="Screen mockup">
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Order context">
+          <span class="lbl">Context</span>
+          <button aria-pressed="true"  data-ctx="window">At the Window</button>
+          <button aria-pressed="false" data-ctx="ahead">Order Ahead</button>
+        </div>
+        <div class="seg" role="group" aria-label="Jump to screen">
+          <button aria-pressed="true"  data-go="cart">C-21 Cart</button>
+          <button aria-pressed="false" data-go="payment">C-22 Payment</button>
+          <button aria-pressed="false" data-go="tracking">C-23 Tracking</button>
+          <button aria-pressed="false" data-go="receipt">C-24 Receipt</button>
+        </div>
+        <div class="sim" id="sim"></div>
+      </div>
+
+      <div class="phone" id="phone" data-ctx="window">
+        <div class="statusbar"><span>9:41</span><div class="notch"></div><span>▮▮▮ ▉</span></div>
+
+        <!-- C-21 CART -->
+        <div class="screen on" id="s-cart">
+          <div class="navhead">
+            <button class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button>
+            <div><b>Your order</b><span class="sub">Taco Loco</span></div>
+          </div>
+          <div class="scroll">
+            <div class="card" style="display:flex; flex-direction:column; gap:12px">
+              <div class="item"><span class="thumb">🌮</span><span class="info"><b>Street Tacos (3)</b><small>Carne asada · al pastor · pollo</small></span>
+                <div class="stepper"><button aria-label="Decrease">–</button><span class="n">2</span><button aria-label="Increase">+</button></div></div>
+              <div class="item"><span class="thumb">🥤</span><span class="info"><b>Agua Fresca</b><small>Horchata</small></span>
+                <div class="stepper"><button aria-label="Decrease">–</button><span class="n">1</span><button aria-label="Increase">+</button></div></div>
+              <button class="btn secondary small">+ Add more items</button>
+            </div>
+
+            <div class="card" id="queueContextCard">
+              <div class="bizmini"><span class="chip discount">🏷️ Line-up discount active</span></div>
+              <p style="font-size:12.5px; color:var(--text-secondary); margin-top:6px">You joined as 4th in line — 15% is applied automatically below.</p>
+            </div>
+
+            <div class="card">
+              <p style="font-size:12.5px; color:var(--text-secondary); font-weight:700; text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px">Add a tip?</p>
+              <div class="tiprow">
+                <button class="tipbtn" data-tip="0">No tip</button>
+                <button class="tipbtn" aria-pressed="true" data-tip="0.15">Round up · <span class="num">$0.15</span></button>
+                <button class="tipbtn" data-tip="1">Custom</button>
+              </div>
+            </div>
+
+            <div class="card rows">
+              <div class="row"><span>Subtotal</span><span class="num">$21.00</span></div>
+              <div class="row discount" id="discountRow"><span>Line-up discount (4th) −15%</span><span class="num">−$3.15</span></div>
+              <div class="row"><span>Round-up tip</span><span class="num" id="tipVal">$0.15</span></div>
+              <div class="row total"><span>Total</span><span class="num" id="cartTotal">$18.00</span></div>
+            </div>
+          </div>
+          <div class="btnbar"><button class="btn primary" id="toPayment">Continue to payment · <span class="num" id="payBtnTotal">$18.00</span></button></div>
+        </div>
+
+        <!-- C-22 PAYMENT -->
+        <div class="screen" id="s-payment">
+          <div class="navhead">
+            <button class="back" id="backToCart"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button>
+            <div><b>Payment</b><span class="sub">Taco Loco · <span class="num" id="payHeadTotal">$18.00</span></span></div>
+          </div>
+          <div class="scroll">
+            <div class="card totalbanner"><span>Total due</span><b class="num" id="payTotal2">$18.00</b></div>
+            <div class="card" style="padding:6px 16px">
+              <button class="paym" aria-pressed="true" data-method="visa"><span class="ic">VISA</span><b>•••• 4242</b><span class="r"></span></button>
+              <button class="paym" data-method="wallet"><span class="ic">💳</span><b>StreetServe Wallet · <span class="num">$6.40</span></b><span class="r"></span></button>
+              <button class="paym" data-method="new"><span class="ic">+</span><b>Add payment method</b><span class="r"></span></button>
+            </div>
+            <p style="font-size:12px; color:var(--text-secondary)">Secured by Stripe. Card details never touch StreetServe's servers.</p>
+          </div>
+          <div class="btnbar"><button class="btn primary" id="payNow">Pay <span class="num" id="payBtnTotal2">$18.00</span></button></div>
+        </div>
+
+        <!-- PROCESSING -->
+        <div class="screen" id="s-processing">
+          <div class="spinner"></div>
+          <p>Confirming payment…</p>
+        </div>
+
+        <!-- DECLINED -->
+        <div class="screen" id="s-declined">
+          <div class="navhead"><b>Payment</b></div>
+          <div class="scroll">
+            <div class="card sadcard">
+              <span class="glyph">⚠️</span>
+              <h3>Card declined</h3>
+              <p>Your bank declined this charge. Nothing was taken — your order is held, not lost.</p>
+            </div>
+          </div>
+          <div class="btnbar" style="display:flex; flex-direction:column; gap:10px">
+            <button class="btn primary" id="retryPay">Try a different method</button>
+            <button class="btn secondary" id="cancelOrderFromDecline">Cancel order</button>
+          </div>
+        </div>
+
+        <!-- C-23 TRACKING -->
+        <div class="screen" id="s-tracking">
+          <div class="navhead">
+            <button class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button>
+            <div><b>Order #1042</b><span class="sub">Taco Loco</span></div>
+          </div>
+          <div class="scroll">
+            <div class="card"><div class="etabig"><span class="n num" id="trackEta">Sit tight</span><small id="trackEtaLbl">Waiting on the vendor to accept</small></div></div>
+            <div class="card">
+              <div class="steps" id="stepsList">
+                <div class="step done" data-step="pending"><div class="rail"><span class="dot">✓</span><span class="line"></span></div><div class="content"><b>Order placed</b><small>9:41 AM</small></div></div>
+                <div class="step active" data-step="accepted"><div class="rail"><span class="dot">2</span><span class="line"></span></div><div class="content"><b>Waiting for Taco Loco to accept</b><small>Usually under 2 minutes</small></div></div>
+                <div class="step" data-step="ready"><div class="rail"><span class="dot">3</span><span class="line"></span></div><div class="content"><b>Preparing your order</b><small>—</small></div></div>
+                <div class="step" data-step="done"><div class="rail"><span class="dot">4</span></div><div class="content"><b>Ready for pickup</b><small>Parked · Main St &amp; 5th Ave</small></div></div>
+              </div>
+            </div>
+            <div class="card" id="cancelledCard" style="display:none">
+              <div class="sadcard">
+                <span class="glyph">🚫</span>
+                <h3>Order cancelled</h3>
+                <p id="cancelReason">Taco Loco went Away/Closed before accepting. You were not charged.</p>
+              </div>
+            </div>
+          </div>
+          <div class="btnbar" id="trackBtnBar"><button class="btn secondary" id="cancelOrder">Cancel order</button></div>
+        </div>
+
+        <!-- C-24 RECEIPT -->
+        <div class="screen" id="s-receipt">
+          <div class="navhead">
+            <button class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button>
+            <div><b>Receipt</b><span class="sub">Taco Loco · 9:41 AM</span></div>
+          </div>
+          <div class="scroll">
+            <div class="savedbanner" id="savedBanner">🏷️ <b>You saved $3.15</b>&nbsp;<span style="color:var(--text-secondary); font-weight:500">by being customer #4</span></div>
+            <div class="card rows">
+              <div class="row"><span>2× Street Tacos</span><span class="num">$17.00</span></div>
+              <div class="row"><span>1× Agua Fresca</span><span class="num">$4.00</span></div>
+              <div class="row"><span>Subtotal</span><span class="num">$21.00</span></div>
+              <div class="row discount" id="receiptDiscountRow"><span>Line-up discount −15%</span><span class="num">−$3.15</span></div>
+              <div class="row"><span>Tip</span><span class="num">$0.15</span></div>
+              <div class="row total"><span>Total charged</span><span class="num">$18.00</span></div>
+            </div>
+            <details class="disclosure card">
+              <summary>Where this goes <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transition:transform .2s"><path d="m6 9 6 6 6-6"/></svg></summary>
+              <div class="inner">
+                <div class="row" style="border:0; padding:4px 0"><span>To Taco Loco</span><span class="num">$16.85</span></div>
+                <div class="row" style="border:0; padding:4px 0"><span>StreetServe platform fee</span><span class="num">$1.00</span></div>
+                <div class="row" style="border:0; padding:4px 0"><span>Tip to Taco Loco</span><span class="num">$0.15</span></div>
+              </div>
+            </details>
+            <div class="card">
+              <p style="font-size:13px; font-weight:600; margin-bottom:8px">Rate Taco Loco</p>
+              <div class="starsrow" aria-label="Rate 1 to 5 stars">
+                <button>★</button><button>★</button><button>★</button><button>★</button><button>★</button>
+              </div>
+            </div>
+          </div>
+          <div class="btnbar"><button class="btn primary" id="doneReceipt">Done</button></div>
+        </div>
+
+        <div class="toast" id="toast"></div>
+      </div>
+
+      <p class="hint">Toggle context above, then Continue → Pay to walk the flow · simulate errors below the phone</p>
+    </section>
+
+    <aside class="notes" aria-label="Design annotations">
+      <div class="note">
+        <h2>Two contexts, one screen set</h2>
+        <ul>
+          <li><b>At the Window</b> (arriving from C-20's queue resolution): the line already was the wait, so payment leads straight to the receipt — no separate tracker. Discount line is present and framed as the payoff for having waited.</li>
+          <li><b>Order Ahead</b> (Direct Order, Flow 2d): no queue discount by default, but gets the full C-23 pending→accepted→ready pipeline since the vendor hasn't seen this order yet and genuinely needs to act on it.</li>
+          <li>Toggling context above the phone changes both which rows appear in the cart and what payment leads to — reflecting that C-21/22 are shared, C-23 is conditional.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>Fee transparency (FR-11.3)</h2>
+        <ul>
+          <li>The full platform/vendor/tip split lives in a <b>collapsed disclosure</b> ("Where this goes"), not a bare line item in the main total — satisfies FR-11.3's full-transparency requirement without making the customer's primary total look like it has a surprise fee bolted on.</li>
+          <li>The headline total customers see is simply what left their card; the split is one tap away for anyone who wants it, which is the "make trust visible, not just enforced" UX principle applied literally.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>Discount payoff moment</h2>
+        <ul>
+          <li>"You saved $3.15 by being customer #4" repeats verbatim from the queue screens (C-20) through cart, receipt banner, and the itemized row — one consistent number the customer can track the whole way, never recalculated or restated differently.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>Failure states</h2>
+        <ul>
+          <li><b>Card decline:</b> "nothing was taken — your order is held, not lost" — mirrors the wave-down journey's reassurance pattern; retry or cancel, never silently retried.</li>
+          <li><b>Order cancelled mid-tracking</b> (business went Away/Closed, PRD edge case): cancelled card replaces the stepper, explicit no-charge statement, refund implied since payment was already held not captured until ready — simulate it below the phone on the Tracking screen.</li>
+          <li>Processing state uses an actual spinner — the one place in the system a spinner (not a skeleton) is correct, per §2.6e, since it's a blocking financial submission.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>Handoff notes</h2>
+        <ul>
+          <li>Idempotency key sent with the Pay action (API §16) — a retried tap after a network blip must never double-charge; this is invisible in the UI by design.</li>
+          <li>Tracking steps map directly to `orders.status` (pending/accepted/ready/completed/cancelled, Database §3); the active-step glow is the only non-essential motion here and collapses under reduced motion.</li>
+          <li>Star rating on the receipt is the entry point to C-16's full review composer, gated to completed transactions only (anti-manipulation rule, Security §4).</li>
+          <li>Full spec: <b>docs/13-screen-design-specs.md § C-21–C-24</b>.</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const phone=$('#phone'), toast=$('#toast'); let tt;
+
+  const SIMS={
+    cart:[], payment:[['Card declines','declined']],
+    tracking:[['Vendor accepts','ACCEPT'],['Order ready','READY'],['Business goes Away/Closed','CANCEL']],
+    receipt:[]
+  };
+
+  function go(id){
+    $$('.screen').forEach(s=>s.classList.remove('on'));
+    $('#s-'+id).classList.add('on');
+    $$('.seg [data-go]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.go===id));
+    const sim=$('#sim'); sim.innerHTML='';
+    const list = SIMS[id] || [];
+    if(list.length){
+      const l=document.createElement('span'); l.className='lbl'; l.textContent='Simulate:'; sim.appendChild(l);
+      list.forEach(([label,action])=>{
+        const b=document.createElement('button'); b.textContent=label;
+        b.addEventListener('click',()=>runSim(action));
+        sim.appendChild(b);
+      });
+    }
+  }
+  function runSim(action){
+    if(action==='declined'){ go('declined'); return; }
+    if(action==='ACCEPT'){ setStep('ready'); show('Taco Loco accepted your order'); return; }
+    if(action==='READY'){ setStep('done'); show('Order ready for pickup!'); return; }
+    if(action==='CANCEL'){
+      $('#stepsList').style.display='none'; $('#trackBtnBar').style.display='none';
+      $('#cancelledCard').style.display='block'; show('Order cancelled — nothing charged');
+    }
+  }
+  function setStep(target){
+    const order=['pending','accepted','ready','done']; const i=order.indexOf(target);
+    $$('.step').forEach(s=>{
+      const si=order.indexOf(s.dataset.step);
+      s.classList.toggle('done', si<i); s.classList.toggle('active', si===i);
+    });
+    if(target==='ready'){ $('#trackEta').textContent='7 min'; $('#trackEtaLbl').textContent='Being prepared now'; }
+    if(target==='done'){ $('#trackEta').textContent='Ready'; $('#trackEtaLbl').textContent='Head to the window whenever works'; $('#trackBtnBar').innerHTML='<button class="btn primary" id="toReceiptFromTrack">View receipt</button>'; $('#toReceiptFromTrack').addEventListener('click',()=>go('receipt')); }
+  }
+
+  // context toggle
+  $$('.seg [data-ctx]').forEach(b=>b.addEventListener('click',()=>{
+    $$('.seg [data-ctx]').forEach(x=>x.setAttribute('aria-pressed', x===b));
+    phone.dataset.ctx = b.dataset.ctx;
+    const isAhead = b.dataset.ctx==='ahead';
+    $('#queueContextCard').style.display = isAhead ? 'none' : 'block';
+    $('#discountRow').style.display = isAhead ? 'none' : 'flex';
+    $('#receiptDiscountRow').style.display = isAhead ? 'none' : 'flex';
+    $('#savedBanner').style.display = isAhead ? 'none' : 'flex';
+    recalc();
+    go('cart');
+  }));
+
+  function recalc(){
+    const ahead = phone.dataset.ctx==='ahead';
+    const sub=21.00, disc = ahead?0:3.15, tip = parseFloat($('.tipbtn[aria-pressed="true"]')?.dataset.tip||0);
+    const total = (sub-disc+tip).toFixed(2);
+    ['cartTotal','payBtnTotal','payHeadTotal','payTotal2','payBtnTotal2'].forEach(id=>{ const e=$('#'+id); if(e) e.textContent='$'+total; });
+    $('#tipVal').textContent = '$'+tip.toFixed(2);
+  }
+
+  $$('.seg [data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
+  $$('.tipbtn').forEach(b=>b.addEventListener('click',()=>{ $$('.tipbtn').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); recalc(); }));
+  $$('.stepper button').forEach(b=>b.addEventListener('click',()=>show('Quantity updated')));
+  $$('.paym').forEach(p=>p.addEventListener('click',()=>{ $$('.paym').forEach(x=>x.setAttribute('aria-pressed','false')); p.setAttribute('aria-pressed','true'); }));
+
+  $('#toPayment').addEventListener('click',()=>go('payment'));
+  $('#backToCart').addEventListener('click',()=>go('cart'));
+  $('#payNow').addEventListener('click',()=>{
+    go('processing');
+    setTimeout(()=>{ go(phone.dataset.ctx==='ahead' ? 'tracking' : 'receipt'); if(phone.dataset.ctx==='ahead') setStep('accepted'); }, 1300);
+  });
+  $('#retryPay').addEventListener('click',()=>go('payment'));
+  $('#cancelOrderFromDecline').addEventListener('click',()=>{ show('Order cancelled'); go('cart'); });
+  $('#cancelOrder').addEventListener('click',()=>{ show('Order cancelled — nothing charged'); go('cart'); });
+  $('#doneReceipt').addEventListener('click',()=>{ show('Back to map'); go('cart'); });
+  $$('.starsrow button').forEach((s,i,arr)=>s.addEventListener('click',()=>{ arr.forEach((x,j)=>x.classList.toggle('on', j<=i)); show('Thanks for the '+(i+1)+'★ rating'); }));
+
+  function show(msg){ toast.textContent=msg; toast.classList.add('show');
+    clearTimeout(tt); tt=setTimeout(()=>toast.classList.remove('show'),3600); }
+
+  recalc(); go('cart');
+</script>

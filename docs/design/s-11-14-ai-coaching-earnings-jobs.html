@@ -1,0 +1,402 @@
+<title>StreetServe — S-11–S-14 AI Assistant, Coaching, Earnings &amp; Jobs</title>
+<style>
+  :root{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --border:rgba(91,94,104,.28); --shadow:0 12px 32px rgba(20,21,26,.14);
+    --motion-micro:100ms; --motion-standard:200ms; --motion-sheet:300ms;
+    --ease-in:cubic-bezier(.2,0,0,1);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-base:#0E0F12; --surface-raised:#17181C;
+      --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+      --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+      --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+      --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+      --border:rgba(156,159,168,.22); --shadow:0 12px 32px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --surface-base:#0E0F12; --surface-raised:#17181C;
+    --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+    --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+    --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+    --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+    --border:rgba(156,159,168,.22); --shadow:0 12px 32px rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"]{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --border:rgba(91,94,104,.28); --shadow:0 12px 32px rgba(20,21,26,.14);
+  }
+
+  *{box-sizing:border-box; margin:0}
+  html,body{background:var(--surface-base); color:var(--text-primary);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.4}
+  button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+  :is(button,[tabindex]):focus-visible{outline:2px solid var(--accent-secondary); outline-offset:2px; border-radius:8px}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:40px 20px 80px; display:flex; flex-direction:column; gap:28px}
+  .page-head .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:600}
+  .page-head h1{font-size:32px; font-weight:700; letter-spacing:-.02em; text-wrap:balance; margin-top:6px}
+  .page-head p{color:var(--text-secondary); max-width:64ch; margin-top:8px; font-size:15px}
+
+  .studio{display:grid; grid-template-columns:minmax(0,460px) minmax(280px,1fr); gap:36px; align-items:start}
+  @media (max-width:900px){ .studio{grid-template-columns:1fr} }
+  .stage{display:flex; flex-direction:column; gap:14px; align-items:center}
+  .controls{display:flex; flex-direction:column; gap:8px; align-items:center}
+  .seg{display:flex; gap:4px; background:var(--surface-raised); border:1px solid var(--border); border-radius:999px; padding:4px; flex-wrap:wrap; justify-content:center}
+  .seg button{padding:7px 12px; border-radius:999px; font-size:12.5px; font-weight:600; color:var(--text-secondary);
+    transition:background var(--motion-micro) var(--ease-in), color var(--motion-micro) var(--ease-in)}
+  .seg button[aria-pressed="true"]{background:var(--accent-secondary); color:#fff}
+  .sim{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; min-height:34px}
+  .sim button{font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:999px;
+    border:1.5px dashed var(--text-secondary); color:var(--text-secondary)}
+  .sim button:hover{color:var(--text-primary); border-color:var(--text-primary)}
+  .sim .lbl{align-self:center; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-secondary)}
+  .hint{font-size:13px; color:var(--text-secondary)}
+
+  .phone{width:min(390px,100%); height:800px; border-radius:44px; background:var(--surface-base);
+    border:1px solid var(--border); box-shadow:var(--shadow); overflow:hidden; position:relative;
+    display:flex; flex-direction:column}
+  .statusbar{height:44px; flex:none; display:flex; align-items:center; justify-content:space-between;
+    padding:0 24px; font-size:14px; font-weight:600; position:relative; z-index:6}
+  .notch{position:absolute; left:50%; top:10px; transform:translateX(-50%); width:110px; height:26px;
+    border-radius:999px; background:var(--text-primary); opacity:.92}
+
+  .screen{position:absolute; inset:44px 0 0; display:none; flex-direction:column}
+  .screen.on{display:flex}
+  .navhead{display:flex; align-items:center; gap:10px; padding:10px 16px; flex:none}
+  .navhead .back{width:38px; height:38px; border-radius:50%; background:var(--surface-raised);
+    border:1px solid var(--border); display:grid; place-items:center; flex:none}
+  .navhead b{font-size:16px; letter-spacing:-.01em}
+  .navhead .sub{font-size:12px; color:var(--text-secondary); display:block; margin-top:1px}
+
+  .scroll{flex:1; overflow-y:auto; padding:0 20px 20px; display:flex; flex-direction:column; gap:14px}
+  .btnbar{flex:none; padding:12px 20px 26px; background:linear-gradient(transparent, var(--surface-raised) 30%); display:flex; flex-direction:column; gap:8px}
+  .btn{height:48px; width:100%; padding:0 20px; border-radius:8px; font-size:15px; font-weight:700;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px; transition:filter var(--motion-micro) var(--ease-in)}
+  .btn:active{filter:brightness(.92)}
+  .btn.primary{background:var(--accent-primary); color:#fff}
+  .btn.secondary{border:1.5px solid var(--text-secondary); color:var(--text-primary)}
+  .btn.small{height:38px; font-size:13px; width:auto; padding:0 16px}
+  .num{font-variant-numeric:tabular-nums}
+  .card{border:1px solid var(--border); border-radius:16px; padding:14px 16px; background:var(--surface-raised)}
+  .chip{display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; padding:3px 9px; border-radius:999px}
+  .chip.discount{color:var(--status-discount); background:color-mix(in srgb,var(--status-discount) 13%,transparent)}
+  .chip.green{color:var(--status-driving); background:color-mix(in srgb,var(--status-driving) 13%,transparent)}
+  .chip.blue{color:var(--accent-secondary); background:color-mix(in srgb,var(--accent-secondary) 13%,transparent)}
+  .badge-ai{display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
+    color:var(--accent-secondary); background:color-mix(in srgb,var(--accent-secondary) 10%,transparent); padding:3px 8px; border-radius:999px}
+
+  /* S-11 AI feed */
+  #s-ai .deck{position:relative; flex:1; display:flex; align-items:center; justify-content:center; padding:16px 20px}
+  .aicard{position:absolute; width:calc(100% - 40px); max-width:320px; background:var(--surface-raised); border:1px solid var(--border);
+    border-radius:20px; padding:20px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:12px;
+    transition:transform var(--motion-sheet) var(--ease-in), opacity var(--motion-sheet) var(--ease-in)}
+  .aicard .ai-head{display:flex; gap:12px; align-items:center}
+  .aicard .glyph{width:46px; height:46px; border-radius:13px; flex:none; display:grid; place-items:center; font-size:24px;
+    background:color-mix(in srgb,var(--accent-secondary) 12%,var(--surface-base)); border:1px solid color-mix(in srgb,var(--accent-secondary) 22%,var(--border))}
+  .aicard h3{font-size:16.5px; font-weight:800; letter-spacing:-.01em; line-height:1.22; text-wrap:balance}
+  .aicard .why{font-size:12.5px; color:var(--text-secondary); background:var(--surface-base); border-radius:10px; padding:10px 12px; display:flex; gap:7px; align-items:flex-start; line-height:1.4}
+  .aicard .stat{display:flex; border:1px solid var(--border); border-radius:12px; overflow:hidden; background:var(--surface-base)}
+  .aicard .stat div{text-align:center; flex:1; padding:11px 8px}
+  .aicard .stat div + div{border-left:1px solid var(--border)}
+  .aicard .stat b{font-size:18px; font-weight:800; display:block; font-variant-numeric:tabular-nums; letter-spacing:-.01em; color:var(--text-primary)}
+  .aicard .stat small{font-size:10.5px; color:var(--text-secondary); margin-top:2px; display:block; line-height:1.25}
+  .aicard .row2{display:flex; gap:8px}
+  .aicard .row2 .btn{height:42px; font-size:13.5px}
+  .deckdots{display:flex; gap:6px; justify-content:center; padding:10px 0}
+  .deckdots i{width:6px; height:6px; border-radius:50%; background:var(--border)}
+  .deckdots i.now{background:var(--accent-secondary); width:16px; border-radius:3px}
+
+  /* S-12 coaching */
+  .objgrid{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .obj{border:1.5px solid var(--border); border-radius:12px; padding:12px 10px; text-align:center; font-size:12.5px; font-weight:600; color:var(--text-secondary); display:flex; flex-direction:column; gap:6px; align-items:center}
+  .obj .ic{font-size:20px}
+  .obj[aria-pressed="true"]{border-color:var(--accent-secondary); color:var(--accent-secondary); background:color-mix(in srgb,var(--accent-secondary) 8%,transparent)}
+  .bubble-them{align-self:flex-start; max-width:80%; background:var(--surface-base); border:1px solid var(--border); border-radius:14px 14px 14px 4px; padding:10px 14px; font-size:13.5px}
+  .bubble-ai{align-self:flex-start; max-width:85%; background:color-mix(in srgb,var(--accent-secondary) 9%,var(--surface-raised)); border:1px solid color-mix(in srgb,var(--accent-secondary) 30%,var(--border)); border-radius:14px 14px 14px 4px; padding:12px 14px; font-size:13.5px; display:flex; flex-direction:column; gap:6px}
+  .convo{display:flex; flex-direction:column; gap:10px}
+
+  /* S-13 earnings */
+  .bigearn{text-align:center; padding:6px 0}
+  .bigearn .n{font-size:38px; font-weight:800; letter-spacing:-.02em}
+  .bigearn small{display:block; font-size:11.5px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.05em; margin-top:2px}
+  .sparkwrap{display:flex; align-items:flex-end; gap:6px; height:64px; padding:0 4px}
+  .bar{flex:1; background:color-mix(in srgb,var(--accent-secondary) 22%,var(--surface-base)); border-radius:5px 5px 0 0; position:relative}
+  .bar.peak{background:var(--accent-secondary)}
+  .bar small{position:absolute; bottom:-18px; left:0; right:0; text-align:center; font-size:9.5px; color:var(--text-secondary)}
+  .payrow{display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid var(--border); font-size:13px}
+  .payrow:last-child{border-bottom:0}
+  .payrow .ic{width:32px; height:32px; border-radius:50%; background:color-mix(in srgb,var(--status-driving) 14%,var(--surface-base)); color:var(--status-driving); display:grid; place-items:center; font-size:14px; flex:none}
+  .payrow b{display:block}
+  .payrow small{color:var(--text-secondary); font-size:11.5px}
+  .payrow .amt{margin-left:auto; font-weight:700}
+
+  /* S-14 jobs */
+  .jobcard{display:flex; gap:12px; align-items:flex-start}
+  .jobcard .ic{width:44px; height:44px; border-radius:12px; background:color-mix(in srgb,var(--accent-primary) 12%,var(--surface-base)); display:grid; place-items:center; font-size:20px; flex:none}
+  .jobcard b{font-size:14px; display:block}
+  .jobcard small{font-size:12px; color:var(--text-secondary)}
+  .jobcard .pay{margin-left:auto; text-align:right; font-weight:800; font-size:15px}
+  .jobcard .pay small{display:block; font-weight:600; font-size:10.5px}
+  .checkstate{display:flex; flex-direction:column; align-items:center; gap:14px; padding:20px; text-align:center}
+  .checkstate .bigcheck{width:80px; height:80px; border-radius:50%; display:grid; place-items:center; background:color-mix(in srgb,var(--status-driving) 15%,var(--surface-base)); color:var(--status-driving)}
+
+  .toast{position:absolute; left:50%; bottom:20px; transform:translateX(-50%) translateY(8px); z-index:9;
+    background:var(--surface-raised); border:1px solid var(--border); box-shadow:var(--shadow);
+    border-radius:12px; padding:10px 16px; font-size:13px; font-weight:600; opacity:0;
+    transition:opacity var(--motion-standard) var(--ease-in), transform var(--motion-standard) var(--ease-in);
+    pointer-events:none; white-space:nowrap; max-width:90%}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  .notes{display:flex; flex-direction:column; gap:14px}
+  .note{background:var(--surface-raised); border:1px solid var(--border); border-radius:16px; padding:18px 20px}
+  .note h2{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:700}
+  .note ul{margin:10px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px}
+  .note li{font-size:13.5px; display:flex; gap:8px}
+  .note li b{font-weight:650}
+  .note li::before{content:""; flex:none; width:6px; height:6px; border-radius:50%; background:var(--accent-secondary); margin-top:6px}
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition-duration:1ms!important}
+  }
+</style>
+
+<div class="wrap">
+  <header class="page-head">
+    <div class="eyebrow">StreetServe · Design phase · Screens 20–23 of 77 · Seller track complete</div>
+    <h1>S-11 → S-14 — AI Assistant, Coaching, Earnings &amp; Jobs</h1>
+    <p>The last four seller screens: one recommendation at a time (never a dashboard dump), a coaching library for objection handling, an earnings home base, and the Jobs board for when there's nothing to sell nearby. This closes out the seller-mode design track.</p>
+  </header>
+
+  <div class="studio">
+    <section class="stage" aria-label="Screen mockup">
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Jump to screen">
+          <button aria-pressed="true"  data-go="ai">S-11 AI Feed</button>
+          <button aria-pressed="false" data-go="coaching">S-12 Coaching</button>
+          <button aria-pressed="false" data-go="earnings">S-13 Earnings</button>
+          <button aria-pressed="false" data-go="jobs">S-14 Jobs</button>
+        </div>
+        <div class="sim" id="sim"></div>
+      </div>
+
+      <div class="phone" id="phone">
+        <div class="statusbar"><span>9:41</span><div class="notch"></div><span>▮▮▮ ▉</span></div>
+
+        <!-- S-11 AI FEED -->
+        <div class="screen on" id="s-ai">
+          <div class="navhead"><b>AI Assistant</b><span class="badge-ai" style="margin-left:auto">Smart · gets better with data</span></div>
+          <div class="deck" id="deck">
+            <div class="aicard" id="card1" data-idx="0">
+              <div class="ai-head"><span class="glyph">🎪</span><h3>Farmers Market on 9th — this Saturday</h3></div>
+              <div class="why">💡 <span>Recommended because: 3 sellers averaged $40+ there last month, and it's 0.6 mi from your usual spot.</span></div>
+              <div class="stat"><div><b class="num">450+</b><small>expected foot traffic</small></div><div><b class="num">9 AM</b><small>best arrival time</small></div></div>
+              <div class="row2"><button class="btn secondary" id="dismiss1">Not now</button><button class="btn primary" id="accept1">Plan for it</button></div>
+            </div>
+            <div class="aicard" id="card2" data-idx="1" style="transform:translateY(14px) scale(.95); opacity:.6; z-index:0">
+              <div class="ai-head"><span class="glyph">🧸</span><h3>Try toys near Beyer Park today</h3></div>
+              <div class="why">💡 <span>Recommended because: weekend park foot traffic is high and you haven't carried this category yet.</span></div>
+              <div class="stat"><div><b class="num">$9</b><small>avg sale price</small></div><div><b class="num">62%</b><small>sell-through last week</small></div></div>
+              <div class="row2"><button class="btn secondary">Not now</button><button class="btn primary">View inventory</button></div>
+            </div>
+          </div>
+          <div class="deckdots"><i class="now"></i><i></i><i></i></div>
+          <div class="btnbar"><button class="btn secondary small" style="width:100%" id="viewAllAi">See all recommendations</button></div>
+        </div>
+
+        <!-- S-12 COACHING -->
+        <div class="screen" id="s-coaching">
+          <div class="navhead">
+            <button class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button>
+            <div><b>Sales coaching</b><span class="sub">Handwoven Market Totes</span></div>
+          </div>
+          <div class="scroll">
+            <p style="font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary)">What did they say?</p>
+            <div class="objgrid">
+              <button class="obj" aria-pressed="true" data-obj="price"><span class="ic">💸</span>"Too expensive"</button>
+              <button class="obj" data-obj="think"><span class="ic">🤔</span>"I'll think about it"</button>
+              <button class="obj" data-obj="quality"><span class="ic">🔍</span>"Is this handmade?"</button>
+              <button class="obj" data-obj="compare"><span class="ic">🛍️</span>"Seen cheaper online"</button>
+            </div>
+            <div class="convo" id="convo">
+              <div class="bubble-them">"$14 feels like a lot for a tote bag."</div>
+              <div class="bubble-ai"><span class="badge-ai" style="align-self:flex-start">AI suggestion</span><span>Mention it's handwoven locally by the church's craft circle — and offer the bundle: "Two for $25, and $2 goes right back to their youth programs."</span></div>
+            </div>
+          </div>
+          <div class="btnbar"><button class="btn secondary small" style="width:100%">See more objections →</button></div>
+        </div>
+
+        <!-- S-13 EARNINGS -->
+        <div class="screen" id="s-earnings">
+          <div class="navhead"><b>Earnings</b></div>
+          <div class="scroll">
+            <div class="card bigearn"><span class="n num">$142.60<small>Earned this week</small></span></div>
+            <div class="card">
+              <div class="sparkwrap">
+                <div class="bar" style="height:30%"><small>M</small></div>
+                <div class="bar" style="height:55%"><small>T</small></div>
+                <div class="bar" style="height:40%"><small>W</small></div>
+                <div class="bar peak" style="height:100%"><small>T</small></div>
+                <div class="bar" style="height:70%"><small>F</small></div>
+                <div class="bar" style="height:20%"><small>S</small></div>
+                <div class="bar" style="height:0%"><small>S</small></div>
+              </div>
+            </div>
+            <p style="font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary)">Payout history</p>
+            <div class="card">
+              <div class="payrow"><span class="ic">✓</span><div><b>Handwoven Market Totes</b><small class="num">Jul 4 · Bronze · 3-day hold</small></div><span class="amt num">$19.60</span></div>
+              <div class="payrow"><span class="ic">✓</span><div><b>Used Paperbacks (Box)</b><small class="num">Jul 2 · Bronze · 3-day hold</small></div><span class="amt num">$31.00</span></div>
+              <div class="payrow"><span class="ic">⏳</span><div><b>Sign-holding gig · Wonder Ice</b><small class="num">Processing</small></div><span class="amt num">$45.00</span></div>
+              <div class="payrow"><span class="ic">✓</span><div><b>Handwoven Market Totes</b><small class="num">Jun 28 · Bronze · 3-day hold</small></div><span class="amt num">$47.00</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- S-14 JOBS -->
+        <div class="screen" id="s-jobs">
+          <div class="navhead"><b>Jobs — Earn Today</b></div>
+          <div class="scroll">
+            <div class="card jobcard" id="jobPick">
+              <span class="ic">🪧</span>
+              <div><b>Sign holding — grand opening</b><small>Wonder Ice · 0.5 mi · 2 hours</small></div>
+              <div class="pay"><span class="num">$45</span><small>flat</small></div>
+            </div>
+            <div class="card jobcard">
+              <span class="ic">📦</span>
+              <div><b>Local delivery run</b><small>Modesto Book Exchange · 1.2 mi · ~1.5 hrs</small></div>
+              <div class="pay"><span class="num">$22</span><small>per run</small></div>
+            </div>
+            <div class="card jobcard">
+              <span class="ic">🎤</span>
+              <div><b>Event staffing — farmers market</b><small>City of Modesto · 2.1 mi · 4 hours</small></div>
+              <div class="pay"><span class="num">$68</span><small>flat</small></div>
+            </div>
+          </div>
+          <div class="btnbar"><button class="btn primary" id="applyJob">Accept sign-holding gig</button></div>
+        </div>
+
+        <!-- S-14 CHECK-IN -->
+        <div class="screen" id="s-checkin">
+          <div class="navhead">
+            <button class="back" id="backJobs"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button>
+            <b>Sign holding — grand opening</b>
+          </div>
+          <div class="scroll">
+            <div class="checkstate">
+              <div class="bigcheck"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="m4.5 12.5 5 5 10-11"/></svg></div>
+              <h3 style="font-size:19px; font-weight:800">You're checked in</h3>
+              <p style="font-size:13.5px; color:var(--text-secondary); max-width:26ch">Geofence confirmed at Wonder Ice. Check out when your 2 hours are up to trigger payout.</p>
+              <span class="chip green">Timer running · 00:04:12</span>
+            </div>
+          </div>
+          <div class="btnbar"><button class="btn primary" id="checkOutJob">Check out — I'm done</button></div>
+        </div>
+
+        <div class="toast" id="toast"></div>
+      </div>
+
+      <p class="hint">Tap a recommendation to dismiss/accept · tap objections on S-12 · accept a job on S-14</p>
+    </section>
+
+    <aside class="notes" aria-label="Design annotations">
+      <div class="note">
+        <h2>S-11 — one recommendation at a time</h2>
+        <ul>
+          <li>Direct implementation of the UX doc's progressive-disclosure rule: a stacked-card deck shows exactly one actionable recommendation, with the next peeking behind it — never a dashboard of numbers on day one.</li>
+          <li>Every card carries a <b>"Recommended because" line</b> (FR-9.1's explainability requirement) — concrete and falsifiable ("3 sellers averaged $40+ there"), not a vague "AI thinks you'll like this."</li>
+          <li>The "Smart · gets better with data" badge is the Q6-mandated copy — never claims full predictive AI for the rule-based v1.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>S-12 — coaching is a library, not a conversation</h2>
+        <ul>
+          <li>Objection picker (not a free-text chat input) — FR-9.3 specifies scripted responses keyed to logged objection categories, not live conversation transcription. The UI should never look like it's listening to the actual customer interaction.</li>
+          <li>AI suggestion bubble is visually distinct (blue-tinted, badged) from a real conversation transcript — this is coaching content, not a chat log, and should never be confused with one.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>S-13 — earnings as a home base</h2>
+        <ul>
+          <li>Weekly total leads, same big-number treatment as settlement (S-10) and customer savings (C-24) — one consistent "here's the number that matters" pattern across the entire app.</li>
+          <li>Payout history mixes consignment settlements and Jobs gigs in one feed — a seller's income doesn't care which product line it came from, so the ledger doesn't force an artificial split.</li>
+          <li>Sparkline uses a real filled-bar treatment with the peak day emphasized, not a decorative flourish — it's the one piece of data visualization in seller mode and earns the same care as a settlement number.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>S-14 — Jobs as the AI's fallback suggestion</h2>
+        <ul>
+          <li>Jobs exists partly as the answer to S-03's empty state ("nothing to sell nearby? try a gig instead") — the flat-fee framing (vs. consignment's per-unit math) is a deliberately different mental model, shown as a plain, comparable dollar figure per card.</li>
+          <li>Check-in is geofence-confirmed, not a manual "I'm here" button a worker could fake from home — matches FR's check-in/check-out requirement for Jobs.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>Handoff notes</h2>
+        <ul>
+          <li>S-11 recommendations come from `GET /ai/recommendations/products` and `/locations` (API §13); `reason_summary` is a required field on every `ai_recommendations` row (Database §3), not optional copy the client invents.</li>
+          <li>S-12 posts the objection category to `POST /ai/sales-coaching` and renders the returned scripted response verbatim — no on-device generation.</li>
+          <li>S-14 check-in/out calls `POST /jobs/:id/check-in` and `/check-out` (API §11), gated on device geofence, triggering payout on check-out per FR.</li>
+          <li>Full spec: <b>docs/13-screen-design-specs.md § S-11–S-14</b>.</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const phone=$('#phone'), toast=$('#toast'); let tt;
+
+  function go(id){
+    $$('.screen').forEach(s=>s.classList.remove('on'));
+    $('#s-'+id).classList.add('on');
+    $$('.seg [data-go]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.go===id));
+  }
+  $$('.seg [data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
+
+  // S-11 deck swipe-away simulation
+  function advanceDeck(msg){
+    show(msg);
+    const c1=$('#card1');
+    c1.style.transform='translateX(120%) rotate(8deg)'; c1.style.opacity='0';
+    setTimeout(()=>{
+      const c2=$('#card2');
+      c2.style.transform='none'; c2.style.opacity='1'; c2.style.zIndex='1';
+      c1.remove();
+    }, 260);
+  }
+  $('#dismiss1')?.addEventListener('click',()=>advanceDeck('Dismissed — you won\'t see this one again'));
+  $('#accept1')?.addEventListener('click',()=>advanceDeck('Added to your plan for Saturday'));
+  $('#viewAllAi').addEventListener('click',()=>show('Opens full recommendation list'));
+
+  // S-12
+  const CONVOS={
+    price:['"$14 feels like a lot for a tote bag."','Mention it’s handwoven locally by the church’s craft circle — and offer the bundle: "Two for $25, and $2 goes right back to their youth programs."'],
+    think:['"Let me think about it."','No pressure — let them know you’ll be at this same spot next weekend, and totes have been selling out by Sunday.'],
+    quality:['"Is this actually handmade?"','Yes — show the maker tag if there is one, and mention it’s made by the same local group they’re supporting.'],
+    compare:['"I saw something cheaper online."','Point out theirs ships in days and costs shipping — yours is in their hands right now, and it directly supports a local group.']
+  };
+  $$('.obj').forEach(o=>o.addEventListener('click',()=>{
+    $$('.obj').forEach(x=>x.setAttribute('aria-pressed','false')); o.setAttribute('aria-pressed','true');
+    const [them,ai]=CONVOS[o.dataset.obj];
+    $('#convo').innerHTML = `<div class="bubble-them">${them}</div><div class="bubble-ai"><span class="badge-ai" style="align-self:flex-start">AI suggestion</span><span>${ai}</span></div>`;
+  }));
+
+  // S-14
+  $('#jobPick').addEventListener('click',()=>show('Viewing sign-holding gig details'));
+  $('#applyJob').addEventListener('click',()=>{ show('Checked in via geofence'); go('checkin'); });
+  $('#backJobs').addEventListener('click',()=>go('jobs'));
+  $('#checkOutJob').addEventListener('click',()=>{ show('Checked out — $45.00 processing to Earnings'); go('jobs'); });
+
+  function show(msg){ toast.textContent=msg; toast.classList.add('show');
+    clearTimeout(tt); tt=setTimeout(()=>toast.classList.remove('show'),3600); }
+</script>

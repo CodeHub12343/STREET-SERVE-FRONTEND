@@ -1,0 +1,431 @@
+<title>StreetServe — Consignment Hub Dashboard (H-01–H-06)</title>
+<style>
+  :root{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF; --surface-sunken:#F1F0ED;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --border:rgba(91,94,104,.24); --shadow:0 12px 32px rgba(20,21,26,.12);
+    --motion-micro:100ms; --motion-standard:200ms; --ease-in:cubic-bezier(.2,0,0,1);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-base:#0E0F12; --surface-raised:#17181C; --surface-sunken:#0A0B0D;
+      --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+      --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+      --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+      --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+      --border:rgba(156,159,168,.18); --shadow:0 12px 32px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --surface-base:#0E0F12; --surface-raised:#17181C; --surface-sunken:#0A0B0D;
+    --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+    --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+    --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+    --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+    --border:rgba(156,159,168,.18); --shadow:0 12px 32px rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"]{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF; --surface-sunken:#F1F0ED;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --border:rgba(91,94,104,.24); --shadow:0 12px 32px rgba(20,21,26,.12);
+  }
+
+  *{box-sizing:border-box; margin:0}
+  html,body{background:var(--surface-base); color:var(--text-primary);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.4}
+  button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+  :is(button,[tabindex]):focus-visible{outline:2px solid var(--accent-secondary); outline-offset:2px; border-radius:8px}
+
+  .wrap{max-width:1240px; margin:0 auto; padding:40px 20px 80px; display:flex; flex-direction:column; gap:24px}
+  .page-head .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:600}
+  .page-head h1{font-size:32px; font-weight:700; letter-spacing:-.02em; text-wrap:balance; margin-top:6px}
+  .page-head p{color:var(--text-secondary); max-width:70ch; margin-top:8px; font-size:15px}
+
+  .controls{display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between}
+  .seg{display:flex; gap:4px; background:var(--surface-raised); border:1px solid var(--border); border-radius:999px; padding:4px; flex-wrap:wrap}
+  .seg button{padding:7px 12px; border-radius:999px; font-size:12.5px; font-weight:600; color:var(--text-secondary);
+    transition:background var(--motion-micro) var(--ease-in), color var(--motion-micro) var(--ease-in)}
+  .seg button[aria-pressed="true"]{background:var(--accent-secondary); color:#fff}
+  .sim{display:flex; gap:8px; flex-wrap:wrap}
+  .sim button{font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:999px; border:1.5px dashed var(--text-secondary); color:var(--text-secondary)}
+  .sim button:hover{color:var(--text-primary); border-color:var(--text-primary)}
+  .sim .lbl{align-self:center; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-secondary)}
+
+  .browser{border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:var(--shadow); background:var(--surface-base); max-width:1180px; margin:0 auto}
+  .chrome{height:38px; background:var(--surface-sunken); display:flex; align-items:center; gap:8px; padding:0 14px; border-bottom:1px solid var(--border)}
+  .chrome i{width:10px; height:10px; border-radius:50%; background:var(--border)}
+  .chrome .url{margin-left:10px; font-size:11px; color:var(--text-secondary); background:var(--surface-raised); border-radius:999px; padding:3px 12px}
+
+  .dash{display:flex; height:660px}
+  .sidebar{width:220px; flex:none; border-right:1px solid var(--border); background:var(--surface-raised); display:flex; flex-direction:column}
+  .sidebar .brand{display:flex; align-items:center; gap:10px; padding:16px 16px 14px; font-weight:800; font-size:15px; border-bottom:1px solid var(--border)}
+  .sidebar .brand .logo{width:30px; height:30px; border-radius:9px; background:var(--status-driving); flex:none; display:grid; place-items:center; color:#fff; font-size:16px}
+  .navitem{display:flex; align-items:center; gap:12px; padding:11px 16px; font-size:13.5px; font-weight:600; color:var(--text-secondary); border-left:3px solid transparent; text-align:left; white-space:nowrap; width:100%}
+  .navitem svg{width:18px; height:18px; flex:none}
+  .navitem[aria-current="page"]{color:var(--accent-secondary); border-left-color:var(--accent-secondary); background:color-mix(in srgb,var(--accent-secondary) 6%,transparent)}
+  .navgroup-label{font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:var(--text-secondary); padding:14px 16px 4px}
+
+  .mainarea{flex:1; display:flex; flex-direction:column; min-width:0}
+  .topbar{height:56px; flex:none; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; padding:0 20px}
+  .topbar h2{font-size:15px; font-weight:700}
+  .topbar .roleSwitch{margin-left:auto; display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:var(--text-secondary); border:1px solid var(--border); border-radius:999px; padding:6px 12px}
+
+  .content{flex:1; overflow-y:auto; padding:20px; display:none; flex-direction:column; gap:16px}
+  .content.on{display:flex}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  .card{border:1px solid var(--border); border-radius:14px; padding:16px; background:var(--surface-raised)}
+  .num{font-variant-numeric:tabular-nums}
+  .kpi small{font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--text-secondary); display:block; margin-bottom:6px}
+  .kpi b{font-size:26px; font-weight:800; letter-spacing:-.01em}
+  .kpi .delta{font-size:12px; font-weight:600; color:var(--status-driving); margin-top:4px; display:block}
+
+  .btn{height:38px; padding:0 16px; border-radius:8px; font-size:13.5px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; gap:7px}
+  .btn.primary{background:var(--accent-primary); color:#fff}
+  .btn.secondary{border:1.5px solid var(--text-secondary); color:var(--text-primary)}
+  .btn.danger{color:var(--status-danger); font-weight:600}
+  .btn.small{height:32px; font-size:12.5px; padding:0 12px}
+  .chip{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:999px}
+  .chip.warn{color:var(--status-warning); background:color-mix(in srgb,var(--status-warning) 13%,transparent)}
+  .chip.green{color:var(--status-driving); background:color-mix(in srgb,var(--status-driving) 13%,transparent)}
+  .chip.blue{color:var(--accent-secondary); background:color-mix(in srgb,var(--accent-secondary) 13%,transparent)}
+  .chip.discount{color:var(--status-discount); background:color-mix(in srgb,var(--status-discount) 13%,transparent)}
+  .chip.gold{color:#B7791F; background:color-mix(in srgb,#F79009 16%,transparent)}
+
+  table{width:100%; border-collapse:collapse; font-size:13px}
+  th{text-align:left; font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--text-secondary); padding:8px 10px; border-bottom:1px solid var(--border)}
+  td{padding:10px; border-bottom:1px solid var(--border); vertical-align:middle}
+  tr:last-child td{border-bottom:0}
+  .avatarname{display:flex; align-items:center; gap:8px}
+  .av{width:28px; height:28px; border-radius:50%; background:var(--surface-sunken); display:grid; place-items:center; font-size:13px}
+
+  /* H-01 wizard */
+  .wizsteps{display:flex; gap:8px}
+  .wizsteps .s{flex:1; height:4px; border-radius:999px; background:var(--border)}
+  .wizsteps .s.done{background:var(--status-driving)}
+  .wizsteps .s.now{background:var(--accent-secondary)}
+  .field{display:flex; flex-direction:column; gap:5px}
+  .field label{font-size:12px; font-weight:700; color:var(--text-secondary)}
+  .field input,.field select{height:38px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface-base); padding:0 12px; font-size:13.5px; color:var(--text-primary)}
+  .qrbox{width:120px; height:120px; border-radius:12px; background:var(--surface-sunken); display:grid; place-items:center; font-size:44px; border:1px solid var(--border)}
+
+  /* H-02 catalog */
+  .prodrow{display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--border)}
+  .prodrow:last-child{border-bottom:0}
+  .prodrow .thumb{width:44px; height:44px; border-radius:10px; background:color-mix(in srgb,var(--accent-secondary) 12%,var(--surface-sunken)); display:grid; place-items:center; font-size:19px; flex:none}
+  .prodrow b{font-size:13.5px; display:block}
+  .prodrow small{font-size:11.5px; color:var(--text-secondary)}
+  .prodrow .terms{display:flex; gap:6px; margin-top:3px}
+
+  /* H-03 approvals */
+  .approvalcard{display:flex; gap:12px; align-items:center; border:1px solid var(--border); border-radius:12px; padding:12px 14px}
+  .approvalcard .info{flex:1}
+  .approvalcard b{font-size:13.5px; display:block}
+  .approvalcard small{font-size:12px; color:var(--text-secondary)}
+
+  /* H-04 live inventory map */
+  .invmap{position:relative; height:280px; border-radius:12px; overflow:hidden; background:var(--surface-sunken); border:1px solid var(--border)}
+  .invmap svg{width:100%; height:100%; position:absolute; inset:0}
+  .sellerpin{position:absolute; transform:translate(-50%,-100%); display:flex; flex-direction:column; align-items:center; gap:2px}
+  .sellerpin .dot{width:34px; height:34px; border-radius:50%; background:var(--surface-raised); border:2.5px solid var(--status-driving); display:grid; place-items:center; font-size:15px; box-shadow:0 3px 8px rgba(0,0,0,.2)}
+  .sellerpin .tag{font-size:9.5px; font-weight:700; background:var(--surface-raised); border:1px solid var(--border); border-radius:999px; padding:1px 6px; white-space:nowrap}
+  .hubmarker{position:absolute; transform:translate(-50%,-50%); width:38px; height:38px; border-radius:10px; background:var(--status-driving); color:#fff; display:grid; place-items:center; font-size:18px; box-shadow:0 3px 10px rgba(0,0,0,.3)}
+
+  /* H-06 AI dashboard */
+  .airec{display:flex; gap:12px; align-items:flex-start; border:1px solid color-mix(in srgb,var(--accent-secondary) 30%,var(--border)); background:color-mix(in srgb,var(--accent-secondary) 7%,var(--surface-raised)); border-radius:12px; padding:14px}
+  .airec .ic{font-size:22px; flex:none}
+  .airec b{font-size:14px; display:block; margin-bottom:2px}
+  .airec p{font-size:12.5px; color:var(--text-secondary)}
+  .badge-ai{display:inline-flex; align-items:center; gap:5px; font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--accent-secondary); background:color-mix(in srgb,var(--accent-secondary) 12%,transparent); padding:2px 7px; border-radius:999px}
+  .sparkwrap2{display:flex; align-items:flex-end; gap:5px; height:80px; padding:0 4px}
+  .bar2{flex:1; background:color-mix(in srgb,var(--accent-secondary) 22%,var(--surface-sunken)); border-radius:4px 4px 0 0}
+  .bar2.peak{background:var(--accent-secondary)}
+  .forecast{stroke:var(--accent-secondary); stroke-width:2.5; fill:none; stroke-dasharray:5 4}
+
+  .toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(8px); z-index:20;
+    background:var(--surface-raised); border:1px solid var(--border); box-shadow:var(--shadow);
+    border-radius:12px; padding:10px 16px; font-size:13px; font-weight:600; opacity:0;
+    transition:opacity .2s var(--ease-in), transform .2s var(--ease-in); pointer-events:none; white-space:nowrap}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  .notes{display:flex; flex-direction:column; gap:14px; max-width:1180px; margin:0 auto; width:100%}
+  .note{background:var(--surface-raised); border:1px solid var(--border); border-radius:16px; padding:18px 20px}
+  .note h2{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:700}
+  .note ul{margin:10px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px}
+  .note li{font-size:13.5px; display:flex; gap:8px}
+  .note li b{font-weight:650}
+  .note li::before{content:""; flex:none; width:6px; height:6px; border-radius:50%; background:var(--status-driving); margin-top:6px}
+  .hint{font-size:13px; color:var(--text-secondary); text-align:center}
+
+  @media (prefers-reduced-motion:reduce){ *,*::before,*::after{transition-duration:1ms!important} }
+</style>
+
+<div class="wrap">
+  <header class="page-head">
+    <div class="eyebrow">StreetServe · Design phase · Screens 41–46 of 77 · Consignment Hub dashboard</div>
+    <h1>H-01 → H-06 — Consignment Hub Dashboard</h1>
+    <p>The supply side of the seller marketplace: register as a hub, list consignment products, approve seller checkouts, watch inventory move on a live map, reconcile settlements, and read AI demand forecasts. Green accent brand ring distinguishes the Hub console from the Vendor one (orange) at a glance.</p>
+  </header>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Jump to screen">
+      <button aria-pressed="true"  data-go="reg">H-01 Register</button>
+      <button aria-pressed="false" data-go="catalog">H-02 Catalog</button>
+      <button aria-pressed="false" data-go="approvals">H-03 Approvals</button>
+      <button aria-pressed="false" data-go="inventory">H-04 Live Inventory</button>
+      <button aria-pressed="false" data-go="settlements">H-05 Settlements</button>
+      <button aria-pressed="false" data-go="ai">H-06 AI Dashboard</button>
+    </div>
+  </div>
+
+  <div class="browser">
+    <div class="chrome"><i></i><i></i><i></i><span class="url">dashboard.streetserve.com/hub</span></div>
+    <div class="dash">
+      <aside class="sidebar">
+        <div class="brand"><span class="logo">🏪</span>Hub Console</div>
+        <div class="navgroup-label">Inventory</div>
+        <button class="navitem" data-nav="catalog" aria-current="page">Product Catalog</button>
+        <button class="navitem" data-nav="approvals">Checkout Approvals <span class="chip warn" style="margin-left:auto">2</span></button>
+        <button class="navitem" data-nav="inventory">Live Inventory</button>
+        <div class="navgroup-label">Money</div>
+        <button class="navitem" data-nav="settlements">Settlements</button>
+        <div class="navgroup-label">Insights</div>
+        <button class="navitem" data-nav="ai">AI Dashboard</button>
+        <button class="navitem" data-nav="reg" style="margin-top:auto; border-top:1px solid var(--border)">Hub Setup</button>
+      </aside>
+
+      <div class="mainarea">
+        <div class="topbar"><h2 id="topTitle">Product Catalog</h2><div class="roleSwitch">🏪 Grace Community Church · Hub</div></div>
+
+        <!-- H-01 REGISTER -->
+        <div class="content" id="c-reg">
+          <div class="wizsteps"><span class="s done"></span><span class="s done"></span><span class="s now"></span></div>
+          <div class="grid2">
+            <div class="card">
+              <p style="font-size:11px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--text-secondary); margin-bottom:12px">Step 3 of 3 · Pickup station</p>
+              <div style="display:flex; flex-direction:column; gap:12px">
+                <div class="field"><label>Hub location</label><input value="1420 Yosemite Blvd, Modesto" /></div>
+                <div class="field"><label>Pickup hours</label><input value="Mon–Sat, 10 AM – 6 PM" /></div>
+                <div class="field"><label>Pickup counter contact</label><input value="Pastor Dave · (209) 555-0142" /></div>
+              </div>
+            </div>
+            <div class="card" style="display:flex; flex-direction:column; align-items:center; gap:12px; justify-content:center">
+              <p style="font-size:12px; font-weight:700; color:var(--text-secondary)">Your pickup/return QR</p>
+              <div class="qrbox">▦</div>
+              <p style="font-size:12px; color:var(--text-secondary); text-align:center">Print this for the counter. Sellers scan it to check inventory out and in.</p>
+              <button class="btn secondary small">Download QR</button>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px"><button class="btn secondary">Back</button><button class="btn primary" id="finishReg">Finish setup</button></div>
+        </div>
+
+        <!-- H-02 CATALOG -->
+        <div class="content on" id="c-catalog">
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+              <b style="font-size:14px">Consignment products</b>
+              <button class="btn primary small">+ List a product</button>
+            </div>
+            <div class="prodrow">
+              <span class="thumb">🧺</span>
+              <div style="flex:1"><b>Handwoven Market Totes</b><small class="num">$14/unit · 12 available</small>
+                <div class="terms"><span class="chip green">70% seller split</span><span class="chip blue">5-day return</span><span class="chip discount">Consignment</span></div>
+              </div>
+              <button class="btn secondary small">Edit terms</button>
+            </div>
+            <div class="prodrow">
+              <span class="thumb">🕯️</span>
+              <div style="flex:1"><b>Hand-poured Candles</b><small class="num">$18/unit · 20 available</small>
+                <div class="terms"><span class="chip green">65% seller split</span><span class="chip blue">7-day return</span><span class="chip discount">Consignment</span></div>
+              </div>
+              <button class="btn secondary small">Edit terms</button>
+            </div>
+            <div class="prodrow">
+              <span class="thumb">📿</span>
+              <div style="flex:1"><b>Beaded Bracelets (set of 5)</b><small class="num">$25/set · 8 available</small>
+                <div class="terms"><span class="chip green">75% seller split</span><span class="chip blue">3-day return</span><span class="chip warn">Donation-based</span></div>
+              </div>
+              <button class="btn secondary small">Edit terms</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- H-03 APPROVALS -->
+        <div class="content" id="c-approvals">
+          <div class="card" style="display:flex; align-items:center; gap:10px; justify-content:space-between">
+            <div><b style="font-size:13.5px">Auto-approve trusted sellers</b><br><small style="font-size:12px; color:var(--text-secondary)">Gold-tier sellers skip manual approval for checkouts under $100</small></div>
+            <span class="chip green">On</span>
+          </div>
+          <div class="card" style="display:flex; flex-direction:column; gap:10px" id="approvalList">
+            <div class="approvalcard" id="ap1">
+              <span class="av">🧑</span>
+              <div class="info"><b>Angela M. wants 6× Handwoven Totes</b><small>Trust Score 82 · Bronze · $84 declared value</small></div>
+              <span class="chip discount">Bronze</span>
+              <div style="display:flex; gap:6px"><button class="btn secondary small" data-deny="ap1">Deny</button><button class="btn primary small" data-approve="ap1">Approve</button></div>
+            </div>
+            <div class="approvalcard" id="ap2">
+              <span class="av">👨</span>
+              <div class="info"><b>Marcus T. wants 4× Candles</b><small>Trust Score 71 · Bronze · Shelter-cosigned · $72 declared value</small></div>
+              <span class="chip gold">Shelter</span>
+              <div style="display:flex; gap:6px"><button class="btn secondary small" data-deny="ap2">Deny</button><button class="btn primary small" data-approve="ap2">Approve</button></div>
+            </div>
+          </div>
+          <div class="card" style="display:none; text-align:center; color:var(--text-secondary)" id="apEmpty">No pending approvals.</div>
+        </div>
+
+        <!-- H-04 LIVE INVENTORY -->
+        <div class="content" id="c-inventory">
+          <div class="grid3">
+            <div class="card kpi"><small>Out with sellers</small><b class="num">18</b><span class="delta">across 4 sellers</span></div>
+            <div class="card kpi"><small>Sold today</small><b class="num">7</b><span class="delta">$118 gross</span></div>
+            <div class="card kpi"><small>Due back today</small><b class="num" style="color:var(--status-warning)">6</b><span class="delta" style="color:var(--status-warning)">1 seller overdue</span></div>
+          </div>
+          <div class="card">
+            <b style="font-size:13.5px; display:block; margin-bottom:10px">Where your inventory is right now</b>
+            <div class="invmap">
+              <svg viewBox="0 0 700 280" preserveAspectRatio="xMidYMid slice">
+                <rect width="700" height="280" fill="var(--surface-sunken)"/>
+                <g stroke="var(--border)" stroke-width="2" fill="none"><path d="M0 90 H700"/><path d="M0 190 H700"/><path d="M180 0 V280"/><path d="M420 0 V280"/><path d="M560 0 V280"/></g>
+              </svg>
+              <div class="hubmarker" style="left:26%; top:50%">🏪</div>
+              <span class="sellerpin" style="left:52%; top:36%"><span class="dot">🧺</span><span class="tag">Angela · 4 left</span></span>
+              <span class="sellerpin" style="left:72%; top:60%"><span class="dot">🕯️</span><span class="tag">Marcus · 3 left</span></span>
+              <span class="sellerpin" style="left:40%; top:74%"><span class="dot">📿</span><span class="tag">Rosa · 2 left</span></span>
+              <span class="sellerpin" style="left:83%; top:28%"><span class="dot" style="border-color:var(--status-warning)">🧺</span><span class="tag">Kim · overdue</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- H-05 SETTLEMENTS -->
+        <div class="content" id="c-settlements">
+          <div class="grid3">
+            <div class="card kpi"><small>Pending settlement</small><b class="num">$46.90</b><span class="delta">3 checkouts closing</span></div>
+            <div class="card kpi"><small>Paid to you this week</small><b class="num">$212.40</b><span class="delta">hub share</span></div>
+            <div class="card kpi"><small>Dispute holds</small><b class="num">1</b><span class="delta" style="color:var(--status-warning)">awaiting resolution</span></div>
+          </div>
+          <div class="card">
+            <table>
+              <tr><th>Checkout</th><th>Seller</th><th>Sold</th><th>Gross</th><th>Your share</th><th>Status</th></tr>
+              <tr><td>Totes ×6</td><td><div class="avatarname"><span class="av">🧑</span>Angela M.</div></td><td class="num">2</td><td class="num">$28.00</td><td class="num">$8.40</td><td><span class="chip green">Settled</span></td></tr>
+              <tr><td>Candles ×4</td><td><div class="avatarname"><span class="av">👨</span>Marcus T.</div></td><td class="num">3</td><td class="num">$54.00</td><td class="num">$18.90</td><td><span class="chip warn">Processing</span></td></tr>
+              <tr><td>Bracelets ×8</td><td><div class="avatarname"><span class="av">👩</span>Rosa L.</div></td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td><span class="chip danger" style="color:var(--status-danger); background:color-mix(in srgb,var(--status-danger) 13%,transparent)">Dispute hold</span></td></tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- H-06 AI DASHBOARD -->
+        <div class="content" id="c-ai">
+          <div class="card"><span class="badge-ai">Smart · gets better with data</span> <span class="chip blue" style="margin-left:6px">V1.x</span></div>
+          <div class="airec">
+            <span class="ic">📈</span>
+            <div><b>Move candles toward the Saturday farmers market</b>
+              <p>Recommended because: candles sold through at 80% near weekend events last month, and you have 20 units sitting idle. 3 sellers are active in that area Saturday.</p>
+            </div>
+          </div>
+          <div class="grid2">
+            <div class="card">
+              <b style="font-size:13.5px">Sell-through by product (14 days)</b>
+              <div class="sparkwrap2" style="margin-top:12px">
+                <div class="bar2 peak" style="height:80%"></div><div class="bar2" style="height:55%"></div><div class="bar2" style="height:40%"></div><div class="bar2" style="height:65%"></div><div class="bar2" style="height:30%"></div>
+              </div>
+              <p style="font-size:11px; color:var(--text-secondary); margin-top:8px">Totes · Candles · Bracelets · Mugs · Prints</p>
+            </div>
+            <div class="card">
+              <b style="font-size:13.5px">Demand forecast — next 7 days</b>
+              <svg viewBox="0 0 260 90" style="width:100%; height:80px; margin-top:8px">
+                <polyline class="forecast" points="5,60 45,50 85,55 125,35 165,40 205,20 245,25"/>
+                <g fill="var(--accent-secondary)"><circle cx="5" cy="60" r="3"/><circle cx="125" cy="35" r="3"/><circle cx="245" cy="25" r="3"/></g>
+              </svg>
+              <p style="font-size:11px; color:var(--text-secondary)">Predicted demand rising toward the weekend</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="hint">Switch screens above · approve/deny a checkout on H-03 · note the overdue seller pin on H-04</p>
+
+  <aside class="notes" aria-label="Design annotations">
+    <div class="note">
+      <h2>Distinct console identity</h2>
+      <ul>
+        <li>Green brand ring/logo (vs. the Vendor console's orange) — a business that is both a vendor and a hub switches between two visually distinct consoles, never confusing which hat they're wearing. Same DashboardShell skeleton, different accent.</li>
+        <li>Hub nav is organized around the hub's actual jobs (Inventory / Money / Insights), not mirrored from the vendor's operate/manage/grow — the two roles have genuinely different daily work.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>H-01 — the QR is the physical bridge</h2>
+      <ul>
+        <li>Registration ends by generating the printable pickup/return QR — the physical object that ties the digital `inventory_checkouts` record to a real counter (the same code sellers scan in S-06/S-09). Setup isn't complete until that bridge exists.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>H-02 — terms are per-product, shown as chips</h2>
+      <ul>
+        <li>Split %, return window, and listing type (consignment/donation-based/wholesale/rental) surface as scannable chips per row — a hub managing dozens of products needs to compare terms at a glance, and these are exactly the fields a seller sees on S-04, kept consistent across both sides.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>H-03 — the trust model made operational</h2>
+      <ul>
+        <li>Every pending checkout shows the seller's Trust Score, tier, and declared value — the hub is accepting real liability risk (their goods leaving the building), so the exact signals that inform that decision are front and center, per FR-8's approval flow.</li>
+        <li><b>Shelter-cosigned sellers are visibly flagged</b> (gold chip) — a hub knows when the shelter partner is the guarantor rather than the seller's own history, so a thin Trust Score reads correctly in context rather than as a red flag.</li>
+        <li>Auto-approve rule for Gold-tier under a threshold is stated at the top — the manual queue only holds what genuinely needs a human decision (FR-8.4 configurable approval).</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>H-04 — this is the hub's version of the live map</h2>
+      <ul>
+        <li>Same live-map concept as the customer C-10, but inverted: the hub sits at the center marker and watches its own inventory move outward on sellers — answering "where are my goods right now" (the Live Inventory Map from the concept doc).</li>
+        <li>The overdue seller pin turns amber — the one piece of the map that needs the hub's attention is the one that changes color, consistent with the traffic-light urgency language used for seller deadlines (S-07).</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>H-05/H-06 — money truth, then insight</h2>
+      <ul>
+        <li>H-05 settlements table shows the hub's share per checkout and surfaces dispute holds explicitly — a "Dispute hold" row can't be settled until resolved (FR-10.3), never silently paid or hidden.</li>
+        <li>H-06 carries both the "Smart · gets better with data" copy AND a V1.x chip — the AI business dashboard is genuinely post-pilot (Feature Breakdown), and every recommendation still carries its mandatory "Recommended because" reason, same rule as the seller's S-11.</li>
+        <li>Forecast chart is dashed to signal prediction (vs. solid historical bars) — the visual grammar itself distinguishes "what happened" from "what the model guesses," so a hub never mistakes a forecast for a fact.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>Handoff notes</h2>
+      <ul>
+        <li>H-02 writes `products` rows; H-03 approvals gate `inventory_checkouts` creation; H-05 reads `settlements` (Database §3) — the hub side of the exact records the seller creates in S-04–S-10.</li>
+        <li>H-06 recommendations come from the same `/ai/recommendations` service (API §13) as the seller's, scoped to inventory-owner context; `reason_summary` remains a required field.</li>
+        <li>A business can hold both Vendor and Hub roles on one account (additive roles) — the console switcher in the topbar moves between them without re-login.</li>
+        <li>Full spec: <b>docs/13-screen-design-specs.md § H-01–H-06</b>.</li>
+      </ul>
+    </div>
+  </aside>
+</div>
+
+<script>
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const toast=document.createElement('div'); toast.className='toast'; toast.id='toast'; document.body.appendChild(toast);
+  let tt; function show(msg){ toast.textContent=msg; toast.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>toast.classList.remove('show'),3200); }
+
+  const TITLES={reg:'Hub Setup', catalog:'Product Catalog', approvals:'Checkout Approvals', inventory:'Live Inventory', settlements:'Settlements', ai:'AI Business Dashboard'};
+  function goTo(id){
+    $$('.content').forEach(c=>c.classList.remove('on'));
+    $('#c-'+id).classList.add('on');
+    $$('.seg [data-go]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.go===id));
+    $$('.navitem[data-nav]').forEach(n=>n.toggleAttribute('aria-current', n.dataset.nav===id));
+    $('#topTitle').textContent = TITLES[id];
+  }
+  $$('.seg [data-go]').forEach(b=>b.addEventListener('click',()=>goTo(b.dataset.go)));
+  $$('.navitem[data-nav]').forEach(n=>n.addEventListener('click',()=>goTo(n.dataset.nav)));
+
+  $('#finishReg').addEventListener('click',()=>{ show('Hub setup complete — QR ready to print'); goTo('catalog'); });
+
+  $$('[data-approve]').forEach(b=>b.addEventListener('click',()=>{ const el=$('#'+b.dataset.approve); show('Checkout approved — seller notified to pick up'); el.remove(); checkAp(); }));
+  $$('[data-deny]').forEach(b=>b.addEventListener('click',()=>{ const el=$('#'+b.dataset.deny); show('Checkout denied'); el.remove(); checkAp(); }));
+  function checkAp(){ if(!$('#approvalList').children.length){ $('#approvalList').style.display='none'; $('#apEmpty').style.display='block'; } }
+</script>

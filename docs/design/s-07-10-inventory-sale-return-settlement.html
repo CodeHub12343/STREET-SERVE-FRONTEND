@@ -1,0 +1,410 @@
+<title>StreetServe — S-07–S-10 Inventory, Sale, Return &amp; Settlement</title>
+<style>
+  :root{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --border:rgba(91,94,104,.28); --shadow:0 12px 32px rgba(20,21,26,.14);
+    --motion-micro:100ms; --motion-standard:200ms; --motion-sheet:300ms;
+    --ease-in:cubic-bezier(.2,0,0,1);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-base:#0E0F12; --surface-raised:#17181C;
+      --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+      --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+      --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+      --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+      --border:rgba(156,159,168,.22); --shadow:0 12px 32px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --surface-base:#0E0F12; --surface-raised:#17181C;
+    --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+    --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+    --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+    --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+    --border:rgba(156,159,168,.22); --shadow:0 12px 32px rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"]{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --border:rgba(91,94,104,.28); --shadow:0 12px 32px rgba(20,21,26,.14);
+  }
+
+  *{box-sizing:border-box; margin:0}
+  html,body{background:var(--surface-base); color:var(--text-primary);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.4}
+  button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+  :is(button,[tabindex]):focus-visible{outline:2px solid var(--accent-secondary); outline-offset:2px; border-radius:8px}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:40px 20px 80px; display:flex; flex-direction:column; gap:28px}
+  .page-head .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:600}
+  .page-head h1{font-size:32px; font-weight:700; letter-spacing:-.02em; text-wrap:balance; margin-top:6px}
+  .page-head p{color:var(--text-secondary); max-width:64ch; margin-top:8px; font-size:15px}
+
+  .studio{display:grid; grid-template-columns:minmax(0,460px) minmax(280px,1fr); gap:36px; align-items:start}
+  @media (max-width:900px){ .studio{grid-template-columns:1fr} }
+  .stage{display:flex; flex-direction:column; gap:14px; align-items:center}
+  .controls{display:flex; flex-direction:column; gap:8px; align-items:center}
+  .seg{display:flex; gap:4px; background:var(--surface-raised); border:1px solid var(--border); border-radius:999px; padding:4px; flex-wrap:wrap; justify-content:center}
+  .seg span.lbl{align-self:center; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-secondary); padding:0 6px 0 10px}
+  .seg button{padding:7px 12px; border-radius:999px; font-size:12.5px; font-weight:600; color:var(--text-secondary);
+    transition:background var(--motion-micro) var(--ease-in), color var(--motion-micro) var(--ease-in)}
+  .seg button[aria-pressed="true"]{background:var(--accent-secondary); color:#fff}
+  .sim{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; min-height:34px}
+  .sim button{font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:999px;
+    border:1.5px dashed var(--text-secondary); color:var(--text-secondary)}
+  .sim button:hover{color:var(--text-primary); border-color:var(--text-primary)}
+  .sim .lbl{align-self:center; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-secondary)}
+  .hint{font-size:13px; color:var(--text-secondary)}
+
+  .phone{width:min(390px,100%); height:800px; border-radius:44px; background:var(--surface-base);
+    border:1px solid var(--border); box-shadow:var(--shadow); overflow:hidden; position:relative;
+    display:flex; flex-direction:column}
+  .statusbar{height:44px; flex:none; display:flex; align-items:center; justify-content:space-between;
+    padding:0 24px; font-size:14px; font-weight:600; position:relative; z-index:6}
+  .notch{position:absolute; left:50%; top:10px; transform:translateX(-50%); width:110px; height:26px;
+    border-radius:999px; background:var(--text-primary); opacity:.92}
+
+  .screen{position:absolute; inset:44px 0 0; display:none; flex-direction:column}
+  .screen.on{display:flex}
+  .navhead{display:flex; align-items:center; gap:10px; padding:10px 16px; flex:none}
+  .navhead .back{width:38px; height:38px; border-radius:50%; background:var(--surface-raised);
+    border:1px solid var(--border); display:grid; place-items:center; flex:none}
+  .navhead b{font-size:16px; letter-spacing:-.01em}
+  .navhead .sub{font-size:12px; color:var(--text-secondary); display:block; margin-top:1px}
+
+  .scroll{flex:1; overflow-y:auto; padding:0 20px 20px; display:flex; flex-direction:column; gap:14px}
+  .btnbar{flex:none; padding:12px 20px 26px; background:linear-gradient(transparent, var(--surface-raised) 30%); display:flex; flex-direction:column; gap:8px}
+  .btn{height:48px; width:100%; padding:0 20px; border-radius:8px; font-size:15px; font-weight:700;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px; transition:filter var(--motion-micro) var(--ease-in)}
+  .btn:active{filter:brightness(.92)}
+  .btn.primary{background:var(--accent-primary); color:#fff}
+  .btn.secondary{border:1.5px solid var(--text-secondary); color:var(--text-primary)}
+  .btn.small{height:40px; font-size:13.5px}
+  .btn[disabled]{opacity:.45; pointer-events:none}
+  .num{font-variant-numeric:tabular-nums}
+  .card{border:1px solid var(--border); border-radius:16px; padding:14px 16px; background:var(--surface-raised)}
+  .chip{display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; padding:3px 9px; border-radius:999px}
+  .chip.green{color:var(--status-driving); background:color-mix(in srgb,var(--status-driving) 13%,transparent)}
+  .chip.warn{color:var(--status-warning); background:color-mix(in srgb,var(--status-warning) 13%,transparent)}
+  .chip.danger{color:var(--status-danger); background:color-mix(in srgb,var(--status-danger) 13%,transparent)}
+  .chip.discount{color:var(--status-discount); background:color-mix(in srgb,var(--status-discount) 13%,transparent)}
+
+  /* S-07 My Inventory */
+  .invcard{display:flex; gap:12px; align-items:center; cursor:pointer}
+  .invcard .thumb{width:52px; height:52px; border-radius:12px; flex:none; display:grid; place-items:center; font-size:24px;
+    background:color-mix(in srgb, var(--accent-secondary) 14%, var(--surface-base))}
+  .invcard .info{flex:1; min-width:0}
+  .invcard b{font-size:14px; display:block}
+  .invcard small{font-size:12px; color:var(--text-secondary)}
+  .progressbar{height:6px; border-radius:999px; background:var(--border); margin-top:6px; overflow:hidden}
+  .progressbar .fill{height:100%; background:var(--status-driving); border-radius:999px}
+  .deadline{font-size:11px; font-weight:700; padding:3px 8px; border-radius:999px; white-space:nowrap}
+  .deadline.ok{color:var(--status-driving); background:color-mix(in srgb,var(--status-driving) 14%,transparent)}
+  .deadline.soon{color:var(--status-warning); background:color-mix(in srgb,var(--status-warning) 14%,transparent)}
+  .deadline.late{color:var(--status-danger); background:color-mix(in srgb,var(--status-danger) 14%,transparent)}
+
+  /* S-08 log sale */
+  .qtybox{display:flex; align-items:center; justify-content:center; gap:20px; padding:10px}
+  .qtybox button{width:44px; height:44px; border-radius:50%; border:1.5px solid var(--border); font-size:20px; font-weight:700}
+  .qtybox .n{font-size:30px; font-weight:800; min-width:40px; text-align:center}
+  .methodrow{display:flex; gap:8px}
+  .method{flex:1; border:1.5px solid var(--border); border-radius:12px; padding:12px 8px; text-align:center; font-size:12.5px; font-weight:600; color:var(--text-secondary); display:flex; flex-direction:column; gap:4px; align-items:center}
+  .method .ic{font-size:20px}
+  .method[aria-pressed="true"]{border-color:var(--accent-secondary); color:var(--accent-secondary); background:color-mix(in srgb,var(--accent-secondary) 8%,transparent)}
+  .banner{display:flex; gap:10px; align-items:flex-start; border-radius:12px; padding:11px 14px; font-size:13px; font-weight:600;
+    border-left:3px solid var(--status-danger); background:color-mix(in srgb,var(--status-danger) 10%,var(--surface-raised))}
+
+  /* S-09 return */
+  .scanbox{aspect-ratio:1; border-radius:20px; background:#0b0b0d; position:relative; overflow:hidden; display:grid; place-items:center; max-width:190px; margin:0 auto}
+  .scanbox .frame{width:70%; height:70%; border:3px solid var(--status-parked); border-radius:16px}
+  .scanline{position:absolute; left:8%; right:8%; height:2px; background:var(--status-parked); top:15%; animation:scan 1.8s ease-in-out infinite}
+  @keyframes scan{0%,100%{top:15%}50%{top:80%}}
+  .scanbox.done{background:color-mix(in srgb,var(--status-driving) 20%,#0b0b0d)}
+  .reconcilerow{display:flex; justify-content:space-between; font-size:13.5px; padding:8px 0; border-bottom:1px solid var(--border)}
+  .reconcilerow:last-child{border-bottom:0}
+  .reconcilerow.check{color:var(--status-driving); font-weight:700}
+  .reconcilerow.mismatch{color:var(--status-danger); font-weight:700}
+
+  /* S-10 settlement */
+  .bigplus{font-size:38px; font-weight:800; letter-spacing:-.02em; text-align:center; padding:10px 0; color:var(--status-driving)}
+  .bigplus small{display:block; font-size:12px; font-weight:700; color:var(--text-secondary); letter-spacing:.05em; text-transform:uppercase; margin-top:2px}
+  .rows{display:flex; flex-direction:column}
+  .row{display:flex; justify-content:space-between; gap:12px; padding:9px 0; font-size:13.5px; border-bottom:1px solid var(--border)}
+  .row:last-child{border-bottom:0}
+  .row.total{font-size:16px; font-weight:800; padding-top:12px; color:var(--status-driving)}
+  .payoutcard{display:flex; align-items:center; gap:12px}
+  .payoutcard .ic{width:40px; height:40px; border-radius:50%; background:color-mix(in srgb,var(--status-driving) 14%,var(--surface-base)); color:var(--status-driving); display:grid; place-items:center; font-size:18px; flex:none}
+  .payoutcard b{font-size:14px; display:block}
+  .payoutcard small{font-size:12px; color:var(--text-secondary)}
+  .trustdelta{display:flex; align-items:center; gap:10px}
+  .trustdelta .arc{width:52px; height:52px; border-radius:50%; display:grid; place-items:center; font-size:14px; font-weight:800;
+    background:conic-gradient(var(--status-driving) 0% 82%, var(--border) 82% 100%)}
+  .trustdelta .arc span{width:42px; height:42px; border-radius:50%; background:var(--surface-raised); display:grid; place-items:center; font-size:13px}
+
+  .toast{position:absolute; left:50%; bottom:20px; transform:translateX(-50%) translateY(8px); z-index:9;
+    background:var(--surface-raised); border:1px solid var(--border); box-shadow:var(--shadow);
+    border-radius:12px; padding:10px 16px; font-size:13px; font-weight:600; opacity:0;
+    transition:opacity var(--motion-standard) var(--ease-in), transform var(--motion-standard) var(--ease-in);
+    pointer-events:none; white-space:nowrap; max-width:90%}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  .notes{display:flex; flex-direction:column; gap:14px}
+  .note{background:var(--surface-raised); border:1px solid var(--border); border-radius:16px; padding:18px 20px}
+  .note h2{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:700}
+  .note ul{margin:10px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px}
+  .note li{font-size:13.5px; display:flex; gap:8px}
+  .note li b{font-weight:650}
+  .note li::before{content:""; flex:none; width:6px; height:6px; border-radius:50%; background:var(--accent-secondary); margin-top:6px}
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition-duration:1ms!important}
+  }
+</style>
+
+<div class="wrap">
+  <header class="page-head">
+    <div class="eyebrow">StreetServe · Design phase · Screens 16–19 of 77 · Seller track continues</div>
+    <h1>S-07 → S-10 — Inventory, Sale, Return &amp; Settlement</h1>
+    <p>Completes the loop S-01–S-06 started: manage what you're holding, log what you sell, return what's left, and watch the payout land. Try the oversell block on S-08 and the mismatch flag on S-09 — both are places where the design has to hold a firm line without treating the seller like a suspect.</p>
+  </header>
+
+  <div class="studio">
+    <section class="stage" aria-label="Screen mockup">
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Jump to screen">
+          <button aria-pressed="true"  data-go="inventory">S-07 Inventory</button>
+          <button aria-pressed="false" data-go="logsale">S-08 Log Sale</button>
+          <button aria-pressed="false" data-go="return">S-09 Return</button>
+          <button aria-pressed="false" data-go="settlement">S-10 Settlement</button>
+        </div>
+        <div class="sim" id="sim"></div>
+      </div>
+
+      <div class="phone" id="phone">
+        <div class="statusbar"><span>9:41</span><div class="notch"></div><span>▮▮▮ ▉</span></div>
+
+        <!-- S-07 MY INVENTORY -->
+        <div class="screen on" id="s-inventory">
+          <div class="navhead"><b>My Inventory</b></div>
+          <div class="scroll">
+            <div class="card invcard" id="toteCard">
+              <span class="thumb">🧺</span>
+              <div class="info">
+                <div style="display:flex; justify-content:space-between; gap:8px">
+                  <b>Handwoven Market Totes</b>
+                  <span class="deadline soon" id="deadlineChip">Due in 6h</span>
+                </div>
+                <small>Grace Community Church · <span class="num" id="remainLabel">4 of 6 remaining</span></small>
+                <div class="progressbar"><div class="fill" id="fillBar" style="width:33%"></div></div>
+              </div>
+            </div>
+            <div class="card invcard" style="opacity:.7">
+              <span class="thumb">📚</span>
+              <div class="info">
+                <div style="display:flex; justify-content:space-between; gap:8px"><b>Used Paperbacks (Box of 20)</b><span class="deadline ok">Due in 3 days</span></div>
+                <small>Modesto Book Exchange · <span class="num">20 of 20 remaining</span></small>
+                <div class="progressbar"><div class="fill" style="width:0%"></div></div>
+              </div>
+            </div>
+            <div class="card" style="text-align:center">
+              <p style="font-size:13px; color:var(--text-secondary)">Looking for more to sell?</p>
+              <button class="btn secondary small" style="width:auto; padding:0 18px; margin-top:8px">Browse nearby inventory</button>
+            </div>
+          </div>
+          <div class="btnbar">
+            <button class="btn primary" id="toLogSale">Log a sale — Totes</button>
+            <button class="btn secondary" id="toReturn">Return unsold — Totes</button>
+          </div>
+        </div>
+
+        <!-- S-08 LOG A SALE -->
+        <div class="screen" id="s-logsale">
+          <div class="navhead">
+            <button class="back" id="backInv1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button>
+            <div><b>Log a sale</b><span class="sub">Handwoven Market Totes · <span class="num">4</span> left</span></div>
+          </div>
+          <div class="scroll">
+            <div class="card" style="text-align:center">
+              <p style="font-size:12.5px; color:var(--text-secondary); font-weight:700; text-transform:uppercase; letter-spacing:.04em">Quantity sold</p>
+              <div class="qtybox"><button id="sMinus">–</button><span class="n num" id="sellQty">1</span><button id="sPlus">+</button></div>
+              <p style="font-size:12px; color:var(--text-secondary)" id="sellHint">At $14/unit, that's <span class="num" id="sellTotal">$14.00</span> gross</p>
+            </div>
+            <div class="card">
+              <p style="font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary); margin-bottom:8px">How was it sold?</p>
+              <div class="methodrow">
+                <button class="method" aria-pressed="true"><span class="ic">📱</span>In-app checkout</button>
+                <button class="method"><span class="ic">📷</span>Manual + photo</button>
+              </div>
+            </div>
+            <div class="banner" id="oversellBanner" style="display:none">🚫 <span>Only <b>4</b> totes are checked out to you — you can't log more than that as sold.</span></div>
+          </div>
+          <div class="btnbar"><button class="btn primary" id="confirmSale">Confirm sale</button></div>
+        </div>
+
+        <!-- S-09 RETURN -->
+        <div class="screen" id="s-return">
+          <div class="navhead">
+            <button class="back" id="backInv2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button>
+            <div><b>Return unsold inventory</b><span class="sub">Handwoven Market Totes</span></div>
+          </div>
+          <div class="scroll" style="align-items:center">
+            <div class="scanbox" id="returnScanbox"><div class="frame"></div><div class="scanline" id="returnScanline"></div></div>
+            <p class="hint" id="returnHint">Scan the hub's return counter code</p>
+            <div class="card" style="width:100%">
+              <p style="font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary); margin-bottom:8px">Reconcile</p>
+              <div class="reconcilerow"><span>Checked out</span><span class="num">6</span></div>
+              <div class="reconcilerow"><span>Sold (logged)</span><span class="num">2</span></div>
+              <div class="reconcilerow" id="returningRow"><span>Returning now</span><span class="num" id="returningVal">4</span></div>
+              <div class="reconcilerow check" id="matchRow"><span>✓ Accounts for all 6</span><span></span></div>
+            </div>
+          </div>
+          <div class="btnbar"><button class="btn primary" id="scanReturnBtn">Scan return code</button></div>
+        </div>
+
+        <!-- S-10 SETTLEMENT -->
+        <div class="screen" id="s-settlement">
+          <div class="navhead">
+            <button class="back" id="backInv3"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18 9 12l6-6"/></svg></button>
+            <div><b>Settlement</b><span class="sub">Handwoven Market Totes · closed</span></div>
+          </div>
+          <div class="scroll">
+            <div class="card">
+              <div class="bigplus num">+$19.60<small>Your net payout</small></div>
+            </div>
+            <div class="card rows">
+              <div class="row"><span>2 sold × $14.00</span><span class="num">$28.00</span></div>
+              <div class="row"><span>Platform fee</span><span class="num">−$2.80</span></div>
+              <div class="row"><span>Hub share (30%)</span><span class="num">−$5.60</span></div>
+              <div class="row total"><span>Your net (70%)</span><span class="num">$19.60</span></div>
+            </div>
+            <div class="card payoutcard">
+              <span class="ic">💳</span>
+              <div><b>Payout timing — Bronze tier</b><small>Held 3 days, arrives <span class="num">Jul 7</span></small></div>
+            </div>
+            <div class="card" style="display:flex; align-items:center; justify-content:space-between">
+              <div class="trustdelta">
+                <div class="arc"><span>82</span></div>
+                <div><b style="font-size:14px">Trust Score</b><br><span class="chip green">+3 · on-time return</span></div>
+              </div>
+            </div>
+            <div class="card" style="display:flex; gap:10px; align-items:center">
+              <span class="chip discount">4 returned, 0 disputed</span>
+            </div>
+          </div>
+          <div class="btnbar"><button class="btn primary" id="doneSettle">Back to my inventory</button></div>
+        </div>
+
+        <div class="toast" id="toast"></div>
+      </div>
+
+      <p class="hint">Try logging 5+ sales on S-08 to see the oversell guard (FR-8.3)</p>
+    </section>
+
+    <aside class="notes" aria-label="Design annotations">
+      <div class="note">
+        <h2>S-07 — My Inventory</h2>
+        <ul>
+          <li>Deadline chips traffic-light by urgency (green "3 days" → amber "6h" → red overdue) — the same three-color status language as everywhere else in the system, applied to time pressure instead of live/parked/away.</li>
+          <li>Progress bar shows remaining stock at a glance; tapping a card opens quantity/condition detail (not modeled here — reuses S-04's term-card pattern).</li>
+          <li>"Browse nearby inventory" stays present even with active checkouts — a seller isn't blocked from picking up more while something is still out.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>S-08 — Log a Sale (FR-8.3)</h2>
+        <ul>
+          <li>Live gross-total readout as quantity changes, same pattern as S-05's potential-earnings calculator — keeps the number concrete instead of abstract.</li>
+          <li><b>Oversell guard</b> is a plain-language banner naming the exact held quantity, not a generic "error" — the seller should immediately understand why 5 is blocked when only 4 are checked out, without feeling accused of anything.</li>
+          <li>Manual + photo method exists for cash/off-app sales — still requires proof, consistent with FR-8's chain-of-custody requirement.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>S-09 — Return Flow</h2>
+        <ul>
+          <li>Reconciliation card does the arithmetic <em>for</em> the seller (checked out − sold = returning) rather than asking them to self-report a returning count — removes an entire class of honest mistakes.</li>
+          <li>"✓ Accounts for all 6" is the reassurance state; a mismatch (simulate below) replaces it with a specific correction prompt rather than a blocking dead-end.</li>
+          <li>Scan uses the same camera-viewfinder metaphor as S-06's pickup checkout — one learned interaction for both check-out and check-in.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>S-10 — Settlement</h2>
+        <ul>
+          <li>Net payout leads, in the same "big green number" treatment used for savings elsewhere in the app — the settlement is framed as an earning, not an accounting statement.</li>
+          <li>Full split (gross → platform fee → hub share → net) itemized directly here, unhidden — sellers see exactly where every dollar of their own consignment went, distinct from the customer receipt's collapsed disclosure (C-24), because this <em>is</em> the seller's business record, not incidental trivia.</li>
+          <li>Trust Score shown as a ring + explicit delta reason ("+3 · on-time return") — never a bare number, per FR-10.1's explainability requirement.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h2>Handoff notes</h2>
+        <ul>
+          <li>S-08's confirm action calls `POST /checkouts/:id/sales`; server rejects any quantity exceeding the checkout's remaining balance regardless of client-side guard (API §9, DB validation rules) — the UI block is a UX courtesy, not the actual enforcement boundary.</li>
+          <li>S-09 return writes `inventory_returns` + triggers `settlements` computation (Database §3); the reconcile numbers shown are read from the same aggregate the server uses, so they can never drift from what actually gets billed.</li>
+          <li>Full spec: <b>docs/13-screen-design-specs.md § S-07–S-10</b>.</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const phone=$('#phone'), toast=$('#toast'); let tt;
+
+  function go(id){
+    $$('.screen').forEach(s=>s.classList.remove('on'));
+    $('#s-'+id).classList.add('on');
+    $$('.seg [data-go]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.go===id));
+  }
+  $$('.seg [data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
+  $('#toLogSale').addEventListener('click',()=>go('logsale'));
+  $('#toReturn').addEventListener('click',()=>go('return'));
+  $('#backInv1').addEventListener('click',()=>go('inventory'));
+  $('#backInv2').addEventListener('click',()=>go('inventory'));
+  $('#backInv3').addEventListener('click',()=>go('inventory'));
+
+  // S-08 log sale
+  let sellQty=1;
+  const AVAILABLE=4;
+  function updateSell(){
+    $('#sellQty').textContent=sellQty;
+    $('#sellTotal').textContent='$'+(sellQty*14).toFixed(2);
+    const over = sellQty>AVAILABLE;
+    $('#oversellBanner').style.display = over ? 'flex' : 'none';
+    $('#confirmSale').disabled = over;
+  }
+  $('#sMinus').addEventListener('click',()=>{ if(sellQty>1){sellQty--; updateSell();} });
+  $('#sPlus').addEventListener('click',()=>{ sellQty++; updateSell(); });
+  $$('.method').forEach(m=>m.addEventListener('click',()=>{ $$('.method').forEach(x=>x.setAttribute('aria-pressed','false')); m.setAttribute('aria-pressed','true'); }));
+  $('#confirmSale').addEventListener('click',()=>{
+    show(sellQty+' sale(s) logged — '+ (AVAILABLE-sellQty) +' remain');
+    $('#remainLabel').textContent=(AVAILABLE-sellQty)+' of 6 remaining';
+    $('#fillBar').style.width = Math.round(((6-(AVAILABLE-sellQty))/6)*100)+'%';
+    go('inventory');
+  });
+
+  // S-09 return
+  let scanned=false;
+  $('#scanReturnBtn').addEventListener('click',()=>{
+    if(!scanned){
+      scanned=true; $('#returnScanbox').classList.add('done'); $('#returnScanline').style.display='none';
+      $('#returnHint').textContent='Code accepted — condition photo optional for good-condition returns';
+      $('#scanReturnBtn').textContent='Confirm return';
+      show('Return code scanned');
+    } else {
+      show('4 totes returned — settlement will process shortly');
+      go('settlement');
+    }
+  });
+
+  function show(msg){ toast.textContent=msg; toast.classList.add('show');
+    clearTimeout(tt); tt=setTimeout(()=>toast.classList.remove('show'),3600); }
+
+  updateSell();
+</script>

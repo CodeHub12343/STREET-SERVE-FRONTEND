@@ -1,0 +1,372 @@
+<title>StreetServe — Interactive Design System</title>
+<style>
+  :root{
+    --bg:#0E0F12; --bg-2:#141519; --raised:#17181C; --raised-2:#1E2027;
+    --ink:#F4F4F5; --ink-2:#B4B7C0; --ink-3:#82858F;
+    --line:rgba(156,159,168,.16); --line-2:rgba(156,159,168,.28);
+    --orange:#FF6B45; --blue:#4C8DFF; --green:#22C55E; --violet:#8B8BF0; --amber:#FDB022; --disc:#9B8AFA;
+    --shadow:0 20px 60px rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"]{
+    --bg:#F7F6F3; --bg-2:#FFFFFF; --raised:#FFFFFF; --raised-2:#FAFAF9;
+    --ink:#14151A; --ink-2:#4A4D57; --ink-3:#6E717B;
+    --line:rgba(91,94,104,.16); --line-2:rgba(91,94,104,.26);
+    --orange:#FF5A33; --blue:#1E6FFF; --green:#17B26A; --violet:#5B5BD6; --amber:#F79009; --disc:#7A5AF8;
+    --shadow:0 20px 50px rgba(20,21,26,.14);
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme]){
+      --bg:#F7F6F3; --bg-2:#FFFFFF; --raised:#FFFFFF; --raised-2:#FAFAF9;
+      --ink:#14151A; --ink-2:#4A4D57; --ink-3:#6E717B;
+      --line:rgba(91,94,104,.16); --line-2:rgba(91,94,104,.26);
+      --orange:#FF5A33; --blue:#1E6FFF; --green:#17B26A; --violet:#5B5BD6; --amber:#F79009; --disc:#7A5AF8;
+      --shadow:0 20px 50px rgba(20,21,26,.14);
+    }
+  }
+
+  *{box-sizing:border-box; margin:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg); color:var(--ink); line-height:1.5;
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  a{color:inherit; text-decoration:none}
+  :focus-visible{outline:2px solid var(--blue); outline-offset:3px; border-radius:6px}
+  .tnum{font-variant-numeric:tabular-nums}
+
+  /* theme toggle */
+  .themebtn{position:fixed; top:18px; right:18px; z-index:50; width:40px; height:40px; border-radius:50%;
+    background:var(--raised); border:1px solid var(--line-2); color:var(--ink); display:grid; place-items:center; cursor:pointer;
+    box-shadow:var(--shadow)}
+
+  .shell{max-width:1200px; margin:0 auto; padding:0 24px}
+
+  /* hero */
+  .hero{position:relative; overflow:hidden; padding:96px 0 72px; text-align:center;
+    background:
+      radial-gradient(60% 80% at 50% -10%, color-mix(in srgb, var(--orange) 22%, transparent), transparent 70%),
+      radial-gradient(50% 60% at 85% 20%, color-mix(in srgb, var(--blue) 14%, transparent), transparent 70%);}
+  .hero::after{content:""; position:absolute; inset:0; pointer-events:none;
+    background-image:linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size:44px 44px; mask-image:radial-gradient(70% 60% at 50% 30%, #000, transparent 75%); opacity:.5}
+  .hero .shell{position:relative; z-index:2}
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:12px; font-weight:700; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--ink-2); border:1px solid var(--line-2); border-radius:999px; padding:7px 15px;
+    background:color-mix(in srgb, var(--raised) 60%, transparent)}
+  .eyebrow .live{width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 0 3px color-mix(in srgb, var(--green) 28%, transparent)}
+  h1{font-size:clamp(40px, 7vw, 76px); font-weight:800; letter-spacing:-.035em; line-height:1.02; margin:24px auto 0; text-wrap:balance; max-width:14ch}
+  h1 .grad{background:linear-gradient(100deg, var(--orange), #FF9E45); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .lede{font-size:clamp(16px,2vw,19px); color:var(--ink-2); max-width:60ch; margin:22px auto 0; text-wrap:pretty}
+  .tag{margin-top:20px; font-size:14px; font-weight:700; letter-spacing:.04em; color:var(--orange)}
+
+  .stripe{display:flex; flex-wrap:wrap; justify-content:center; gap:0; margin:44px auto 0; max-width:760px;
+    border:1px solid var(--line-2); border-radius:16px; overflow:hidden; background:color-mix(in srgb, var(--raised) 70%, transparent); backdrop-filter:blur(6px)}
+  .stat{flex:1 1 130px; padding:18px 12px; text-align:center; border-right:1px solid var(--line)}
+  .stat:last-child{border-right:0}
+  .stat b{display:block; font-size:26px; font-weight:800; letter-spacing:-.02em}
+  .stat small{font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-3)}
+
+  /* section */
+  section{padding:52px 0 8px}
+  .sec-head{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; padding-bottom:8px; margin-bottom:22px; border-bottom:1px solid var(--line)}
+  .sec-badge{width:34px; height:34px; border-radius:10px; display:grid; place-items:center; font-size:16px; flex:none; color:#fff}
+  .sec-head h2{font-size:24px; font-weight:800; letter-spacing:-.02em}
+  .sec-head .meta{margin-left:auto; font-size:12.5px; color:var(--ink-3); font-weight:600}
+  .sec-head p{flex-basis:100%; font-size:14px; color:var(--ink-2); margin-top:2px}
+
+  .grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:16px}
+
+  .card{position:relative; display:flex; flex-direction:column; gap:0; background:var(--raised); border:1px solid var(--line-2);
+    border-radius:16px; overflow:hidden; transition:transform .18s cubic-bezier(.2,0,0,1), border-color .18s, box-shadow .18s}
+  .card:hover{transform:translateY(-4px); border-color:var(--accent); box-shadow:var(--shadow)}
+  .card .top{height:5px; background:var(--accent)}
+  .card .pad{padding:18px 18px 16px; display:flex; flex-direction:column; gap:10px; flex:1}
+  .card .idline{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .card .ids{font-size:11.5px; font-weight:800; letter-spacing:.03em; font-variant-numeric:tabular-nums; color:var(--accent)}
+  .platform{font-size:9.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3);
+    border:1px solid var(--line-2); border-radius:999px; padding:2px 7px}
+  .v1x{font-size:9.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--blue);
+    background:color-mix(in srgb, var(--blue) 14%, transparent); border-radius:999px; padding:2px 7px}
+  .card h3{font-size:16.5px; font-weight:750; letter-spacing:-.01em; line-height:1.25}
+  .card p{font-size:13px; color:var(--ink-2); flex:1}
+  .card .try{font-size:12px; color:var(--ink-3); display:flex; gap:6px; align-items:flex-start}
+  .card .try b{color:var(--ink-2); font-weight:700}
+  .card .cta{display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--line);
+    font-size:13px; font-weight:700; color:var(--accent)}
+  .card .cta .arrow{transition:transform .18s cubic-bezier(.2,0,0,1)}
+  .card:hover .cta .arrow{transform:translateX(4px)}
+
+  /* footer */
+  footer{margin-top:60px; padding:40px 0 64px; border-top:1px solid var(--line); text-align:center; color:var(--ink-3)}
+  footer .fbrand{font-weight:800; color:var(--ink); font-size:15px; letter-spacing:-.01em}
+  footer p{font-size:13px; margin-top:8px; max-width:60ch; margin-inline:auto}
+  footer .legend{display:flex; flex-wrap:wrap; gap:14px; justify-content:center; margin-top:22px; font-size:12px}
+  footer .legend span{display:inline-flex; align-items:center; gap:6px; color:var(--ink-2)}
+  footer .legend i{width:11px; height:11px; border-radius:4px; display:inline-block}
+
+  @media (prefers-reduced-motion:reduce){ *{transition:none!important} html{scroll-behavior:auto} }
+</style>
+
+<button class="themebtn" id="themebtn" aria-label="Toggle theme">◐</button>
+
+<header class="hero">
+  <div class="shell">
+    <span class="eyebrow"><span class="live"></span>StreetServe · Interactive Design System</span>
+    <h1>The whole product,<br><span class="grad">on the move.</span></h1>
+    <p class="lede">Sixteen clickable, theme-aware prototypes covering every one of the 77 screens of StreetServe — the real-time marketplace connecting mobile vendors, street sellers, and communities. Built screen-by-screen from the approved design system, before a line of production code.</p>
+    <p class="tag">See good, do good.</p>
+    <div class="stripe">
+      <div class="stat"><b class="tnum">77</b><small>Screens</small></div>
+      <div class="stat"><b class="tnum">16</b><small>Prototypes</small></div>
+      <div class="stat"><b class="tnum">5</b><small>User surfaces</small></div>
+      <div class="stat"><b class="tnum">2</b><small>Themes</small></div>
+      <div class="stat"><b>AA</b><small>Accessibility</small></div>
+    </div>
+  </div>
+</header>
+
+<main class="shell">
+
+  <!-- CUSTOMER -->
+  <section id="customer">
+    <div class="sec-head">
+      <span class="sec-badge" style="background:var(--orange)">🗺️</span>
+      <h2>Customer App</h2>
+      <span class="meta">38 screens · 9 prototypes · mobile</span>
+      <p>Discovering mobile businesses live on the map, waving them down, riding the line-up discount, ordering, paying, scheduling, and staying connected.</p>
+    </div>
+    <div class="grid" style="--accent:var(--orange)">
+      <a class="card" style="--accent:var(--orange)" href="https://claude.ai/code/artifact/9837ae1a-2821-49e7-a0f8-b08b2637767e" target="_blank" rel="noopener">
+        <div class="top"></div>
+        <div class="pad">
+          <div class="idline"><span class="ids">C-10</span><span class="platform">Mobile</span></div>
+          <h3>Map Home</h3>
+          <p>The product's center of gravity. Live pins with custom business logos, status rings, category filters, and the wave-down entry point.</p>
+          <div class="try"><b>Try:</b> tap a pin · switch category tabs · loading &amp; empty states</div>
+        </div>
+        <div class="cta"><span>Open prototype</span><span class="arrow">→</span></div>
+      </a>
+      <a class="card" style="--accent:var(--orange)" href="https://claude.ai/code/artifact/b89c2fb0-dcec-460d-9d80-4a868fd7cf60" target="_blank" rel="noopener">
+        <div class="top"></div>
+        <div class="pad">
+          <div class="idline"><span class="ids">C-14</span><span class="platform">Mobile</span></div>
+          <h3>Business Profile Sheet</h3>
+          <p>The surface every transaction starts from. Three snap points and a status model that drives five surfaces from one source of truth.</p>
+          <div class="try"><b>Try:</b> snap peek → half → full · switch Driving/Parked/Closed</div>
+        </div>
+        <div class="cta"><span>Open prototype</span><span class="arrow">→</span></div>
+      </a>
+      <a class="card" style="--accent:var(--orange)" href="https://claude.ai/code/artifact/df609d19-0c13-45a3-856a-0a518941a29e" target="_blank" rel="noopener">
+        <div class="top"></div>
+        <div class="pad">
+          <div class="idline"><span class="ids">C-18 · 19 · 20</span><span class="platform">Mobile</span></div>
+          <h3>Wave Down &amp; Queue</h3>
+          <p>The full journey: send a wave, wait through every branch (accept / decline / expire), then ride the queue to "you're up."</p>
+          <div class="try"><b>Try:</b> send wave · simulate accept, decline, expire · Pop-Up delay</div>
+        </div>
+        <div class="cta"><span>Open prototype</span><span class="arrow">→</span></div>
+      </a>
+      <a class="card" style="--accent:var(--orange)" href="https://claude.ai/code/artifact/52e1bfb3-883b-411a-aef9-d31a846937f3" target="_blank" rel="noopener">
+        <div class="top"></div>
+        <div class="pad">
+          <div class="idline"><span class="ids">C-21 → 24</span><span class="platform">Mobile</span></div>
+          <h3>Order, Payment &amp; Receipt</h3>
+          <p>The transaction loop, two contexts in one screen set: at-the-window (from a queue) vs. order-ahead (with the full tracker).</p>
+          <div class="try"><b>Try:</b> toggle context · pay · simulate a card decline</div>
+        </div>
+        <div class="cta"><span>Open prototype</span><span class="arrow">→</span></div>
+      </a>
+      <a class="card" style="--accent:var(--orange)" href="https://claude.ai/code/artifact/95cb399e-1e87-44cd-b8a0-89ac89e45ca6" target="_blank" rel="noopener">
+        <div class="top"></div>
+        <div class="pad">
+          <div class="idline"><span class="ids">C-26 · 27</span><span class="platform">Mobile</span></div>
+          <h3>Booking &amp; Detail</h3>
+          <p>Scheduling a mobile service, with all three vendor responses modeled: confirm, propose a new time, or cancel with compensation.</p>
+          <div class="try"><b>Try:</b> book a slot · simulate "vendor proposes new time" / "cancels"</div>
+        </div>
+        <div class="cta"><span>Open prototype</span><span class="arrow">→</span></div>
+      </a>
+      <a class="card" style="--accent:var(--orange)" href="https://claude.ai/code/artifact/5e8e6944-92a7-44a1-b56e-e2f1ffae8926" target="_blank" rel="noopener">
+        <div class="top"></div>
+        <div class="pad">
+          <div class="idline"><span class="ids">C-31 · 32 · 33</span><span class="platform">Mobile</span></div>
+          <h3>Favorites &amp; Messages</h3>
+          <p>The Follow / Notify Me / Message mechanics: a live status board of favorites, plus scoped business-inquiry threads.</p>
+          <div class="try"><b>Try:</b> simulate "goes Driving" · empty states · quick-reply chips</div>
+        </div>
+        <div class="cta"><span>Open prototype</span><span class="arrow">→</span></div>
+      </a>
+      <a class="card" style="--accent:var(--orange)" href="https://claude.ai/code/artifact/db811550-3a49-4720-bf1b-c228f85f2a1b" target="_blank" rel="noopener">
+        <div class="top"></div>
+        <div class="pad">
+          <div class="idline"><span class="ids">C-01 → 09</span><span class="platform">Mobile</span></div>
+          <h3>Onboarding &amp; Auth</h3>
+          <p>The first thing every user sees: splash, value carousel, passwordless phone/email + OTP, profile, role intent, permission primers, and a first-run tutorial.</p>
+          <div class="try"><b>Try:</b> tap out an OTP · enter <b>000000</b> for the failure case</div>
+        </div>
+        <div class="cta"><span>Open prototype</span><span class="arrow">→</span></div>
+      </a>
+      <a class="card" style="--accent:var(--orange)" href="https://claude.ai/code/artifact/d1e0a699-0077-49eb-83de-8bf20e6bd36b" target="_blank" rel="noopener">
+        <div class="top"></div>
+        <div class="pad">
+          <div class="idline"><span class="ids">C-34 → 38</span><span class="platform">Mobile</span></div>
+          <h3>Profile &amp; Account</h3>
+          <p>The account hub and everything under it: profile, wallet (with Spot Me debts), the verification tier ladder, settings, and product-specific help.</p>
+          <div class="try"><b>Try:</b> navigate from the profile · toggle settings · expand FAQs</div>
+        </div>
+        <div class="cta"><span>Open prototype</span><span class="arrow">→</span></div>
+      </a>
+      <a class="card" style="--accent:var(--orange)" href="https://claude.ai/code/artifact/06baa80f-fad4-4aa7-814d-a82aa845e2c5" target="_blank" rel="noopener">
+        <div class="top"></div>
+        <div class="pad">
+          <div class="idline"><span class="ids">C-11 → 30</span><span class="platform">Mobile</span><span class="v1x">Some V1.x</span></div>
+          <h3>Discovery, Content &amp; Gifting</h3>
+          <p>Search, the accessibility list view, category browser, menu, reviews, Block Party, unified orders history, and the gifting + Spot Me flows.</p>
+          <div class="try"><b>Try:</b> add menu items · rate a business · step the Spot Me amount</div>
+        </div>
+        <div class="cta"><span>Open prototype</span><span class="arrow">→</span></div>
+      </a>
+    </div>
+  </section>
+
+  <!-- SELLER -->
+  <section id="seller">
+    <div class="sec-head">
+      <span class="sec-badge" style="background:var(--disc)">💵</span>
+      <h2>Street Seller</h2>
+      <span class="meta">14 screens · 3 prototypes · mobile</span>
+      <p>The gig side: earn today with no capital. Reserve consignment inventory, sell it on the street with AI coaching, return what's unsold, get paid — with a dedicated path for shelter-program participants.</p>
+    </div>
+    <div class="grid">
+      <a class="card" style="--accent:var(--disc)" href="https://claude.ai/code/artifact/0f32d81c-65c2-4cc9-8574-39eb212ddc71" target="_blank" rel="noopener">
+        <div class="top"></div>
+        <div class="pad">
+          <div class="idline"><span class="ids">S-01 → 06</span><span class="platform">Mobile</span></div>
+          <h3>Onboarding &amp; First Checkout</h3>
+          <p>From "earn today" to walking out of a hub with inventory. Two verification paths — standard KYC, and shelter-cosigned.</p>
+          <div class="try"><b>Try:</b> toggle Standard vs. Shelter path · QR pickup checkout</div>
+        </div>
+        <div class="cta"><span>Open prototype</span><span class="arrow">→</span></div>
+      </a>
+      <a class="card" style="--accent:var(--disc)" href="https://claude.ai/code/artifact/ca21cab7-99ad-46e6-83b0-00bf083a3523" target="_blank" rel="noopener">
+        <div class="top"></div>
+        <div class="pad">
+          <div class="idline"><span class="ids">S-07 → 10</span><span class="platform">Mobile</span></div>
+          <h3>Inventory, Sale &amp; Settlement</h3>
+          <p>Manage what you're holding, log sales (with an oversell guard), return the rest, and watch the payout land.</p>
+          <div class="try"><b>Try:</b> trigger the oversell block · reconcile a return · see settlement</div>
+        </div>
+        <div class="cta"><span>Open prototype</span><span class="arrow">→</span></div>
+      </a>
+      <a class="card" style="--accent:var(--disc)" href="https://claude.ai/code/artifact/2f0a3c59-c833-4f5c-9ace-60effdfafd25" target="_blank" rel="noopener">
+        <div class="top"></div>
+        <div class="pad">
+          <div class="idline"><span class="ids">S-11 → 14</span><span class="platform">Mobile</span><span class="v1x">Some V1.x</span></div>
+          <h3>AI Assistant, Coaching &amp; Jobs</h3>
+          <p>One recommendation at a time (never a dashboard dump), objection-handling coaching, an earnings home base, and the Jobs board.</p>
+          <div class="try"><b>Try:</b> swipe recommendations · pick an objection · accept a gig</div>
+        </div>
+        <div class="cta"><span>Open prototype</span><span class="arrow">→</span></div>
+      </a>
+    </div>
+  </section>
+
+  <!-- VENDOR -->
+  <section id="vendor">
+    <div class="sec-head">
+      <span class="sec-badge" style="background:var(--orange)">🚚</span>
+      <h2>Vendor Dashboard</h2>
+      <span class="meta">12 screens · 2 prototypes · web</span>
+      <p>The mobile business's command center. Registration with compliance gating, the live-status home screen, queue and order management, menu control, growth tools, and payouts — with a fully responsive sidebar.</p>
+    </div>
+    <div class="grid">
+      <a class="card" style="--accent:var(--orange)" href="https://claude.ai/code/artifact/be25f08f-e7da-4024-8e31-f90e4f753da8" target="_blank" rel="noopener">
+        <div class="top"></div>
+        <div class="pad">
+          <div class="idline"><span class="ids">V-01 · 02 · 04 · 05 · 06</span><span class="platform">Web</span></div>
+          <h3>Core Operating Loop</h3>
+          <p>Registration, the live-status home screen, queue management, the order kanban, and menu / Today's Special control.</p>
+          <div class="try"><b>Try:</b> the width switcher (responsive sidebar) · move an order card</div>
+        </div>
+        <div class="cta"><span>Open prototype</span><span class="arrow">→</span></div>
+      </a>
+      <a class="card" style="--accent:var(--orange)" href="https://claude.ai/code/artifact/44f432fd-4f60-4d0e-82d0-c0bd1534f4d3" target="_blank" rel="noopener">
+        <div class="top"></div>
+        <div class="pad">
+          <div class="idline"><span class="ids">V-03 · 07 → 12</span><span class="platform">Web</span><span class="v1x">Some V1.x</span></div>
+          <h3>Growth, Comms &amp; Money</h3>
+          <p>Wave-down inbox, bookings calendar, message inbox, ping-sharing budget, giveaways, analytics with benchmarking, and payouts.</p>
+          <div class="try"><b>Try:</b> accept a wave-down · propose a new booking time</div>
+        </div>
+        <div class="cta"><span>Open prototype</span><span class="arrow">→</span></div>
+      </a>
+    </div>
+  </section>
+
+  <!-- HUB -->
+  <section id="hub">
+    <div class="sec-head">
+      <span class="sec-badge" style="background:var(--green)">🏪</span>
+      <h2>Consignment Hub</h2>
+      <span class="meta">6 screens · 1 prototype · web</span>
+      <p>The supply side of the seller marketplace. Inventory owners list goods, approve who takes them, watch inventory move on a live map, reconcile settlements, and read AI demand forecasts.</p>
+    </div>
+    <div class="grid">
+      <a class="card" style="--accent:var(--green)" href="https://claude.ai/code/artifact/742debef-cf0a-4779-843b-9eeb72497cbd" target="_blank" rel="noopener">
+        <div class="top"></div>
+        <div class="pad">
+          <div class="idline"><span class="ids">H-01 → 06</span><span class="platform">Web</span><span class="v1x">Some V1.x</span></div>
+          <h3>Hub Dashboard</h3>
+          <p>Register, list consignment products, approve seller checkouts (Trust Score in context), track inventory on a live map, settle, forecast.</p>
+          <div class="try"><b>Try:</b> approve a checkout · spot the shelter-cosigned flag · overdue pin</div>
+        </div>
+        <div class="cta"><span>Open prototype</span><span class="arrow">→</span></div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ADMIN -->
+  <section id="admin">
+    <div class="sec-head">
+      <span class="sec-badge" style="background:var(--violet)">🛡️</span>
+      <h2>Admin · Trust &amp; Safety</h2>
+      <span class="meta">7 screens · 1 prototype · web · internal</span>
+      <p>The internal console that keeps the marketplace honest: city health, dispute arbitration, license &amp; category review, fraud triage (human-in-the-loop), user management, shelter-impact reporting, and sponsors.</p>
+    </div>
+    <div class="grid">
+      <a class="card" style="--accent:var(--violet)" href="https://claude.ai/code/artifact/923e2dbd-cb99-47be-8520-f9595cec9613" target="_blank" rel="noopener">
+        <div class="top"></div>
+        <div class="pad">
+          <div class="idline"><span class="ids">A-01 → 07</span><span class="platform">Web · Internal</span></div>
+          <h3>Trust &amp; Safety Console</h3>
+          <p>Ops overview, the dispute console (SLA-timed, evidence + chain-of-custody), compliance backbone, and privacy-first shelter reporting.</p>
+          <div class="try"><b>Try:</b> resolve dispute #4471 · approve a license · fraud hold</div>
+        </div>
+        <div class="cta"><span>Open prototype</span><span class="arrow">→</span></div>
+      </a>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="shell">
+    <div class="fbrand">StreetServe</div>
+    <p>Every prototype is self-contained, keyboard-navigable, and renders in light or dark to match your device. Emoji stand in for uploaded business logos and product photography. Pilot market: Modesto, CA.</p>
+    <div class="legend">
+      <span><i style="background:var(--green)"></i>Driving</span>
+      <span><i style="background:var(--blue)"></i>Parked</span>
+      <span><i style="background:var(--violet)"></i>Away / Closed</span>
+      <span><i style="background:var(--orange)"></i>Wave Down / primary</span>
+      <span><i style="background:var(--disc)"></i>Line-up discount</span>
+    </div>
+    <p style="margin-top:22px; color:var(--ink-3)">Design blueprint &amp; full specs: <b style="color:var(--ink-2)">docs/13-screen-design-specs.md</b> · © 2026 StreetServe</p>
+  </div>
+</footer>
+
+<script>
+  const root=document.documentElement, btn=document.getElementById('themebtn');
+  btn.addEventListener('click',()=>{
+    const cur = root.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light');
+    root.setAttribute('data-theme', cur==='dark' ? 'light':'dark');
+  });
+</script>

@@ -1,0 +1,460 @@
+<title>StreetServe — Vendor Dashboard Part 2 (V-03/07/08/09/10/11/12)</title>
+<style>
+  :root{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF; --surface-sunken:#F1F0ED;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --border:rgba(91,94,104,.24); --shadow:0 12px 32px rgba(20,21,26,.12);
+    --motion-micro:100ms; --motion-standard:200ms; --ease-in:cubic-bezier(.2,0,0,1);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-base:#0E0F12; --surface-raised:#17181C; --surface-sunken:#0A0B0D;
+      --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+      --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+      --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+      --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+      --border:rgba(156,159,168,.18); --shadow:0 12px 32px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --surface-base:#0E0F12; --surface-raised:#17181C; --surface-sunken:#0A0B0D;
+    --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+    --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+    --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+    --status-warning:#FDB022; --status-danger:#F04438; --status-discount:#9B8AFA;
+    --border:rgba(156,159,168,.18); --shadow:0 12px 32px rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"]{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF; --surface-sunken:#F1F0ED;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20; --status-discount:#7A5AF8;
+    --border:rgba(91,94,104,.24); --shadow:0 12px 32px rgba(20,21,26,.12);
+  }
+
+  *{box-sizing:border-box; margin:0}
+  html,body{background:var(--surface-base); color:var(--text-primary);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.4}
+  button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+  :is(button,[tabindex]):focus-visible{outline:2px solid var(--accent-secondary); outline-offset:2px; border-radius:8px}
+
+  .wrap{max-width:1240px; margin:0 auto; padding:40px 20px 80px; display:flex; flex-direction:column; gap:24px}
+  .page-head .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:600}
+  .page-head h1{font-size:32px; font-weight:700; letter-spacing:-.02em; text-wrap:balance; margin-top:6px}
+  .page-head p{color:var(--text-secondary); max-width:70ch; margin-top:8px; font-size:15px}
+
+  .controls{display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between}
+  .seg{display:flex; gap:4px; background:var(--surface-raised); border:1px solid var(--border); border-radius:999px; padding:4px; flex-wrap:wrap}
+  .seg button{padding:7px 12px; border-radius:999px; font-size:12.5px; font-weight:600; color:var(--text-secondary);
+    transition:background var(--motion-micro) var(--ease-in), color var(--motion-micro) var(--ease-in)}
+  .seg button[aria-pressed="true"]{background:var(--accent-secondary); color:#fff}
+  .sim{display:flex; gap:8px; flex-wrap:wrap}
+  .sim button{font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:999px;
+    border:1.5px dashed var(--text-secondary); color:var(--text-secondary)}
+  .sim button:hover{color:var(--text-primary); border-color:var(--text-primary)}
+  .sim .lbl{align-self:center; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-secondary)}
+
+  .browser{border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:var(--shadow); background:var(--surface-base); max-width:1180px; margin:0 auto}
+  .chrome{height:38px; background:var(--surface-sunken); display:flex; align-items:center; gap:8px; padding:0 14px; border-bottom:1px solid var(--border)}
+  .chrome i{width:10px; height:10px; border-radius:50%; background:var(--border)}
+  .chrome .url{margin-left:10px; font-size:11px; color:var(--text-secondary); background:var(--surface-raised); border-radius:999px; padding:3px 12px}
+
+  .dash{display:flex; height:660px}
+  .sidebar{width:220px; flex:none; border-right:1px solid var(--border); background:var(--surface-raised); display:flex; flex-direction:column}
+  .sidebar .brand{display:flex; align-items:center; gap:10px; padding:16px 16px 14px; font-weight:800; font-size:15px; border-bottom:1px solid var(--border)}
+  .sidebar .brand .logo{width:30px; height:30px; border-radius:9px; background:var(--accent-primary); flex:none; display:grid; place-items:center; color:#fff; font-size:14px}
+  .navitem{display:flex; align-items:center; gap:12px; padding:11px 16px; font-size:13.5px; font-weight:600; color:var(--text-secondary); border-left:3px solid transparent; text-align:left; white-space:nowrap; width:100%}
+  .navitem svg{width:18px; height:18px; flex:none}
+  .navitem[aria-current="page"]{color:var(--accent-secondary); border-left-color:var(--accent-secondary); background:color-mix(in srgb,var(--accent-secondary) 6%,transparent)}
+  .navgroup-label{font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:var(--text-secondary); padding:14px 16px 4px}
+
+  .mainarea{flex:1; display:flex; flex-direction:column; min-width:0}
+  .topbar{height:56px; flex:none; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; padding:0 20px}
+  .topbar h2{font-size:15px; font-weight:700}
+  .topbar .roleSwitch{margin-left:auto; display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:var(--text-secondary); border:1px solid var(--border); border-radius:999px; padding:6px 12px}
+
+  .content{flex:1; overflow-y:auto; padding:20px; display:none; flex-direction:column; gap:16px}
+  .content.on{display:flex}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  .card{border:1px solid var(--border); border-radius:14px; padding:16px; background:var(--surface-raised)}
+  .num{font-variant-numeric:tabular-nums}
+  .kpi small{font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--text-secondary); display:block; margin-bottom:6px}
+  .kpi b{font-size:26px; font-weight:800; letter-spacing:-.01em}
+  .kpi .delta{font-size:12px; font-weight:600; color:var(--status-driving); margin-top:4px; display:block}
+  .kpi .delta.bench{color:var(--accent-secondary)}
+
+  .btn{height:38px; padding:0 16px; border-radius:8px; font-size:13.5px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; gap:7px}
+  .btn.primary{background:var(--accent-primary); color:#fff}
+  .btn.secondary{border:1.5px solid var(--text-secondary); color:var(--text-primary)}
+  .btn.danger{color:var(--status-danger); font-weight:600}
+  .btn.small{height:32px; font-size:12.5px; padding:0 12px}
+  .btn[disabled]{opacity:.45; pointer-events:none}
+  .chip{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:999px}
+  .chip.warn{color:var(--status-warning); background:color-mix(in srgb,var(--status-warning) 13%,transparent)}
+  .chip.green{color:var(--status-driving); background:color-mix(in srgb,var(--status-driving) 13%,transparent)}
+  .chip.blue{color:var(--accent-secondary); background:color-mix(in srgb,var(--accent-secondary) 13%,transparent)}
+  .chip.danger{color:var(--status-danger); background:color-mix(in srgb,var(--status-danger) 13%,transparent)}
+
+  /* V-03 wave-down inbox */
+  .wdcard{display:flex; gap:12px; align-items:center; border:1px solid var(--border); border-radius:12px; padding:12px 14px}
+  .wdcard .av{width:40px; height:40px; border-radius:50%; background:var(--surface-sunken); display:grid; place-items:center; font-size:18px; flex:none}
+  .wdcard .info{flex:1; min-width:0}
+  .wdcard b{font-size:13.5px; display:block}
+  .wdcard small{font-size:12px; color:var(--text-secondary)}
+  .wdcard .countdown{font-weight:800; font-size:16px; text-align:center; min-width:56px}
+  .wdcard .countdown small{display:block; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em}
+  .wdcard .acts{display:flex; gap:6px}
+
+  /* V-07 bookings calendar */
+  .weekgrid{display:grid; grid-template-columns:60px repeat(7,1fr); border:1px solid var(--border); border-radius:12px; overflow:hidden; font-size:11.5px}
+  .weekgrid .hd{background:var(--surface-sunken); padding:8px 4px; text-align:center; font-weight:700; border-bottom:1px solid var(--border); border-left:1px solid var(--border)}
+  .weekgrid .hd:first-child{border-left:0}
+  .weekgrid .tm{padding:10px 6px; color:var(--text-secondary); text-align:right; border-top:1px solid var(--border); font-weight:600}
+  .weekgrid .cell{border-top:1px solid var(--border); border-left:1px solid var(--border); min-height:44px; position:relative; padding:3px}
+  .apptchip{background:color-mix(in srgb,var(--accent-secondary) 16%,var(--surface-raised)); border:1px solid var(--accent-secondary); border-radius:6px; padding:3px 5px; font-size:10.5px; font-weight:700; color:var(--accent-secondary); cursor:pointer}
+  .apptchip.pending{background:color-mix(in srgb,var(--status-warning) 16%,var(--surface-raised)); border-color:var(--status-warning); color:var(--status-warning)}
+
+  /* V-08 messages */
+  .threadrow{display:flex; gap:10px; align-items:center; padding:10px; border-radius:10px; text-align:left; width:100%}
+  .threadrow:hover{background:var(--surface-sunken)}
+  .threadrow.active{background:color-mix(in srgb,var(--accent-secondary) 8%,transparent)}
+  .threadrow .av{width:36px; height:36px; border-radius:50%; background:var(--surface-sunken); display:grid; place-items:center; font-size:15px; flex:none}
+  .threadrow b{font-size:13px; display:block}
+  .threadrow small{font-size:11.5px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; max-width:160px}
+  .threadrow .dot{width:8px; height:8px; border-radius:50%; background:var(--accent-primary); margin-left:auto; flex:none}
+  .msgpane{display:flex; flex-direction:column; height:100%}
+  .msgs2{flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:12px}
+  .bubble{max-width:70%; padding:8px 12px; border-radius:14px; font-size:13px}
+  .bubble.them{align-self:flex-start; background:var(--surface-sunken); border-bottom-left-radius:4px}
+  .bubble.me{align-self:flex-end; background:var(--accent-secondary); color:#fff; border-bottom-right-radius:4px}
+  .composer2{display:flex; gap:8px; padding:10px 12px; border-top:1px solid var(--border)}
+  .composer2 input{flex:1; height:38px; border-radius:999px; border:1px solid var(--border); background:var(--surface-base); padding:0 14px; font-size:13px; color:var(--text-primary)}
+
+  /* V-09 ping budget */
+  .bigbal{font-size:36px; font-weight:800; letter-spacing:-.02em}
+  .balbar{height:10px; border-radius:999px; background:var(--border); overflow:hidden; margin-top:8px}
+  .balbar .fill{height:100%; background:var(--accent-secondary); border-radius:999px}
+  .sliderow{display:flex; align-items:center; gap:10px}
+  .sliderow input[type=range]{flex:1; accent-color:var(--accent-secondary)}
+
+  /* V-10 giveaways */
+  .givecard{display:flex; align-items:center; gap:12px; border:1px solid var(--border); border-radius:12px; padding:12px}
+  .givecard .ic{width:40px; height:40px; border-radius:10px; background:color-mix(in srgb,var(--accent-primary) 12%,var(--surface-sunken)); display:grid; place-items:center; font-size:18px; flex:none}
+  .givecard b{font-size:13.5px; display:block}
+  .givecard .capbar{height:6px; border-radius:999px; background:var(--border); margin-top:6px; width:140px; overflow:hidden}
+  .givecard .capbar .fill{height:100%; background:var(--status-driving)}
+
+  /* V-11 analytics */
+  .sparkwrap2{display:flex; align-items:flex-end; gap:5px; height:90px; padding:0 4px}
+  .bar2{flex:1; background:color-mix(in srgb,var(--accent-secondary) 22%,var(--surface-sunken)); border-radius:4px 4px 0 0; position:relative}
+  .bar2.peak{background:var(--accent-secondary)}
+  .benchrow{display:flex; align-items:center; gap:10px; font-size:12.5px}
+  .benchbar{flex:1; height:8px; border-radius:999px; background:var(--border); overflow:hidden}
+  .benchbar .fill{height:100%; border-radius:999px; background:var(--status-driving)}
+
+  /* V-12 payouts */
+  .payoutrow{display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); font-size:13px}
+  .payoutrow:last-child{border-bottom:0}
+  .payoutrow .ic{width:32px; height:32px; border-radius:50%; display:grid; place-items:center; font-size:14px; flex:none}
+  .payoutrow .ic.ok{background:color-mix(in srgb,var(--status-driving) 14%,transparent); color:var(--status-driving)}
+  .payoutrow .ic.pending{background:color-mix(in srgb,var(--status-warning) 14%,transparent); color:var(--status-warning)}
+  .payoutrow b{display:block}
+  .payoutrow small{color:var(--text-secondary); font-size:11.5px}
+  .payoutrow .amt{margin-left:auto; font-weight:700}
+
+  .toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(8px); z-index:20;
+    background:var(--surface-raised); border:1px solid var(--border); box-shadow:var(--shadow);
+    border-radius:12px; padding:10px 16px; font-size:13px; font-weight:600; opacity:0;
+    transition:opacity .2s var(--ease-in), transform .2s var(--ease-in); pointer-events:none; white-space:nowrap}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  .notes{display:flex; flex-direction:column; gap:14px; max-width:1180px; margin:0 auto; width:100%}
+  .note{background:var(--surface-raised); border:1px solid var(--border); border-radius:16px; padding:18px 20px}
+  .note h2{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:700}
+  .note ul{margin:10px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px}
+  .note li{font-size:13.5px; display:flex; gap:8px}
+  .note li b{font-weight:650}
+  .note li::before{content:""; flex:none; width:6px; height:6px; border-radius:50%; background:var(--accent-secondary); margin-top:6px}
+  .hint{font-size:13px; color:var(--text-secondary); text-align:center}
+
+  @media (prefers-reduced-motion:reduce){ *,*::before,*::after{transition-duration:1ms!important} }
+</style>
+
+<div class="wrap">
+  <header class="page-head">
+    <div class="eyebrow">StreetServe · Design phase · Screens 34–40 of 77 · Vendor dashboard, part 2 of 2</div>
+    <h1>V-03 / V-07 / V-08 / V-09 / V-10 / V-11 / V-12 — Growth, Communication &amp; Money</h1>
+    <p>Completes the vendor dashboard: the wave-down inbox, bookings calendar, message inbox, the two V1.x growth tools (Ping Sharing, Giveaways), analytics, and payouts. With this, all 12 vendor screens are designed.</p>
+  </header>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Jump to screen">
+      <button aria-pressed="true"  data-go="wave">V-03 Wave-Downs</button>
+      <button aria-pressed="false" data-go="bookings">V-07 Bookings</button>
+      <button aria-pressed="false" data-go="messages">V-08 Messages</button>
+      <button aria-pressed="false" data-go="ping">V-09 Ping</button>
+      <button aria-pressed="false" data-go="giveaways">V-10 Giveaways</button>
+      <button aria-pressed="false" data-go="analytics">V-11 Analytics</button>
+      <button aria-pressed="false" data-go="payouts">V-12 Payouts</button>
+    </div>
+    <div class="sim" id="sim"></div>
+  </div>
+
+  <div class="browser">
+    <div class="chrome"><i></i><i></i><i></i><span class="url">dashboard.streetserve.com/vendor</span></div>
+    <div class="dash">
+      <aside class="sidebar">
+        <div class="brand"><span class="logo">S</span>StreetServe</div>
+        <div class="navgroup-label">Operate</div>
+        <button class="navitem">Live Status</button>
+        <button class="navitem" data-nav="wave" aria-current="page">Wave-Downs <span class="chip warn" style="margin-left:auto">3</span></button>
+        <button class="navitem">Queue</button>
+        <button class="navitem">Orders</button>
+        <div class="navgroup-label">Manage</div>
+        <button class="navitem">Menu</button>
+        <button class="navitem" data-nav="bookings">Bookings</button>
+        <button class="navitem" data-nav="messages">Messages <span class="chip warn" style="margin-left:auto">2</span></button>
+        <div class="navgroup-label">Grow</div>
+        <button class="navitem" data-nav="ping">Ping Sharing <span class="chip blue" style="margin-left:auto">V1.x</span></button>
+        <button class="navitem" data-nav="giveaways">Giveaways <span class="chip blue" style="margin-left:auto">V1.x</span></button>
+        <button class="navitem" data-nav="analytics">Analytics</button>
+        <button class="navitem" data-nav="payouts">Payouts</button>
+      </aside>
+
+      <div class="mainarea">
+        <div class="topbar"><h2 id="topTitle">Wave-Down Inbox</h2><div class="roleSwitch">🚗 Taco Loco · Vendor</div></div>
+
+        <!-- V-03 WAVE-DOWN INBOX -->
+        <div class="content on" id="c-wave">
+          <div class="card" style="display:flex; flex-direction:column; gap:10px" id="wdList">
+            <div class="wdcard" id="wd1">
+              <span class="av">👩</span>
+              <div class="info"><b>Maria G.</b><small>0.3 mi away · "Can you do 2 al pastor?"</small></div>
+              <div class="countdown" id="wdTimer1">4:52<small>left</small></div>
+              <div class="acts"><button class="btn secondary small" data-decline="wd1">Decline</button><button class="btn primary small" data-accept="wd1">Accept</button></div>
+            </div>
+            <div class="wdcard" id="wd2">
+              <span class="av">🧑</span>
+              <div class="info"><b>Jordan K.</b><small>0.6 mi away</small></div>
+              <div class="countdown" id="wdTimer2">3:10<small>left</small></div>
+              <div class="acts"><button class="btn secondary small" data-decline="wd2">Decline</button><button class="btn primary small" data-accept="wd2">Accept</button></div>
+            </div>
+            <div class="wdcard" id="wd3">
+              <span class="av">👨</span>
+              <div class="info"><b>Priya S.</b><small>0.2 mi away</small></div>
+              <div class="countdown" id="wdTimer3">0:38<small>left</small></div>
+              <div class="acts"><button class="btn secondary small" data-decline="wd3">Decline</button><button class="btn primary small" data-accept="wd3">Accept</button></div>
+            </div>
+          </div>
+          <div class="card" style="display:none; text-align:center; color:var(--text-secondary)" id="wdEmpty">No pending wave-downs — you're all caught up.</div>
+        </div>
+
+        <!-- V-07 BOOKINGS CALENDAR -->
+        <div class="content" id="c-bookings">
+          <div class="grid2" style="grid-template-columns:1fr; margin-bottom:0">
+            <div class="weekgrid">
+              <div class="hd"></div><div class="hd">Mon</div><div class="hd">Tue</div><div class="hd">Wed</div><div class="hd">Thu</div><div class="hd">Fri <span class="chip blue" style="margin-left:4px">today</span></div><div class="hd">Sat</div><div class="hd">Sun</div>
+              <div class="tm">9 AM</div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"><span class="apptchip">Detail · J.K.</span></div><div class="cell"></div>
+              <div class="tm">11 AM</div><div class="cell"></div><div class="cell"><span class="apptchip">Wash · M.G.</span></div><div class="cell"></div><div class="cell"></div><div class="cell" id="fridayCell"><span class="apptchip" id="todayAppt">Detail · 11:30</span></div><div class="cell"></div><div class="cell"></div>
+              <div class="tm">1 PM</div><div class="cell"></div><div class="cell"></div><div class="cell"><span class="apptchip pending">Pending · A.R.</span></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="tm">3 PM</div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"><span class="apptchip">Interior · P.S.</span></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+            </div>
+          </div>
+          <div class="card" id="bookingDetail">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start">
+              <div><b style="font-size:14px">Full Detail — Jordan K.</b><br><small class="num" style="color:var(--text-secondary)">Today · 11:30 AM</small></div>
+              <span class="chip green">Confirmed</span>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:12px">
+              <button class="btn secondary small" id="proposeBtn">Propose new time</button>
+              <button class="btn danger small">Decline</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- V-08 MESSAGES -->
+        <div class="content" id="c-messages" style="padding:0; flex-direction:row">
+          <div style="width:240px; border-right:1px solid var(--border); padding:12px; display:flex; flex-direction:column; gap:4px">
+            <button class="threadrow active"><span class="av">👩</span><div><b>Maria G.</b><small>Are you doing al pastor today?</small></div><span class="dot"></span></button>
+            <button class="threadrow"><span class="av">🧑</span><div><b>Jordan K.</b><small>Perfect, see you at 11:30</small></div></button>
+            <button class="threadrow"><span class="av">👨</span><div><b>Chris P.</b><small>Do you take Apple Pay?</small></div><span class="dot"></span></button>
+          </div>
+          <div class="msgpane" style="flex:1">
+            <div style="padding:12px 16px; border-bottom:1px solid var(--border); font-weight:700; font-size:13.5px">Maria G.</div>
+            <div class="msgs2">
+              <div class="bubble them">Hey! Are you doing al pastor today?</div>
+              <div class="bubble me">Yes! We'll have the al pastor today 🌮</div>
+            </div>
+            <div class="composer2"><input placeholder="Reply to Maria…" /><button class="btn primary small">Send</button></div>
+          </div>
+        </div>
+
+        <!-- V-09 PING SHARING (V1.x) -->
+        <div class="content" id="c-ping">
+          <div class="card"><span class="chip blue">V1.x — post-pilot</span></div>
+          <div class="grid2">
+            <div class="card">
+              <small style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-secondary)">Remaining balance</small>
+              <div class="bigbal num">$18.40</div>
+              <div class="balbar"><div class="fill" style="width:37%"></div></div>
+              <p style="font-size:12px; color:var(--text-secondary); margin-top:6px">of <span class="num">$50.00</span> reloaded</p>
+              <button class="btn primary small" style="margin-top:10px">Reload balance</button>
+            </div>
+            <div class="card">
+              <small style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-secondary)">Per-share tip</small>
+              <div class="sliderow" style="margin-top:8px"><input type="range" min="10" max="100" value="20" id="tipSlider"/><b class="num" id="tipVal">$0.20</b></div>
+              <p style="font-size:12px; color:var(--text-secondary); margin-top:10px"><span class="num">14</span> qualifying shares this week · <span class="num">3</span> converted to a sale</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- V-10 GIVEAWAYS (V1.x) -->
+        <div class="content" id="c-giveaways">
+          <div class="card"><span class="chip blue">V1.x — post-pilot</span></div>
+          <div class="card" style="display:flex; flex-direction:column; gap:12px">
+            <div class="givecard"><span class="ic">🌮</span><div style="flex:1"><b>Free Kids Taco (ages 10 &amp; under)</b><small class="num">6 of 10 claimed today</small><div class="capbar"><div class="fill" style="width:60%"></div></div></div><button class="btn secondary small">Edit</button></div>
+            <button class="btn primary small" style="width:fit-content">+ New giveaway</button>
+          </div>
+        </div>
+
+        <!-- V-11 ANALYTICS -->
+        <div class="content" id="c-analytics">
+          <div class="grid3">
+            <div class="card kpi"><small>Sales this week</small><b class="num">$612</b><span class="delta">↑ 12% vs last week</span></div>
+            <div class="card kpi"><small>Queue conversion</small><b class="num">78%</b><span class="delta bench">↑ above category avg (64%)</span></div>
+            <div class="card kpi"><small>Avg wave-down response</small><b class="num">1m 40s</b><span class="delta">under your 5 min SLA</span></div>
+          </div>
+          <div class="card">
+            <b style="font-size:13.5px">Sales — last 7 days</b>
+            <div class="sparkwrap2" style="margin-top:10px">
+              <div class="bar2" style="height:35%"></div><div class="bar2" style="height:55%"></div><div class="bar2" style="height:40%"></div>
+              <div class="bar2 peak" style="height:100%"></div><div class="bar2" style="height:70%"></div><div class="bar2" style="height:50%"></div><div class="bar2" style="height:20%"></div>
+            </div>
+          </div>
+          <div class="card">
+            <b style="font-size:13.5px">Queue conversion vs. Food Truck category average</b>
+            <div class="benchrow" style="margin-top:10px"><span style="width:60px; color:var(--text-secondary)">You</span><div class="benchbar"><div class="fill" style="width:78%"></div></div><b class="num">78%</b></div>
+            <div class="benchrow" style="margin-top:6px"><span style="width:60px; color:var(--text-secondary)">Category</span><div class="benchbar"><div class="fill" style="width:64%; background:var(--text-secondary); opacity:.5"></div></div><b class="num">64%</b></div>
+          </div>
+        </div>
+
+        <!-- V-12 PAYOUTS -->
+        <div class="content" id="c-payouts">
+          <div class="grid2">
+            <div class="card kpi"><small>Available balance</small><b class="num">$284.50</b><span class="delta">Next payout: tomorrow</span></div>
+            <div class="card">
+              <small style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-secondary)">Stripe account</small>
+              <div style="display:flex; align-items:center; gap:8px; margin-top:8px"><span class="chip green">✓ Connected &amp; verified</span></div>
+              <button class="btn secondary small" style="margin-top:10px">Manage on Stripe</button>
+            </div>
+          </div>
+          <div class="card">
+            <b style="font-size:13.5px">Payout history</b>
+            <div style="margin-top:8px">
+              <div class="payoutrow"><span class="ic ok">✓</span><div><b>Weekly payout</b><small class="num">Jul 1</small></div><span class="amt num">$540.20</span></div>
+              <div class="payoutrow"><span class="ic pending">⏳</span><div><b>Weekly payout</b><small>Processing — arrives tomorrow</small></div><span class="amt num">$284.50</span></div>
+              <div class="payoutrow"><span class="ic ok">✓</span><div><b>Weekly payout</b><small class="num">Jun 24</small></div><span class="amt num">$611.90</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="hint">Accept/decline a wave-down · click a calendar appointment · try "Propose new time"</p>
+
+  <aside class="notes" aria-label="Design annotations">
+    <div class="note">
+      <h2>V-03 — the SLA countdown is the vendor's mirror of C-19</h2>
+      <ul>
+        <li>Each request shows the same 5-minute countdown the customer sees on their Waiting screen (C-19) — from the vendor's side, urgency renders as a shrinking number per row, sorted soonest-to-expire first, so the most time-sensitive request is never buried.</li>
+        <li>A request expiring unanswered (simulate: let Priya S.'s timer hit zero) auto-removes from the inbox exactly as it does on the customer side — one shared server truth, two mirrored UIs.</li>
+        <li>Only Accept/Decline are modeled here; "propose a scheduled stop" (the third FR-2 response) reuses V-07's slot-picking pattern rather than inventing a fourth UI.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>V-07 — pending vs. confirmed are visually distinct chips</h2>
+      <ul>
+        <li>Pending customer-requested bookings (amber) and vendor-confirmed bookings (blue) never share a color — a vendor scanning the week should immediately tell what still needs a response from what's settled.</li>
+        <li>"Propose new time" opens the same slot-picker component the customer uses in C-26 — reused, not rebuilt, so the two sides of one negotiation always show identical available/unavailable times.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>V-08 — a real inbox, not a stripped-down chat</h2>
+      <ul>
+        <li>Two-pane layout (thread list + active conversation) since a vendor may be managing several simultaneous customer questions during a shift — this is the one place the vendor dashboard needs genuine multi-conversation triage, unlike the customer's single-thread-at-a-time C-33.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>V-09/V-10 — both explicitly labeled V1.x</h2>
+      <ul>
+        <li>A visible "V1.x — post-pilot" chip appears at the top of both screens in the mockup itself — these are included in the design system now so the visual language is ready, but the copy is honest that they're not part of the MVP launch, consistent with the Feature Breakdown doc's phasing.</li>
+        <li>V-09's balance/slider directly visualizes the paid-ping fraud-guard rules from Security §4 (rate caps, unique-recipient constraint) via the "14 shares · 3 converted" line — makes the anti-farming reality visible to the vendor funding it, not just an invisible backend rule.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>V-11 — benchmarking without shaming</h2>
+      <ul>
+        <li>Category-average comparison bar sits directly beneath the vendor's own number, same scale, muted color for the benchmark — informative context, not a leaderboard or ranking that could feel punitive to a new vendor still building volume.</li>
+        <li>This is the "vendor analytics benchmarking" item promoted from the Feature Breakdown's Recommended Additions into part of the core V-11 design, since it increases dashboard stickiness at effectively no extra data-collection cost.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>V-12 — Stripe owns the compliance surface, this screen just reports it</h2>
+      <ul>
+        <li>"Manage on Stripe" deep-links to Stripe's own hosted dashboard rather than StreetServe rebuilding bank-detail management — consistent with the Architecture doc's decision not to build a custom ledger/escrow system, this dashboard only visualizes balance and history.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2>Handoff notes</h2>
+      <ul>
+        <li>V-03 countdown timers are rendered from a server-supplied expiry timestamp per request (consistent with the server-authoritative timer rule from C-19) — the mockup's local countdown is a simulation stand-in only.</li>
+        <li>V-07 booking state transitions (propose/accept/decline) write to `bookings.status` and are what the customer's C-27 detail screen mirrors — same event, two views.</li>
+        <li>V-09's slider and reload button call `PATCH /ping-budgets/:businessId` and `POST /ping-budgets/:businessId` (API §7).</li>
+        <li>Full spec: <b>docs/13-screen-design-specs.md § V-03/07/08/09/10/11/12</b>.</li>
+      </ul>
+    </div>
+  </aside>
+</div>
+
+<script>
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const toast=document.createElement('div'); toast.className='toast'; toast.id='toast'; document.body.appendChild(toast);
+  let tt; function show(msg){ toast.textContent=msg; toast.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>toast.classList.remove('show'),3200); }
+
+  const TITLES={wave:'Wave-Down Inbox', bookings:'Bookings Calendar', messages:'Messages', ping:'Ping Sharing Budget', giveaways:'Giveaways', analytics:'Analytics', payouts:'Payouts'};
+  function goTo(id){
+    $$('.content').forEach(c=>c.classList.remove('on'));
+    $('#c-'+id).classList.add('on');
+    $$('.seg [data-go]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.go===id));
+    $$('.navitem[data-nav]').forEach(n=>n.toggleAttribute('aria-current', n.dataset.nav===id));
+    $('#topTitle').textContent = TITLES[id];
+  }
+  $$('.seg [data-go]').forEach(b=>b.addEventListener('click',()=>goTo(b.dataset.go)));
+  $$('.navitem[data-nav]').forEach(n=>n.addEventListener('click',()=>goTo(n.dataset.nav)));
+
+  $$('[data-accept]').forEach(b=>b.addEventListener('click',()=>{
+    const el=$('#'+b.dataset.accept); show('Accepted — routing to '+el.querySelector('b').textContent);
+    el.remove(); checkEmpty();
+  }));
+  $$('[data-decline]').forEach(b=>b.addEventListener('click',()=>{
+    const el=$('#'+b.dataset.decline); show('Declined');
+    el.remove(); checkEmpty();
+  }));
+  function checkEmpty(){ if(!$('#wdList').children.length){ $('#wdList').style.display='none'; $('#wdEmpty').style.display='block'; } }
+
+  $('#proposeBtn').addEventListener('click',()=>{
+    show('Opens the same slot-picker component customers use in C-26');
+    $('#bookingDetail').innerHTML = '<div class="chip warn">Awaiting customer response</div><p style="font-size:13px; margin-top:8px">Proposed <b class="num">2:30 PM today</b> to Jordan K. instead of 11:30 AM.</p>';
+    $('#todayAppt').textContent='Pending · 2:30?'; $('#todayAppt').className='apptchip pending';
+  });
+
+  $('#tipSlider').addEventListener('input',(e)=>{ $('#tipVal').textContent='$'+(e.target.value/100).toFixed(2); });
+
+  $$('.threadrow').forEach(t=>t.addEventListener('click',()=>{ $$('.threadrow').forEach(x=>x.classList.remove('active')); t.classList.add('active'); const d=t.querySelector('.dot'); if(d) d.remove(); }));
+</script>

@@ -1,0 +1,489 @@
+<title>StreetServe — C-10 Map Home</title>
+<style>
+  :root{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20;
+    --map-ground:#ECEAE4; --map-block:#E2E0D9; --map-road:#FFFFFF;
+    --map-water:#D8E4EE; --map-park:#DCE6DA;
+    --ring:rgba(30,111,255,.9); --scrim:rgba(20,21,26,.4);
+    --border:rgba(91,94,104,.28); --shadow:0 12px 32px rgba(20,21,26,.14);
+    --motion-micro:100ms; --motion-standard:200ms; --motion-sheet:300ms;
+    --ease-in:cubic-bezier(.2,0,0,1); --ease-out:cubic-bezier(.4,0,1,1);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-base:#0E0F12; --surface-raised:#17181C;
+      --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+      --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+      --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+      --status-warning:#FDB022; --status-danger:#F04438;
+      --map-ground:#101216; --map-block:#171A20; --map-road:#232833;
+      --map-water:#14202E; --map-park:#14201A;
+      --border:rgba(156,159,168,.22); --shadow:0 12px 32px rgba(0,0,0,.5);
+      --scrim:rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --surface-base:#0E0F12; --surface-raised:#17181C;
+    --text-primary:#F4F4F5; --text-secondary:#9C9FA8;
+    --accent-primary:#FF6B45; --accent-secondary:#4C8DFF;
+    --status-driving:#22C55E; --status-parked:#4C8DFF; --status-away:#9B8AFA;
+    --status-warning:#FDB022; --status-danger:#F04438;
+    --map-ground:#101216; --map-block:#171A20; --map-road:#232833;
+    --map-water:#14202E; --map-park:#14201A;
+    --border:rgba(156,159,168,.22); --shadow:0 12px 32px rgba(0,0,0,.5);
+    --scrim:rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"]{
+    --surface-base:#FAFAF9; --surface-raised:#FFFFFF;
+    --text-primary:#14151A; --text-secondary:#5B5E68;
+    --accent-primary:#FF5A33; --accent-secondary:#1E6FFF;
+    --status-driving:#17B26A; --status-parked:#1E6FFF; --status-away:#7A5AF8;
+    --status-warning:#F79009; --status-danger:#D92D20;
+    --map-ground:#ECEAE4; --map-block:#E2E0D9; --map-road:#FFFFFF;
+    --map-water:#D8E4EE; --map-park:#DCE6DA;
+    --border:rgba(91,94,104,.28); --shadow:0 12px 32px rgba(20,21,26,.14);
+    --scrim:rgba(20,21,26,.4);
+  }
+
+  *{box-sizing:border-box; margin:0}
+  html,body{background:var(--surface-base); color:var(--text-primary);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    line-height:1.4;}
+  button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+  :is(button,[tabindex]):focus-visible{outline:2px solid var(--accent-secondary); outline-offset:2px; border-radius:8px}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:40px 20px 80px; display:flex; flex-direction:column; gap:28px}
+  .page-head .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:600}
+  .page-head h1{font-size:32px; font-weight:700; letter-spacing:-.02em; text-wrap:balance; margin-top:6px}
+  .page-head p{color:var(--text-secondary); max-width:62ch; margin-top:8px; font-size:15px}
+
+  .studio{display:grid; grid-template-columns:minmax(0,460px) minmax(280px,1fr); gap:36px; align-items:start}
+  @media (max-width:900px){ .studio{grid-template-columns:1fr} }
+
+  /* ---------- stage ---------- */
+  .stage{display:flex; flex-direction:column; gap:16px; align-items:center}
+  .seg{display:flex; gap:4px; background:var(--surface-raised); border:1px solid var(--border);
+    border-radius:999px; padding:4px}
+  .seg button{padding:7px 16px; border-radius:999px; font-size:13px; font-weight:600; color:var(--text-secondary);
+    transition:background var(--motion-micro) var(--ease-in), color var(--motion-micro) var(--ease-in)}
+  .seg button[aria-pressed="true"]{background:var(--accent-secondary); color:#fff}
+  .hint{font-size:13px; color:var(--text-secondary)}
+
+  .phone{width:min(390px,100%); height:800px; border-radius:44px; background:var(--surface-base);
+    border:1px solid var(--border); box-shadow:var(--shadow); overflow:hidden; position:relative;
+    display:flex; flex-direction:column}
+  .statusbar{height:44px; flex:none; display:flex; align-items:center; justify-content:space-between;
+    padding:0 24px; font-size:14px; font-weight:600; position:relative; z-index:5}
+  .notch{position:absolute; left:50%; top:10px; transform:translateX(-50%); width:110px; height:26px;
+    border-radius:999px; background:var(--text-primary); opacity:.92}
+  .sb-icons{display:flex; gap:5px; align-items:center; font-size:12px}
+
+  .maphead{flex:none; padding:6px 16px 10px; display:flex; flex-direction:column; gap:10px; z-index:5;
+    background:linear-gradient(var(--surface-base) 55%, transparent)}
+  .search{display:flex; align-items:center; gap:10px; height:44px; padding:0 14px;
+    background:var(--surface-raised); border:1px solid var(--border); border-radius:999px;
+    color:var(--text-secondary); font-size:14px}
+  .search svg{flex:none}
+  .tabs{display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:none; padding:8px 15px; border-radius:999px; font-size:13px; font-weight:600;
+    background:var(--surface-raised); border:1px solid var(--border); color:var(--text-secondary);
+    transition:all var(--motion-micro) var(--ease-in)}
+  .tab[aria-pressed="true"]{background:var(--text-primary); color:var(--surface-base); border-color:var(--text-primary)}
+
+  .map{flex:1; position:relative; overflow:hidden; background:var(--map-ground)}
+  .map svg.base{position:absolute; inset:0; width:100%; height:100%}
+
+  .you{position:absolute; left:50%; top:47%; width:16px; height:16px; border-radius:50%;
+    background:var(--accent-secondary); border:3px solid var(--surface-raised);
+    box-shadow:0 0 0 8px color-mix(in srgb, var(--accent-secondary) 18%, transparent); z-index:2}
+
+  .pin{position:absolute; transform:translate(-50%,-100%); display:flex; flex-direction:column;
+    align-items:center; gap:4px; z-index:3; transition:opacity var(--motion-standard) var(--ease-in)}
+  .pin.hidden{opacity:0; pointer-events:none}
+  .pin .face{width:48px; height:48px; border-radius:50%; background:var(--surface-raised);
+    display:grid; place-items:center; font-size:22px; border:3px solid var(--status-parked);
+    box-shadow:0 4px 12px rgba(0,0,0,.25)}
+  .pin[data-status="driving"] .face{border-color:var(--status-driving); animation:pulse 2.4s var(--ease-in) infinite}
+  .pin[data-status="away"] .face{border-color:var(--status-away); filter:grayscale(.5); opacity:.75}
+  .pin .eta{font-size:11px; font-weight:600; font-variant-numeric:tabular-nums; padding:3px 8px;
+    border-radius:999px; background:var(--surface-raised); border:1px solid var(--border); white-space:nowrap}
+  .pin[data-status="away"] .eta{color:var(--text-secondary)}
+  @keyframes pulse{0%,100%{box-shadow:0 4px 12px rgba(0,0,0,.25),0 0 0 0 color-mix(in srgb,var(--status-driving) 45%,transparent)}
+    55%{box-shadow:0 4px 12px rgba(0,0,0,.25),0 0 0 12px transparent}}
+  .pin.roams{animation:roam 14s ease-in-out infinite alternate}
+  @keyframes roam{from{translate:0 0}to{translate:34px -12px}}
+
+  .fab{position:absolute; left:50%; bottom:20px; transform:translateX(-50%); z-index:4;
+    display:flex; align-items:center; gap:8px; height:48px; padding:0 22px; border-radius:999px;
+    background:var(--text-primary); color:var(--surface-base); font-size:14px; font-weight:700;
+    box-shadow:var(--shadow); transition:transform var(--motion-micro) var(--ease-in)}
+  .fab:active{transform:translateX(-50%) scale(.96)}
+  .locate{position:absolute; right:14px; bottom:22px; z-index:4; width:44px; height:44px; border-radius:50%;
+    background:var(--surface-raised); border:1px solid var(--border); display:grid; place-items:center;
+    color:var(--accent-secondary); box-shadow:var(--shadow)}
+
+  /* loading & empty overlays */
+  .skeleton{position:absolute; transform:translate(-50%,-100%); width:48px; height:48px; border-radius:50%;
+    background:linear-gradient(100deg, var(--surface-raised) 40%, color-mix(in srgb,var(--text-secondary) 18%,var(--surface-raised)) 50%, var(--surface-raised) 60%);
+    background-size:220% 100%; animation:shimmer 1.4s linear infinite; z-index:3; display:none}
+  @keyframes shimmer{to{background-position:-120% 0}}
+  .empty-card{position:absolute; left:16px; right:16px; top:34%; z-index:3; display:none;
+    background:var(--surface-raised); border:1px solid var(--border); border-radius:16px;
+    padding:24px 20px; text-align:center; box-shadow:var(--shadow)}
+  .empty-card .glyph{font-size:34px}
+  .empty-card h3{font-size:16px; font-weight:700; margin-top:8px}
+  .empty-card p{font-size:13px; color:var(--text-secondary); margin-top:6px}
+  .empty-card .actions{display:flex; gap:10px; justify-content:center; margin-top:16px}
+  .btn{height:44px; padding:0 20px; border-radius:8px; font-size:14px; font-weight:700;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    transition:filter var(--motion-micro) var(--ease-in)}
+  .btn:active{filter:brightness(.92)}
+  .btn.primary{background:var(--accent-primary); color:#fff}
+  .btn.secondary{border:1.5px solid var(--text-secondary); color:var(--text-primary)}
+  .btn.small{height:38px; padding:0 16px; font-size:13px}
+  .btn[disabled]{opacity:.4; pointer-events:none}
+
+  .map.is-loading .pin, .map.is-loading .you{display:none}
+  .map.is-loading .skeleton{display:block}
+  .map.is-empty .pin, .map.is-empty .you{display:none}
+  .map.is-empty .empty-card{display:block}
+
+  /* ---------- sheet (peek snap) ---------- */
+  .scrim{position:absolute; inset:0; background:var(--scrim); opacity:0; pointer-events:none;
+    transition:opacity var(--motion-sheet) var(--ease-in); z-index:6}
+  .phone.sheet-open .scrim{opacity:1; pointer-events:auto}
+  .sheet{position:absolute; left:0; right:0; bottom:0; z-index:7; background:var(--surface-raised);
+    border-radius:16px 16px 0 0; box-shadow:0 -8px 30px rgba(0,0,0,.3); padding:8px 20px 26px;
+    transform:translateY(105%); transition:transform var(--motion-sheet) var(--ease-in)}
+  .phone.sheet-open .sheet{transform:translateY(0)}
+  .handle{width:32px; height:4px; border-radius:999px; background:var(--text-secondary); opacity:.4; margin:4px auto 14px}
+  .sheet-row{display:flex; gap:14px; align-items:center}
+  .sheet .face{width:56px; height:56px; border-radius:50%; background:var(--surface-base);
+    display:grid; place-items:center; font-size:26px; border:3px solid var(--status-parked); flex:none}
+  .sheet[data-status="driving"] .face{border-color:var(--status-driving)}
+  .sheet[data-status="away"] .face{border-color:var(--status-away)}
+  .sheet-id h3{font-size:18px; font-weight:700; letter-spacing:-.01em}
+  .sheet-meta{display:flex; align-items:center; gap:8px; margin-top:3px; font-size:13px; color:var(--text-secondary);
+    font-variant-numeric:tabular-nums; flex-wrap:wrap}
+  .chip{display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; padding:3px 9px;
+    border-radius:999px}
+  .chip .dot{width:7px; height:7px; border-radius:50%}
+  .chip.driving{color:var(--status-driving); background:color-mix(in srgb,var(--status-driving) 14%,transparent)}
+  .chip.driving .dot{background:var(--status-driving)}
+  .chip.parked{color:var(--status-parked); background:color-mix(in srgb,var(--status-parked) 14%,transparent)}
+  .chip.parked .dot{background:var(--status-parked)}
+  .chip.away{color:var(--status-away); background:color-mix(in srgb,var(--status-away) 14%,transparent)}
+  .chip.away .dot{background:var(--status-away)}
+  .sheet-cta{display:flex; gap:10px; margin-top:18px}
+  .sheet-cta .btn{flex:1}
+  .sheet-note{font-size:12px; color:var(--text-secondary); margin-top:10px; text-align:center}
+
+  /* ---------- tab bar ---------- */
+  .tabbar{flex:none; height:78px; border-top:1px solid var(--border); background:var(--surface-raised);
+    display:grid; grid-template-columns:repeat(5,1fr); padding:8px 6px 18px; z-index:5}
+  .tb{display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10.5px; font-weight:600;
+    color:var(--text-secondary); border-radius:10px}
+  .tb svg{width:22px; height:22px}
+  .tb[aria-current="page"]{color:var(--accent-secondary)}
+
+  /* ---------- toast ---------- */
+  .toast{position:absolute; left:50%; bottom:96px; transform:translateX(-50%) translateY(8px); z-index:8;
+    background:var(--surface-raised); border:1px solid var(--border); box-shadow:var(--shadow);
+    border-radius:12px; padding:10px 16px; font-size:13px; font-weight:600; opacity:0;
+    transition:opacity var(--motion-standard) var(--ease-in), transform var(--motion-standard) var(--ease-in);
+    pointer-events:none; white-space:nowrap; max-width:90%}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  /* ---------- annotations ---------- */
+  .notes{display:flex; flex-direction:column; gap:14px}
+  .note{background:var(--surface-raised); border:1px solid var(--border); border-radius:16px; padding:18px 20px}
+  .note h2{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:700}
+  .note ul{margin:10px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px}
+  .note li{font-size:13.5px; display:flex; gap:8px}
+  .note li b{font-weight:650}
+  .note li::before{content:""; flex:none; width:6px; height:6px; border-radius:50%; background:var(--accent-secondary); margin-top:6px}
+  .note p{font-size:13.5px; color:var(--text-secondary); margin-top:10px}
+  .swatches{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap}
+  .sw{display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-secondary)}
+  .sw i{width:14px; height:14px; border-radius:4px; display:inline-block; border:1px solid var(--border)}
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition-duration:1ms!important}
+  }
+</style>
+
+<div class="wrap">
+  <header class="page-head">
+    <div class="eyebrow">StreetServe · Design phase · Screen 1 of 77</div>
+    <h1>C-10 — Map Home</h1>
+    <p>The customer app's center of gravity, built on the MapShell template. Interactive mockup: tap pins, switch category tabs, and preview loading/empty states. Follows <em>06-ux-and-design-system.md</em> tokens exactly; renders in your current theme.</p>
+  </header>
+
+  <div class="studio">
+    <section class="stage" aria-label="Screen mockup">
+      <div class="seg" role="group" aria-label="Preview state">
+        <button aria-pressed="true"  data-state="default">Default</button>
+        <button aria-pressed="false" data-state="loading">Loading</button>
+        <button aria-pressed="false" data-state="empty">Empty</button>
+      </div>
+
+      <div class="phone" id="phone">
+        <div class="statusbar">
+          <span>9:41</span>
+          <div class="notch"></div>
+          <div class="sb-icons"><span>▮▮▮</span><span>Wi-Fi</span><span>▉</span></div>
+        </div>
+
+        <div class="maphead">
+          <div class="search" role="search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            Search businesses or services
+          </div>
+          <div class="tabs" role="tablist" aria-label="Category filter">
+            <button class="tab" aria-pressed="true"  data-cat="all">All</button>
+            <button class="tab" aria-pressed="false" data-cat="food">Food</button>
+            <button class="tab" aria-pressed="false" data-cat="coffee">Coffee</button>
+            <button class="tab" aria-pressed="false" data-cat="services">Services</button>
+            <button class="tab" aria-pressed="false" data-cat="shopping">Shopping</button>
+            <button class="tab" aria-pressed="false" data-cat="more">More</button>
+          </div>
+        </div>
+
+        <div class="map" id="map">
+          <svg class="base" viewBox="0 0 390 560" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect width="390" height="560" fill="var(--map-ground)"/>
+            <path d="M-10 90 C 90 120, 150 60, 250 95 S 380 160, 410 130 L 410 190 C 320 215, 240 150, 150 145 S 30 165, -10 150 Z" fill="var(--map-water)"/>
+            <rect x="255" y="330" width="105" height="120" rx="10" fill="var(--map-park)"/>
+            <g stroke="var(--map-road)" stroke-width="10" fill="none" stroke-linecap="round">
+              <path d="M60 -10 V 570"/><path d="M195 -10 V 570"/><path d="M320 -10 V 570"/>
+              <path d="M-10 250 H 400"/><path d="M-10 400 H 400"/><path d="M-10 480 H 400"/>
+            </g>
+            <g stroke="var(--map-road)" stroke-width="5" fill="none">
+              <path d="M128 250 V 570"/><path d="M258 250 V 480"/><path d="M-10 330 H 400"/><path d="M60 178 H 400"/>
+            </g>
+            <g fill="var(--map-block)">
+              <rect x="72" y="262" width="44" height="56" rx="6"/><rect x="140" y="262" width="43" height="56" rx="6"/>
+              <rect x="207" y="262" width="39" height="56" rx="6"/><rect x="72" y="342" width="44" height="46" rx="6"/>
+              <rect x="140" y="342" width="43" height="46" rx="6"/><rect x="72" y="412" width="111" height="56" rx="6"/>
+              <rect x="207" y="412" width="101" height="56" rx="6"/><rect x="207" y="342" width="39" height="46" rx="6"/>
+              <rect x="332" y="262" width="48" height="56" rx="6"/><rect x="72" y="190" width="111" height="48" rx="6"/>
+              <rect x="207" y="190" width="101" height="48" rx="6"/><rect x="332" y="190" width="48" height="48" rx="6"/>
+            </g>
+          </svg>
+
+          <div class="you" aria-label="Your location"></div>
+
+          <button class="pin roams" style="left:20%; top:26%" data-cat="food" data-status="driving"
+            data-name="Taco Loco" data-desc="Mexican Food Truck" data-rating="4.8 (124)" data-eta="2 min away">
+            <span class="face">🌮</span><span class="eta">2 min</span>
+          </button>
+          <button class="pin" style="left:76%; top:20%" data-cat="food" data-status="driving"
+            data-name="Wonder Ice" data-desc="Shaved Ice &amp; Ice Cream" data-rating="4.9 (208)" data-eta="5 min away">
+            <span class="face">🍦</span><span class="eta">5 min</span>
+          </button>
+          <button class="pin" style="left:48%; top:38%" data-cat="coffee" data-status="parked"
+            data-name="Brew Crew" data-desc="Coffee Truck" data-rating="4.7 (86)" data-eta="1 min away">
+            <span class="face">☕</span><span class="eta">1 min</span>
+          </button>
+          <button class="pin" style="left:22%; top:52%" data-cat="services" data-status="parked"
+            data-name="Fade Factory" data-desc="Mobile Barber" data-rating="4.6 (54)" data-eta="3 min away">
+            <span class="face">✂️</span><span class="eta">3 min</span>
+          </button>
+          <button class="pin" style="left:78%; top:48%" data-cat="services" data-status="driving"
+            data-name="QuickFix" data-desc="Mobile Mechanic" data-rating="4.8 (91)" data-eta="7 min away">
+            <span class="face">🔧</span><span class="eta">7 min</span>
+          </button>
+          <button class="pin" style="left:44%; top:62%" data-cat="services" data-status="parked"
+            data-name="Pup Side Suds" data-desc="Mobile Pet Grooming" data-rating="4.9 (67)" data-eta="2 min away">
+            <span class="face">🐶</span><span class="eta">2 min</span>
+          </button>
+          <button class="pin" style="left:20%; top:78%" data-cat="services" data-status="parked"
+            data-name="Detail Boss" data-desc="Mobile Detailing" data-rating="4.7 (73)" data-eta="4 min away">
+            <span class="face">🚗</span><span class="eta">4 min</span>
+          </button>
+          <button class="pin" style="left:72%; top:76%" data-cat="shopping" data-status="away"
+            data-name="Sweet Treats" data-desc="Dessert Cart" data-rating="4.8 (49)" data-eta="Closed · opens 4 PM">
+            <span class="face">🧁</span><span class="eta">Closed</span>
+          </button>
+
+          <div class="skeleton" style="left:20%; top:26%"></div>
+          <div class="skeleton" style="left:76%; top:20%"></div>
+          <div class="skeleton" style="left:48%; top:38%"></div>
+          <div class="skeleton" style="left:22%; top:52%"></div>
+          <div class="skeleton" style="left:78%; top:48%"></div>
+          <div class="skeleton" style="left:44%; top:62%"></div>
+
+          <div class="empty-card">
+            <div class="glyph">🛞</div>
+            <h3>Nothing moving near you yet</h3>
+            <p>StreetServe is growing in Modesto. Widen your radius, or see who's scheduled to stop nearby this week.</p>
+            <div class="actions">
+              <button class="btn secondary small">Widen radius</button>
+              <button class="btn primary small">See scheduled</button>
+            </div>
+          </div>
+
+          <button class="fab" id="fab">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7L12 2z"/></svg>
+            Serve Near Me
+          </button>
+          <button class="locate" aria-label="Recenter map">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+          </button>
+        </div>
+
+        <div class="scrim" id="scrim"></div>
+        <div class="sheet" id="sheet" role="dialog" aria-modal="false" aria-label="Business preview">
+          <div class="handle"></div>
+          <div class="sheet-row">
+            <span class="face" id="sh-face">🌮</span>
+            <div class="sheet-id">
+              <h3 id="sh-name">Taco Loco</h3>
+              <div class="sheet-meta">
+                <span class="chip driving" id="sh-chip"><span class="dot"></span><span id="sh-status">Driving</span></span>
+                <span>★ <span id="sh-rating">4.8 (124)</span></span>
+                <span id="sh-eta">2 min away</span>
+              </div>
+            </div>
+          </div>
+          <div class="sheet-cta">
+            <button class="btn primary" id="sh-primary">Wave Down</button>
+            <button class="btn secondary">Directions</button>
+          </div>
+          <div class="sheet-note" id="sh-note">Pull up for menu, Today's Special, photos &amp; reviews (C-14)</div>
+        </div>
+
+        <nav class="tabbar" aria-label="Main">
+          <button class="tb" aria-current="page">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 20-6 2V6l6-2 6 2 6-2v16l-6 2-6-2z"/><path d="M9 4v16M15 6v16"/></svg>
+            Map</button>
+          <button class="tb">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21C7 16.5 3 13 3 8.8 3 6 5.2 4 7.8 4c1.6 0 3.2.8 4.2 2.2C13 4.8 14.6 4 16.2 4 18.8 4 21 6 21 8.8c0 4.2-4 7.7-9 12.2z"/></svg>
+            Favorites</button>
+          <button class="tb">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h12l2 5H4l2-5zM4 7h16v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7z"/><path d="M9 11a3 3 0 0 0 6 0"/></svg>
+            Orders</button>
+          <button class="tb">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-8 8H4l2-3.2A8 8 0 1 1 21 12z"/></svg>
+            Messages</button>
+          <button class="tb">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+            Profile</button>
+        </nav>
+
+        <div class="toast" id="toast">Centered on your location</div>
+      </div>
+
+      <p class="hint">Tap a pin · switch category tabs · try the state switcher above</p>
+    </section>
+
+    <aside class="notes" aria-label="Design annotations">
+      <div class="note">
+        <h2>Anatomy · MapShell</h2>
+        <ul>
+          <li><b>Search + tab header</b> — pinned over map with a surface fade; tabs per client mockup (All/Food/Coffee/Services/Shopping/More). "More" opens the full category browser (C-13).</li>
+          <li><b>Pins</b> — business's own logo (emoji stand-ins here) in a 48px circle with a 3px status ring; travel-time chip below in tabular numerals.</li>
+          <li><b>Serve Near Me</b> — floating primary map action; recenters + refreshes. High-contrast neutral, so orange stays reserved for Wave Down.</li>
+          <li><b>Sheet peek</b> — first snap point of C-14 (§2.6f): identity, status chip, rating, ETA, primary action. Pull up → half/full profile.</li>
+          <li><b>Tab bar</b> — Map · Favorites · Orders · Messages · Profile, active in accent-secondary.</li>
+        </ul>
+      </div>
+
+      <div class="note">
+        <h2>Status model (§2.2 tokens)</h2>
+        <ul>
+          <li><b>Driving</b> — green ring + pulse (Taco Loco roams to show live movement).</li>
+          <li><b>Parked</b> — blue ring, stationary, all actions available.</li>
+          <li><b>Away/Closed</b> — violet ring, desaturated face, "Closed" chip; Wave Down swaps to <b>Notify Me</b> in the sheet (tap Sweet Treats 🧁).</li>
+        </ul>
+        <div class="swatches">
+          <span class="sw"><i style="background:var(--status-driving)"></i>driving</span>
+          <span class="sw"><i style="background:var(--status-parked)"></i>parked</span>
+          <span class="sw"><i style="background:var(--status-away)"></i>away</span>
+          <span class="sw"><i style="background:var(--accent-primary)"></i>wave down</span>
+        </div>
+      </div>
+
+      <div class="note">
+        <h2>States shown</h2>
+        <ul>
+          <li><b>Loading</b> — skeleton circles at pin geometry (§2.6e), never a spinner.</li>
+          <li><b>Empty</b> — actionable card per the "empty state as a sales tool" rule: widen radius / see scheduled.</li>
+          <li><b>Toast</b> — §2.6d transient feedback, fired by Serve Near Me and the "More" tab.</li>
+        </ul>
+      </div>
+
+      <div class="note">
+        <h2>Spec &amp; handoff notes</h2>
+        <ul>
+          <li>Type is specified as Inter/Inter Tight; this mockup renders the system stack as a stand-in (font CDNs are blocked in artifacts).</li>
+          <li>Pins never overlap the FAB zone; at density they cluster (cluster pin variant, designed with C-17).</li>
+          <li>Reduced motion: pulse, roam and shimmer collapse to static.</li>
+          <li>Full interaction spec: <b>docs/13-screen-design-specs.md § C-10</b>.</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+  const $ = (s, r=document)=>r.querySelector(s);
+  const $$ = (s, r=document)=>[...r.querySelectorAll(s)];
+  const phone = $('#phone'), map = $('#map'), sheet = $('#sheet'), toast = $('#toast');
+
+  // --- state switcher ---
+  $$('.seg button').forEach(b=>b.addEventListener('click',()=>{
+    $$('.seg button').forEach(x=>x.setAttribute('aria-pressed', x===b));
+    map.classList.toggle('is-loading', b.dataset.state==='loading');
+    map.classList.toggle('is-empty',   b.dataset.state==='empty');
+    closeSheet();
+  }));
+
+  // --- category tabs ---
+  $$('.tab').forEach(t=>t.addEventListener('click',()=>{
+    if(t.dataset.cat==='more'){ showToast('Opens full category browser (C-13)'); return; }
+    $$('.tab').forEach(x=>x.setAttribute('aria-pressed', x===t));
+    const cat=t.dataset.cat;
+    $$('.pin').forEach(p=>p.classList.toggle('hidden', cat!=='all' && p.dataset.cat!==cat));
+    closeSheet();
+  }));
+
+  // --- pins → sheet peek ---
+  $$('.pin').forEach(p=>p.addEventListener('click',()=>{
+    $('#sh-face').textContent = p.querySelector('.face').textContent;
+    $('#sh-name').textContent = p.dataset.name;
+    $('#sh-rating').textContent = p.dataset.rating;
+    $('#sh-eta').textContent = p.dataset.eta;
+    const st = p.dataset.status;
+    sheet.dataset.status = st;
+    const chip = $('#sh-chip');
+    chip.className = 'chip ' + st;
+    $('#sh-status').textContent = st==='away' ? 'Closed' : st[0].toUpperCase()+st.slice(1);
+    const primary = $('#sh-primary');
+    if(st==='away'){ primary.textContent='Notify Me'; $('#sh-note').textContent='Closed right now — we’ll alert you when they’re back near you.'; }
+    else{ primary.textContent='Wave Down'; $('#sh-note').textContent='Pull up for menu, Today’s Special, photos & reviews (C-14)'; }
+    phone.classList.add('sheet-open');
+  }));
+
+  function closeSheet(){ phone.classList.remove('sheet-open'); }
+  $('#scrim').addEventListener('click', closeSheet);
+  $('#sh-primary').addEventListener('click', ()=>{
+    showToast(sheet.dataset.status==='away' ? 'We’ll notify you when they’re nearby' : 'Wave sent — waiting for vendor (C-18)');
+    closeSheet();
+  });
+
+  // --- toast ---
+  let tt;
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(tt); tt = setTimeout(()=>toast.classList.remove('show'), 4000);
+  }
+  $('#fab').addEventListener('click', ()=>showToast('Centered on your location'));
+  $('.locate').addEventListener('click', ()=>showToast('Centered on your location'));
+</script>
