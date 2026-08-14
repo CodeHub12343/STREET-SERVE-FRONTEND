@@ -94,10 +94,23 @@ export function PromoteFlow({ subject, backHref }: { subject: PromoteSubject; ba
   const urlLooksValid =
     trimmedUrl === '' || /^https?:\/\/\S+$/i.test(trimmedUrl);
 
+  /**
+   * The link is optional ONLY when there is a business profile to fall back to.
+   *
+   * The server fills a missing destination with `/business/<id>` for a business-owned placement.
+   * A user-owned ad has no such fallback: it resolves to `clickUrl: null` and renders as a
+   * non-interactive card — so leaving this blank without a business bought an advert nobody could
+   * click. The server refuses that outright now; this says so before they reach the card form
+   * rather than after.
+   */
+  const linkRequired = subject.kind === 'ad' && !businessId;
+  const linkMissing = linkRequired && trimmedUrl === '';
+
   const canSubmit =
     (usingTier || budgetCents > 0) &&
     (subject.kind !== 'ad' || headline.trim().length >= 2) &&
-    urlLooksValid;
+    urlLooksValid &&
+    !linkMissing;
 
   const leave = () => router.replace(backHref ?? '/vendor/ads');
 
@@ -258,16 +271,25 @@ export function PromoteFlow({ subject, backHref }: { subject: PromoteSubject; ba
               />
               <div>
                 <Input
-                  label="Link (optional)"
+                  label={linkRequired ? 'Link' : 'Link (optional)'}
                   value={clickUrl}
                   maxLength={2048}
                   inputMode="url"
                   placeholder="https://your-website.com"
                   onChange={(e) => setClickUrl(e.target.value)}
-                  error={urlLooksValid ? undefined : 'Enter a full web address starting with https://'}
+                  error={
+                    !urlLooksValid
+                      ? 'Enter a full web address starting with https://'
+                      : undefined
+                  }
                 />
-                {/* The default is the useful one, so say what it is rather than leaving them to guess. */}
-                <Hint>Leave empty to send people to your business profile.</Hint>
+                {/* Say which case they are in. The old hint promised a business-profile fallback to
+                    everyone, including the people who have no profile for it to fall back to. */}
+                <Hint>
+                  {linkRequired
+                    ? 'Required — without a business profile there is nowhere else to send people, and an ad with no link cannot be clicked.'
+                    : 'Leave empty to send people to your business profile.'}
+                </Hint>
               </div>
             </Section>
           ) : null}
