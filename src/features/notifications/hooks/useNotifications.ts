@@ -162,16 +162,54 @@ export function useUnreadCount(): number {
 
 export function useMarkRead() {
   const qc = useQueryClient();
-  const mark = (id: string) =>
-    qc.setQueryData<AppNotification[]>(keys.notifications, (prev) => (prev ?? []).map((n) => (n.id === id ? { ...n, read: true } : n)));
+
+  /** Snapshot before an optimistic write, so a failed request can put the badge back honestly. */
+  const snapshot = () => qc.getQueryData<AppNotification[]>(keys.notifications);
+
+  const writeOne = (id: string) =>
+    qc.setQueryData<AppNotification[]>(keys.notifications, (prev) =>
+      (prev ?? []).map((n) => (n.id === id ? { ...n, read: true } : n)),
+    );
+
   const one = useMutation({
-    mutationFn: (id: string) => (isMapDemo ? Promise.resolve() : api.post(endpoints.notificationRead(id))),
-    onMutate: (id) => mark(id),
+    mutationFn: (id: string) =>
+      isMapDemo ? Promise.resolve() : api.post(endpoints.notificationRead(id)),
+    onMutate: (id) => {
+      const previous = snapshot();
+      writeOne(id);
+      return { previous };
+    },
+    onError: (_e, _id, ctx) => {
+      if (ctx?.previous) qc.setQueryData(keys.notifications, ctx.previous);
+    },
+    // The server owns `read`; re-read it rather than trusting the optimistic write to have stuck.
+    onSettled: () => void qc.invalidateQueries({ queryKey: keys.notifications }),
   });
+
   const all = useMutation({
-    mutationFn: () => Promise.resolve(),
-    onMutate: () => qc.setQueryData<AppNotification[]>(keys.notifications, (prev) => (prev ?? []).map((n) => ({ ...n, read: true }))),
+    /**
+     * This used to be `() => Promise.resolve()` — "mark all as read" edited the local cache and
+     * called nothing. The endpoint existed on both sides the whole time (`notificationsReadAll`,
+     * and POST /me/notifications/read-all server-side); it was simply never wired.
+     *
+     * So the badge cleared and then came back on the next reload, because the server had never been
+     * told. Now that the inbox also refetches on a timer and on socket reconnect, the same bug
+     * would undo the badge within a minute without any reload at all.
+     */
+    mutationFn: () => (isMapDemo ? Promise.resolve() : api.post(endpoints.notificationsReadAll)),
+    onMutate: () => {
+      const previous = snapshot();
+      qc.setQueryData<AppNotification[]>(keys.notifications, (prev) =>
+        (prev ?? []).map((n) => ({ ...n, read: true })),
+      );
+      return { previous };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.previous) qc.setQueryData(keys.notifications, ctx.previous);
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: keys.notifications }),
   });
+
   return { one, all };
 }
 
