@@ -38,6 +38,11 @@ export type VendorOrderStatus = 'pending' | 'preparing' | 'ready' | 'completed';
 
 export interface VendorOrder {
   id: string;
+  /**
+   * Needed to open the conversation from a ticket. Optional because demo fixtures predate it and a
+   * missing id must hide the control rather than send a request that cannot succeed.
+   */
+  customerId?: string;
   customerName: string;
   items: { name: string; qty: number }[];
   totalCents: Cents;

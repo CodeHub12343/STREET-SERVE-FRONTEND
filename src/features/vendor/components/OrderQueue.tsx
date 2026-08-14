@@ -12,6 +12,7 @@ import { RequestDriverButton } from '@/features/delivery';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { useAdvanceOrder, useVendorOrders } from '../hooks/useVendorData';
+import { OpenThreadButton } from '@/features/messaging';
 import type { VendorOrder, VendorOrderStatus } from '../types';
 
 const COLUMNS: { status: VendorOrderStatus; title: string; cta: string }[] = [
@@ -43,7 +44,7 @@ export function OrderQueue({ businessId }: { businessId: string }) {
             </ColHead>
             <Cards>
               {items.map((o) => (
-                <OrderCard key={o.id} order={o} cta={col.cta} pending={advance.isPending && advance.variables?.id === o.id} onAdvance={() => advance.mutate({ id: o.id, status: o.status })} />
+                <OrderCard key={o.id} order={o} businessId={businessId} cta={col.cta} pending={advance.isPending && advance.variables?.id === o.id} onAdvance={() => advance.mutate({ id: o.id, status: o.status })} />
               ))}
             </Cards>
           </Column>
@@ -53,7 +54,19 @@ export function OrderQueue({ businessId }: { businessId: string }) {
   );
 }
 
-function OrderCard({ order, cta, pending, onAdvance }: { order: VendorOrder; cta: string; pending: boolean; onAdvance: () => void }) {
+function OrderCard({
+  order,
+  businessId,
+  cta,
+  pending,
+  onAdvance,
+}: {
+  order: VendorOrder;
+  businessId: string;
+  cta: string;
+  pending: boolean;
+  onAdvance: () => void;
+}) {
   return (
     <Card>
       <CardHead>
@@ -70,6 +83,29 @@ function OrderCard({ order, cta, pending, onAdvance }: { order: VendorOrder; cta
       <Button size="compact" fullWidth loading={pending} onClick={onAdvance}>
         {cta}
       </Button>
+      {/*
+        The seller's half of the same coordination problem. A wave-down told them where the customer
+        was standing; a direct order tells them nothing but a name, so until the customer appeared at
+        the window there was no way to ask "where are you?" or say "running five minutes late".
+
+        Opens the same (customer, business) thread the customer's order screen opens. Hidden once
+        collected, and hidden when the id is absent rather than sending a request that must fail.
+      */}
+      {order.customerId && order.status !== 'completed' ? (
+        <OpenThreadButton
+          businessId={businessId}
+          customerId={order.customerId}
+          label="Message customer"
+          /*
+           * No basePath override: thread detail lives only at /messages/[id]. There is no
+           * /vendor/messages/[id] route, and the dashboard's own MessagesList already navigates
+           * there, so pointing somewhere else would 404 rather than open the conversation.
+           */
+          variant="tertiary"
+          size="compact"
+          fullWidth
+        />
+      ) : null}
       {/*
         DAN-1 — only once the vendor has accepted the order. Asking for a driver before you have
         agreed to make the food would put an offer in front of drivers for a job that may not happen.

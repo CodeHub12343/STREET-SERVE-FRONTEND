@@ -24,6 +24,7 @@ import { Skeleton } from '@/components/feedback/Skeleton';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { useToast } from '@/components/feedback/ToastProvider';
 import { formatCents } from '@/lib/money';
+import { OpenThreadButton } from '@/features/messaging';
 import { useState } from 'react';
 import { useCancelOrder, useOrder, useRefundPreview } from '../hooks/useOrders';
 import type { OrderStatus } from '../types';
@@ -91,6 +92,23 @@ export function OrderTracking({ id }: { id: string }) {
       <Card>
         <Tracker steps={STEPS} activeIndex={INDEX[txn.status]} />
       </Card>
+
+      {/*
+        A direct order is collected at the seller's pitch, so the two still have to find each other —
+        a food truck on a busy street is not a street address, and "I'm the one in the red cap" is
+        the thing that actually completes the handover. The wave-down flow has always offered this
+        (WaveActive "Message them"); ordering did not, so a customer who skipped the wave had no way
+        to say anything until they were standing there.
+
+        The thread is keyed on (customer, business) server-side, so this opens the SAME conversation
+        a wave-down would — not a second, order-scoped one that would fragment the history.
+
+        Hidden once the order is completed: the handover is done, and the durable channel is still in
+        Messages for anything after the fact.
+      */}
+      {!isCompleted ? (
+        <OpenThreadButton businessId={txn.businessId} label="Message the seller" fullWidth />
+      ) : null}
       {isCompleted ? (
         <>
           {/* Review is only meaningful — and only accepted server-side — once the order is done. */}

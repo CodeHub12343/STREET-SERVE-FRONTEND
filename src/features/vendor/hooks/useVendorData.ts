@@ -109,6 +109,8 @@ export function useRespondWave(businessId: string) {
 /** Raw GET /businesses/:id/orders shape (ordersService.view + listForBusiness). */
 interface RawVendorOrder {
   id: string;
+  /** Already returned by the server's order view — the board just never carried it through. */
+  customerId?: string;
   customerName?: string;
   status: string;
   items: { name?: string | null; quantity?: number | null }[];
@@ -126,6 +128,7 @@ export function toVendorOrder(o: RawVendorOrder): VendorOrder {
     o.status === 'accepted' ? 'preparing' : (o.status as VendorOrderStatus);
   return {
     id: o.id,
+    customerId: o.customerId,
     customerName: o.customerName || 'A customer',
     items: o.items.map((it) => ({ name: it.name ?? 'Item', qty: it.quantity ?? 1 })),
     totalCents: o.totalCents,
