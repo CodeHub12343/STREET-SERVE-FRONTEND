@@ -262,12 +262,24 @@ export function useNotifyMe(id: string) {
 export function useSubmitReview(businessId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ rating, body, transactionId }: { rating: number; body: string; transactionId?: string }): Promise<Review> => {
-      const review: Review = { id: `rv_${Date.now()}`, author: 'You', rating, body, createdAt: new Date().toISOString() };
-      if (isMapDemo) return Promise.resolve(review);
+    /**
+     * The response is `{ id, rating }`, not a full review row. Typed honestly so nothing can treat
+     * it as renderable again — the previous `Promise<Review>` was what let a row with no timestamp
+     * reach the list and crash the page.
+     */
+    mutationFn: ({
+      rating,
+      body,
+      transactionId,
+    }: {
+      rating: number;
+      body: string;
+      transactionId?: string;
+    }): Promise<{ id: string; rating: number }> => {
+      if (isMapDemo) return Promise.resolve({ id: `rv_${Date.now()}`, rating });
       // Backend CreateReviewBody: { subjectType, subjectId, rating, comment?, transactionId }. The
       // transactionId comes from the completed order the user is reviewing (H3, enforced server-side).
-      return api.post<Review>(endpoints.reviews, {
+      return api.post<{ id: string; rating: number }>(endpoints.reviews, {
         subjectType: 'business',
         subjectId: businessId,
         rating,
@@ -275,8 +287,21 @@ export function useSubmitReview(businessId: string) {
         transactionId,
       });
     },
-    onSuccess: (review) => {
-      qc.setQueryData<Review[]>(keys.reviews(businessId), (prev) => [review, ...(prev ?? [])]);
+    onSuccess: () => {
+      /**
+       * Refetch rather than splice the POST response into the list.
+       *
+       * `POST /reviews` returns `{ id, rating }` — reviews.service.ts §60 — NOT the row shape the
+       * list renders. Unshifting it produced an entry with no `createdAt`, and
+       * `formatRelativeMinutes` fell through to `Intl.DateTimeFormat.format()`, which throws
+       * RangeError on an invalid date. Thrown during render, that hit the error boundary: posting a
+       * review appeared to break the page, seconds after the success toast.
+       *
+       * The list endpoint is the authority on how a review reads back (it resolves the author, and
+       * hides moderated photos). Asking it is both correct and cheaper than keeping a hand-built row
+       * in sync with a projection that has different fields.
+       */
+      void qc.invalidateQueries({ queryKey: keys.reviews(businessId) });
       void qc.invalidateQueries({ queryKey: keys.business(businessId) });
     },
   });

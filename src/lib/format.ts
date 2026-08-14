@@ -17,7 +17,19 @@ export function formatDateTime(iso: string, locale = 'en-US'): string {
  * this same behaviour.
  */
 export function formatRelativeMinutes(iso: string, now = Date.now()): string {
-  const ms = now - new Date(iso).getTime();
+  /**
+   * A missing or unparseable timestamp must not take the page down.
+   *
+   * Every comparison below is false against NaN, so an invalid date fell through the whole ladder
+   * to `formatDate`, where `Intl.DateTimeFormat.format()` throws RangeError: Invalid time value.
+   * Thrown during render, that reaches the error boundary — a whole screen replaced by "an
+   * unexpected error occurred" because one row had no date. A timestamp is decoration on a review;
+   * it is never worth a blank page.
+   */
+  const at = new Date(iso).getTime();
+  if (Number.isNaN(at)) return '';
+
+  const ms = now - at;
   // A clock skew or a server timestamp a moment in the future should read as "just now", not as a
   // negative age.
   if (ms < 0) return 'just now';
@@ -39,7 +51,11 @@ export function formatRelativeMinutes(iso: string, now = Date.now()): string {
 
 /** Date only — for anything old enough that a relative age stops being useful. */
 export function formatDate(iso: string, locale = 'en-US'): string {
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(iso));
+  // `Intl.DateTimeFormat.format()` THROWS on an invalid date rather than returning a placeholder,
+  // so this is the one formatter that can crash a render. Guarded at the source, not per caller.
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(date);
 }
 
 /** mm:ss countdown from a server-supplied deadline (docs/13 C-19 — server-authoritative). */
