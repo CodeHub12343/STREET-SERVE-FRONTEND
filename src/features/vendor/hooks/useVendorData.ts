@@ -112,6 +112,8 @@ interface RawVendorOrder {
   /** Already returned by the server's order view — the board just never carried it through. */
   customerId?: string;
   customerName?: string;
+  /** 'pickup_now' | 'pickup_scheduled' | 'delivery' — decides whether a driver can be asked for. */
+  fulfillmentType?: string | null;
   status: string;
   items: { name?: string | null; quantity?: number | null }[];
   totalCents: number;
@@ -130,6 +132,7 @@ export function toVendorOrder(o: RawVendorOrder): VendorOrder {
     id: o.id,
     customerId: o.customerId,
     customerName: o.customerName || 'A customer',
+    isDelivery: o.fulfillmentType === 'delivery',
     items: o.items.map((it) => ({ name: it.name ?? 'Item', qty: it.quantity ?? 1 })),
     totalCents: o.totalCents,
     status,

@@ -15,6 +15,7 @@ import { SocketProvider } from '@/lib/socket/SocketProvider';
 import { ToastProvider } from '@/components/feedback/ToastProvider';
 import { OfflineBanner } from '@/components/pwa/OfflineBanner';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
+import { NotificationRealtime } from '@/features/notifications';
 import { env, isAuthConfigured } from '@/lib/env';
 
 function Inner({ children }: { children: ReactNode }) {
@@ -25,6 +26,8 @@ function Inner({ children }: { children: ReactNode }) {
           <AuthTokenBridge>
             <SocketProvider>
               <ToastProvider>
+                {/* Live inbox for every screen, including flows that hide the bell. */}
+                <NotificationRealtime />
                 <OfflineBanner />
                 {children}
                 <InstallPrompt />

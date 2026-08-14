@@ -137,6 +137,18 @@ export function useNotifications() {
         ? Promise.resolve(demoNotifications())
         : api.get<RawNotification[]>(endpoints.notifications).then((rows) => rows.map(toNotification)),
     staleTime: isMapDemo ? Infinity : 20_000,
+    /**
+     * Safety net under the socket, not a replacement for it.
+     *
+     * A WebSocket is the first thing a captive portal, a corporate proxy or an aggressive mobile
+     * network drops, and a phone kills it on screen-lock. When that happens the inbox must still
+     * advance on its own rather than sit frozen until the user reloads — which is precisely the
+     * failure being fixed here, and it should not be able to come back silently.
+     *
+     * React Query pauses intervals for a hidden document by default, so a backgrounded PWA is not
+     * polling in the user's pocket; the socket's reconnect refetch covers the return to foreground.
+     */
+    refetchInterval: isMapDemo ? false : 60_000,
   });
 }
 

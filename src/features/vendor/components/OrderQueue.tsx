@@ -109,8 +109,16 @@ function OrderCard({
       {/*
         DAN-1 — only once the vendor has accepted the order. Asking for a driver before you have
         agreed to make the food would put an offer in front of drivers for a job that may not happen.
+
+        `isDelivery` is the other half, and it was missing: a driver can only be dispatched to a
+        destination, and a collection order has none. delivery.service.ts rejects the request with
+        "This order is not a delivery", so on a board of pickup orders — which is every board today,
+        since delivery is gated default-deny per city — this button could only ever produce an error.
+        An action the server must refuse should not be offered.
       */}
-      {order.status === 'preparing' ? <RequestDriverButton orderId={order.id} /> : null}
+      {order.isDelivery && order.status === 'preparing' ? (
+        <RequestDriverButton orderId={order.id} />
+      ) : null}
     </Card>
   );
 }

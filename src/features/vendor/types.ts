@@ -44,6 +44,11 @@ export interface VendorOrder {
    */
   customerId?: string;
   customerName: string;
+  /**
+   * A driver can only be asked for on a delivery. A `pickup_now` order has no destination, and the
+   * server rejects the request with "This order is not a delivery" — so the control must not appear.
+   */
+  isDelivery?: boolean;
   items: { name: string; qty: number }[];
   totalCents: Cents;
   status: VendorOrderStatus;
