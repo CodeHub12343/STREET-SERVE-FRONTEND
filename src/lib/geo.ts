@@ -32,7 +32,39 @@ export const LIVE_CELL_GEOHASH_PRECISION = 6;
  * A denied permission short-circuits: it will not become allowed by asking again, and the browser
  * will not re-prompt, so retrying only delays the honest error.
  */
-export function requestPosition(): Promise<GeolocationPosition> {
+/**
+ * Plain-language reason a position request failed.
+ *
+ * Collapsing the three codes into one message is the bug this exists to prevent: a timeout reported
+ * as "grant permission" tells a user to fix something that is not broken, and the advice cannot be
+ * followed. `useJobs` keeps its own richer variant because its UI branches on a typed error kind;
+ * this is for callers that only need a sentence.
+ */
+export function positionErrorMessage(
+  err: GeolocationPositionError | undefined,
+  /** Appended to the timeout/unavailable cases, e.g. "so we can’t post the gig". */
+  consequence = '',
+): string {
+  const tail = consequence ? ` ${consequence}` : '';
+  // 1 PERMISSION_DENIED · 2 POSITION_UNAVAILABLE · 3 TIMEOUT.
+  if (err?.code === 1) {
+    return 'Location is blocked for this site. Allow it in your browser — the padlock in the address bar — then try again.';
+  }
+  if (err?.code === 3) {
+    return `Finding your location took too long — this usually means no GPS signal indoors.${tail} Try near a window or outside.`;
+  }
+  return `Your device could not work out where it is.${tail} Try again, or move somewhere with a clearer signal.`;
+}
+
+export function requestPosition(
+  /**
+   * How stale a cached fix may be on the fast pass. Defaults to 5 minutes, which is right for
+   * choosing a city or a service-area centre. Callers that pin a position to a place the user is
+   * physically standing — going live at a pitch — should pass something tighter, since a fix from
+   * five minutes ago can be several blocks away.
+   */
+  { maxCachedAgeMs = 300_000 }: { maxCachedAgeMs?: number } = {},
+): Promise<GeolocationPosition> {
   if (typeof navigator === 'undefined' || !navigator.geolocation) {
     return Promise.reject(
       Object.assign(new Error('Geolocation is unavailable on this device.'), { code: 2 }),
@@ -44,7 +76,7 @@ export function requestPosition(): Promise<GeolocationPosition> {
       navigator.geolocation.getCurrentPosition(resolve, reject, options),
     );
 
-  return get({ enableHighAccuracy: false, timeout: 8_000, maximumAge: 300_000 }).catch(
+  return get({ enableHighAccuracy: false, timeout: 8_000, maximumAge: maxCachedAgeMs }).catch(
     (first: GeolocationPositionError) => {
       // Asking a second time cannot turn a denial into a grant — surface it now.
       if (first.code === 1) throw first;

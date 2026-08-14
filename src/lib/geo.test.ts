@@ -65,6 +65,16 @@ describe('requestPosition', () => {
     expect(get.mock.calls[1]![2]).toMatchObject({ enableHighAccuracy: true, timeout: 25_000 });
   });
 
+  it('honours a tighter cache window for callers that pin a physical position', async () => {
+    // Going live sets the seller's map pin where they are standing; a 5-minute-old fix could be
+    // blocks away, so that caller narrows the window rather than taking the onboarding default.
+    const get = stub((ok) => ok(position()));
+
+    await requestPosition({ maxCachedAgeMs: 60_000 });
+
+    expect(get.mock.calls[0]![2]).toMatchObject({ maximumAge: 60_000 });
+  });
+
   it('does not retry a denied permission', async () => {
     // Asking again cannot turn a denial into a grant, and the browser will not re-prompt — retrying
     // only makes the user wait longer for the same answer.

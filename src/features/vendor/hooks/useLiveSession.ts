@@ -12,6 +12,7 @@ import { api } from '@/lib/api/client';
 import { endpoints } from '@/lib/api/endpoints';
 import { keys } from '@/lib/query/keys';
 import { isMapDemo } from '@/lib/env';
+import { requestPosition } from '@/lib/geo';
 import type { LiveSession, LiveStatus } from '../types';
 
 // Ping cadence for the dashboard keep-alive. Comfortably inside the server's 60s stale-session TTL,
@@ -46,19 +47,36 @@ function distanceM(a: [number, number], b: [number, number]): number {
   return Math.sqrt(x * x + y * y) * R;
 }
 
-/** Resolve the vendor's current position for the backend's StartSessionBody (requires lng/lat). */
+/**
+ * Resolve the vendor's current position for the backend's StartSessionBody (requires lng/lat).
+ *
+ * Every failure used to be reported as "location permission is needed", which was wrong far more
+ * often than it was right: the request asked for a FRESH high-accuracy fix inside 10 seconds
+ * (`maximumAge` defaults to 0, refusing any position the device already had), and a phone indoors
+ * routinely cannot deliver that. Vendors with permission fully granted were told to grant it, and
+ * "enable it and try again" is unfollowable advice when it is already enabled.
+ *
+ * A 60s cache window rather than the helper's 5-minute default: this pins the seller's live map pin
+ * to where they are standing, and a five-minute-old fix can be several blocks from the pitch. Live
+ * tracking corrects it immediately afterwards, so a slightly stale start is recoverable — a failed
+ * start is not.
+ */
 function getCurrentCoords(): Promise<{ lat: number; lng: number }> {
-  return new Promise((resolve, reject) => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      reject(new Error('Location is required to go live, but this device has no geolocation.'));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => reject(new Error('Location permission is needed to go live. Enable it and try again.')),
-      { enableHighAccuracy: true, timeout: 10_000 },
-    );
-  });
+  return requestPosition({ maxCachedAgeMs: 60_000 }).then(
+    (pos) => ({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+    (err: GeolocationPositionError | undefined) => {
+      // 1 PERMISSION_DENIED · 2 POSITION_UNAVAILABLE · 3 TIMEOUT.
+      if (err?.code === 1) {
+        throw new Error('Location permission is needed to go live. Enable it and try again.');
+      }
+      if (err?.code === 3) {
+        throw new Error(
+          'Couldn’t get a location fix to go live — this usually means no GPS signal indoors. Step outside or near a window and try again.',
+        );
+      }
+      throw new Error('Couldn’t determine your location, so you can’t go live yet. Try again.');
+    },
+  );
 }
 
 export function useLiveSession(businessId: string) {
