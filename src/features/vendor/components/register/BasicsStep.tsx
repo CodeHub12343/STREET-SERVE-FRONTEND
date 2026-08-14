@@ -80,9 +80,22 @@ export function BasicsStep({
         setLocating(false);
         show('Service area centred on your location', 'success');
       },
-      () => {
+      /**
+       * The error carries a `code` saying WHY, and collapsing all three into one message told a user
+       * who had blocked the permission to "try again", which can never work — the browser will not
+       * re-prompt once denied, so the button silently does nothing forever.
+       *
+       * 1 PERMISSION_DENIED · 2 POSITION_UNAVAILABLE · 3 TIMEOUT — only the last two are worth retrying.
+       */
+      (err) => {
         setLocating(false);
-        show('We couldn’t get your location. You can set this later in settings.', 'warning');
+        const message =
+          err.code === err.PERMISSION_DENIED
+            ? 'Location is blocked for this site. Allow it in your browser’s address-bar settings, or set your area later in settings.'
+            : err.code === err.TIMEOUT
+              ? 'Finding your location took too long. Try again, or set your area later in settings.'
+              : 'We couldn’t get your location. You can set this later in settings.';
+        show(message, 'warning');
       },
       { enableHighAccuracy: false, timeout: 10_000 },
     );
