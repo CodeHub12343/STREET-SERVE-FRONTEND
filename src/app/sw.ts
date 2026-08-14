@@ -42,6 +42,25 @@ const serwist = new Serwist({
     },
     ...defaultCache,
   ],
+  /**
+   * Last resort for a navigation the runtime caches cannot satisfy.
+   *
+   * `defaultCache` handles pages with NetworkFirst, which REJECTS when the network fails and the
+   * cache misses — a first visit to a route while offline, or any failed navigation. Serwist then
+   * reports `no-response` and the browser shows its own error page, which §4 explicitly rules out
+   * ("actions that require the network are disabled with explanation, not silent failures").
+   *
+   * Scoped to `document` destinations only: an image or API call that fails must keep failing so
+   * the calling code sees a real error, rather than silently receiving an HTML page.
+   */
+  fallbacks: {
+    entries: [
+      {
+        url: '/offline',
+        matcher: ({ request }) => request.destination === 'document',
+      },
+    ],
+  },
 });
 
 serwist.addEventListeners();
