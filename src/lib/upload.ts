@@ -59,11 +59,28 @@ export async function uploadImage(
     purpose: PURPOSE_MAP[purpose],
   });
 
-  const put = await fetch(presign.uploadUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': file.type },
-    body: file,
-  });
+  /**
+   * `fetch` REJECTS on a network-layer failure rather than resolving with `ok: false`, and a CORS
+   * block is a network-layer failure. The `!put.ok` check below therefore never ran for the most
+   * likely production fault: a raw `TypeError: Failed to fetch` escaped instead, so the user saw a
+   * dead button and a console trace rather than a message.
+   *
+   * The bucket missing its CORS policy is a deployment mistake, not something the user can fix, but
+   * silently doing nothing is the worst way to report it.
+   */
+  let put: Response;
+  try {
+    put = await fetch(presign.uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    });
+  } catch (cause) {
+    throw new Error(
+      "Couldn't reach the image server. Check your connection and try again.",
+      { cause },
+    );
+  }
   if (!put.ok) throw new Error('Upload failed. Please try again.');
 
   return { fileKey: presign.fileKey, url: presign.publicUrl ?? presign.fileKey };
