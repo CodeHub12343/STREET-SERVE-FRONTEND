@@ -193,14 +193,20 @@ const Row = styled.div`
   display: flex;
   justify-content: space-between;
   gap: ${({ theme }) => theme.space[3]}px;
+  /* An audience description can be a long unbroken string; let it wrap rather than widen the page. */
+  flex-wrap: wrap;
 
   dt {
     color: ${({ theme }) => theme.color.textSecondary};
+    min-width: 0;
   }
   dd {
     margin: 0;
     color: ${({ theme }) => theme.color.textPrimary};
     font-variant-numeric: tabular-nums;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    text-align: right;
   }
 `;
 

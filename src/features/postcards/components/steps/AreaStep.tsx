@@ -219,10 +219,25 @@ const Fields = styled.div`
   margin: ${({ theme }) => theme.space[4]}px 0;
 `;
 
+/**
+ * City / State / ZIP.
+ *
+ * `minmax(0, …)` rather than a bare `2fr 1fr 1fr`: a grid track's implicit minimum is `auto`, so a
+ * track refuses to shrink below its content — three inputs with labels then push the grid wider
+ * than the phone and take the whole page's horizontal scroll with them. The same defect the
+ * fieldset had on the size step, in its grid form.
+ *
+ * Stacked below `sm` regardless. Three text inputs across a 430px screen leaves each about 90px
+ * wide, which is not a usable field even when the arithmetic fits.
+ */
 const Row = styled.div`
   display: grid;
   gap: ${({ theme }) => theme.space[2]}px;
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: 1fr;
+
+  ${({ theme }) => theme.media.sm} {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
 `;
 
 const Actions = styled.div`

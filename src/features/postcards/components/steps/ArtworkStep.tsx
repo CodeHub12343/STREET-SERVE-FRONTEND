@@ -218,11 +218,21 @@ const SpecLink = styled.a`
   font-size: ${({ theme }) => theme.typography.scale[1]}px;
 `;
 
+/**
+ * `flex-wrap` + `min-width: 0`: the row holds the file picker and the chosen file's name, and a
+ * camera-generated name is both long and unbreakable. Without these the name refuses to wrap and
+ * drags the page's width with it.
+ */
 const UploadRow = styled.div`
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: ${({ theme }) => theme.space[3]}px;
   margin-bottom: ${({ theme }) => theme.space[3]}px;
+
+  > * {
+    min-width: 0;
+  }
 `;
 
 /** Hidden but focusable and labelled — never `display: none`, which removes it from the a11y tree. */
@@ -237,6 +247,8 @@ const HiddenInput = styled.input`
 const Findings = styled.ul`
   margin: 0;
   padding-left: ${({ theme }) => theme.space[4]}px;
+  /* Findings quote file names and dimensions — long tokens with nothing to break on. */
+  overflow-wrap: anywhere;
 
   li + li {
     margin-top: ${({ theme }) => theme.space[1]}px;

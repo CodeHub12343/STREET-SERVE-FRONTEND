@@ -246,6 +246,8 @@ const Root = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.space[4]}px;
+  /* Nothing inside the wizard may widen the page; the step row scrolls itself instead. */
+  min-width: 0;
 `;
 
 const Centered = styled.div`
@@ -262,6 +264,8 @@ const Steps = styled.ol`
   margin: 0;
   padding: 0 0 ${({ theme }) => theme.space[1]}px;
   overflow-x: auto;
+  /* Belt and braces: the scroller itself must never exceed its parent. */
+  max-width: 100%;
   scrollbar-width: none;
   &::-webkit-scrollbar {
     display: none;
@@ -317,6 +321,7 @@ const Panel = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.space[4]}px;
+  min-width: 0;
 `;
 
 const Footer = styled.div`
