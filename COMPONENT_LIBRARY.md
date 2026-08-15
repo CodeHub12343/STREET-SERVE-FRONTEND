@@ -40,6 +40,66 @@ export const tokens = {
 };
 ```
 
+### 1.1 Elevation — `theme.elevation`
+
+There was a single `shadow` token, used in 27 places, so a toast, a card and a bottom sheet cast the
+same shadow and nothing could say *this sits above that*. Four levels, each named for what the
+surface is **doing** rather than how strong the shadow looks:
+
+| Level | Use it for | Rule of thumb |
+|---|---|---|
+| `flat` | cards, list rows, table rows | scrolls **with** the page |
+| `raised` | menus, popovers, the business picker's results | lifted, still attached to a trigger |
+| `floating` | the orbit, FABs, sticky bars | above the page, no scrim |
+| `overlay` | sheets, modals, toasts | over everything, **has a scrim** |
+
+Each level is two shadows — a tight contact shadow for the edge, a wide ambient one for the lift. A
+single large blur reads as fog; the pair reads as an object. Dark mode uses deeper alpha on purpose:
+the light-mode values are invisible on a near-black surface.
+
+```ts
+box-shadow: ${({ theme }) => theme.elevation.overlay};
+```
+
+### 1.2 Charts — `theme.chart`
+
+Series colour is a **different job** from status colour. `statusDanger` on a series says "this line
+is bad", not "this line is Orders" — so the status palette stays reserved for state, and
+`chart.series1…4` are for identity only.
+
+**Four slots, and that is a measured limit rather than a shortcut.** Every candidate palette was run
+through the dataviz validator. With the brand burnt-orange occupying the warm side, a fifth and
+sixth hue collided with it under all-pairs comparison — olive vs the brand orange came out at
+**ΔE 3.2** for protanopia (indistinguishable) and magenta at **11.7 for normal vision**. Shipping six
+colours would have meant two unreadable pairs, so the palette stops at four.
+
+Both modes pass all six checks under `--pairs all` (the strict setting — any two series can become
+adjacent once a filter removes the ones between them):
+
+| Mode | Series | Worst pair |
+|---|---|---|
+| light | `#175CD3` `#C4410C` `#0D9488` `#A21CAF` | ΔE 21.8 normal · 9.6 deutan |
+| dark | `#3B82F6` `#D9662B` `#0E9F8F` `#B84FC7` | ΔE 19.7 normal · 9.1 deutan |
+
+Rules that are not negotiable:
+
+- **Assign in fixed order, never cycle.** Colour follows the entity, so filtering a series out must
+  not repaint the survivors. Use `CHART_SERIES_KEYS[i]`; running past the end is the signal to
+  aggregate into "Other" or switch to small multiples, never to generate a hue.
+- **One axis.** Two measures of different scale become two charts, never two y-scales.
+- **Text wears text tokens**, never the series colour; a coloured mark beside the label carries
+  identity.
+- **≥2 series always carries a legend**, so identity is never colour-alone.
+- `chart.grid` and `chart.axis` are deliberately recessive — furniture must not compete with data.
+  `chart.gap` is the surface-coloured 2px separator between adjacent fills, so two bars read as two
+  objects.
+
+Dark mode is **selected, not flipped**: its steps were validated against the dark surface
+(`#17181C`) independently. An automatic lightening of the light palette fails the dark lightness
+band.
+
+---
+
 - `styles/theme.ts` builds the active `DefaultTheme` (dark by default) and swaps palette on `data-theme`.
 - `styles/styled.d.ts` augments styled-components' `DefaultTheme` so `theme.color.accentPrimary` is **typed** everywhere.
 - `styles/GlobalStyle.ts`: reset, base font, `:focus-visible` ring (2px `accentSecondary`, offset 2px — `docs/06 §2.6j`), `.tnum` tabular-nums, and the `@media (prefers-reduced-motion)` collapse (`docs/06 §2.6c`).
