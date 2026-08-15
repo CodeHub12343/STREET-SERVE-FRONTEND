@@ -4,7 +4,7 @@
  * S-01 Seller intro (docs/13 S-01) — the "earn today / you owe nothing until you sell" pitch that
  * reduces first-sale anxiety (docs/06 §1). Leads into discovering inventory.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import { Wallet, PackageCheck, RotateCcw } from 'lucide-react';
@@ -16,14 +16,30 @@ export function SellerIntro() {
   const introSeen = useSellerOnboardingStore((s) => s.introSeen);
   const markIntroSeen = useSellerOnboardingStore((s) => s.markIntroSeen);
 
-  // Returning sellers have seen the pitch — forward them straight to Discover so this screen only
-  // ever fronts the very first visit. `replace` keeps it out of the back stack.
+  /**
+   * Decided once, from the value at mount.
+   *
+   * `introSeen` was only set by pressing the CTA, so leaving this screen any other way — the orb,
+   * the back arrow, switching mode — left the flag false and the pitch returned on every visit to
+   * the Street Seller surface. "Seen" was really recording "converted", which is a different fact.
+   *
+   * Reading it into a ref matters: marking it seen below flips the store, and re-running the check
+   * against the NEW value would redirect the visitor away from the very intro they just opened.
+   * The mount value is the only one that answers "had they been here before?".
+   */
+  const seenBeforeThisVisit = useRef(introSeen);
+
   useEffect(() => {
-    if (introSeen) router.replace('/seller');
-  }, [introSeen, router]);
+    if (seenBeforeThisVisit.current) {
+      // `replace` keeps the pitch out of the back stack for a returning seller.
+      router.replace('/seller');
+      return;
+    }
+    // Arriving is what makes it seen. Whether they take the CTA is a separate question.
+    markIntroSeen();
+  }, [router, markIntroSeen]);
 
   const start = () => {
-    markIntroSeen();
     router.push('/seller');
   };
 
