@@ -28,7 +28,32 @@ export function QRScanner({ onScan, expectedCode = 'SS-QR-DEMO' }: { onScan: (co
         const { Html5Qrcode } = await import('html5-qrcode');
         if (cancelled || !readerRef.current) return;
         const scanner = new Html5Qrcode(readerRef.current.id);
-        stop = () => void scanner.stop().catch(() => undefined);
+        /**
+         * Stopping is idempotent AND synchronously guarded.
+         *
+         * A successful scan stopped the scanner and then called `onScan`, which sets state in the
+         * parent — and the parent swaps branches, unmounting this component. The effect cleanup then
+         * called stop a SECOND time on an already-stopped scanner.
+         *
+         * html5-qrcode throws "Cannot stop, scanner is not running or paused." SYNCHRONOUSLY in that
+         * case, so `.catch()` on the return value never saw it: there is no promise to attach to
+         * when the throw happens before one is returned. The error escaped into React's render and
+         * took the whole checkout screen to the error boundary — after a successful scan, which is
+         * the one moment the seller must not lose.
+         *
+         * The flag prevents the second call; the try/catch means a version that changes its mind
+         * about when stopping is legal still cannot blank the screen.
+         */
+        let stopped = false;
+        stop = () => {
+          if (stopped) return;
+          stopped = true;
+          try {
+            void scanner.stop().catch(() => undefined);
+          } catch {
+            // Already stopped, or never started. Nothing to clean up either way.
+          }
+        };
         await scanner.start(
           { facingMode: 'environment' },
           { fps: 10, qrbox: 240 },
