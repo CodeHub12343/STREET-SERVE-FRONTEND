@@ -392,7 +392,8 @@ export const endpoints = {
     orders: (businessId: string) => `/postcards/business/${businessId}/orders`,
     order: (orderId: string) => `/postcards/orders/${orderId}`,
     quote: (orderId: string) => `/postcards/orders/${orderId}/quote`,
-    checkout: (orderId: string) => `/postcards/orders/${orderId}/checkout`,
+    // The server route is `pay`; this was `checkout` and 404'd on every attempt to pay.
+    checkout: (orderId: string) => `/postcards/orders/${orderId}/pay`,
     cancel: (orderId: string) => `/postcards/orders/${orderId}/cancel`,
     moderationQueue: '/postcards/moderation/queue',
     moderate: (assetId: string) => `/postcards/moderation/${assetId}`,

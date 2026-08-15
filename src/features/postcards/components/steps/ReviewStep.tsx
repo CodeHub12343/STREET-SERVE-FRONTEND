@@ -23,12 +23,14 @@
  * is — but tax is separate, and what was QUOTED is separate from what was CHARGED. Conflating them
  * would hide the difference at exactly the moment someone is checking a receipt.
  */
+import { useState } from 'react';
 import styled from 'styled-components';
 import { Button } from '@/components/primitives/Button';
 import { Banner } from '@/components/feedback/Banner';
 import { useToast } from '@/components/feedback/ToastProvider';
 import { AppApiError } from '@/lib/api/errors';
 import { formatCents } from '@/lib/money';
+import { PaymentSheet } from '@/features/payments';
 import { useCheckoutOrder, useQuoteOrder } from '../../hooks/usePostcards';
 import type { PostcardOrder } from '../../types';
 
@@ -56,10 +58,24 @@ export function ReviewStep({
   const expired = price?.isExpired ?? false;
   const alreadyPaid = order.status !== 'draft' && order.status !== 'quoted';
 
+  /**
+   * The intent the server opened, held until the card form confirms it.
+   *
+   * `payOrder` returns a `clientSecret` and this screen used to discard it, then announce "Payment
+   * started. We will email your receipt." Nothing ever confirmed the intent, so no money moved and
+   * the order sat unpaid while the buyer had been told otherwise — the worst shape a payment bug
+   * can take. The charge is only real once Stripe confirms it, and only the card form can do that.
+   */
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+
   async function pay(): Promise<void> {
     try {
-      await checkout.mutateAsync();
-      show('Payment started. We will email your receipt.', 'success');
+      const res = await checkout.mutateAsync();
+      if (res.alreadyPaid || !res.clientSecret) {
+        show('This order is already paid.', 'success');
+        return;
+      }
+      setClientSecret(res.clientSecret);
     } catch (err) {
       show(
         err instanceof AppApiError ? err.message : 'We could not take that payment.',
@@ -144,6 +160,25 @@ export function ReviewStep({
         </p>
       </PointOfNoReturn>
 
+      {clientSecret ? (
+        <CardStep>
+          <CardTitle>Pay {formatCents(price?.totalCents ?? 0)}</CardTitle>
+          {/*
+            PaymentSheet owns the money-safety states (processing, decline, incomplete fields), so
+            this screen does not reimplement them. Success means Stripe confirmed the charge —
+            printing still waits on the webhook and on a human approving the artwork.
+          */}
+          <PaymentSheet
+            clientSecret={clientSecret}
+            amountCents={price?.totalCents ?? 0}
+            onSuccess={() => {
+              setClientSecret(null);
+              show('Payment taken. We will email your receipt.', 'success');
+            }}
+          />
+        </CardStep>
+      ) : null}
+
       {alreadyPaid ? (
         <Banner tone="success" title="This order is paid">
           Nothing more to do — you can follow its progress from your orders list.
@@ -219,6 +254,19 @@ const TotalRow = styled(Row)`
     color: ${({ theme }) => theme.color.textPrimary};
     font-weight: 700;
   }
+`;
+
+const CardStep = styled.div`
+  margin-top: ${({ theme }) => theme.space[4]}px;
+  padding: ${({ theme }) => theme.space[4]}px;
+  border-radius: ${({ theme }) => theme.radius.card}px;
+  background: ${({ theme }) => theme.color.surfaceRaised};
+  border: 1px solid ${({ theme }) => theme.color.line2};
+  min-width: 0;
+`;
+const CardTitle = styled.h3`
+  margin: 0 0 ${({ theme }) => theme.space[3]}px;
+  font-size: ${({ theme }) => theme.typography.scale[2]}px;
 `;
 
 const PointOfNoReturn = styled.div`

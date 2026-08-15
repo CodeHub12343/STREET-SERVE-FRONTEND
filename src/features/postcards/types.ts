@@ -172,8 +172,13 @@ export interface ConfigureOrderInput {
 
 export interface CheckoutResult {
   orderId: string;
-  clientSecret: string;
-  chargedCents: number;
+  /** True when the order was already paid — the server returns no secret to confirm in that case. */
+  alreadyPaid: boolean;
+  /**
+   * Null only when `alreadyPaid`. Previously this was typed `string` alongside a `chargedCents`
+   * field the server never sends, so the type described a response that did not exist.
+   */
+  clientSecret: string | null;
 }
 
 /** Reviewer-facing. Carries the screening flags the buyer never sees. */
