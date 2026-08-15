@@ -14,7 +14,7 @@ import { AppApiError } from '@/lib/api/errors';
 import { endpoints } from '@/lib/api/endpoints';
 import { keys } from '@/lib/query/keys';
 import { isMapDemo } from '@/lib/env';
-import { distanceMeters } from '@/lib/geo';
+import { distanceMeters, requestPosition } from '@/lib/geo';
 import { newIdempotencyKey } from '@/lib/idempotency';
 import {
   demoApplyToJob,
@@ -141,6 +141,36 @@ export function getCurrentCoords(opts: { precise?: boolean } = {}): Promise<JobC
 }
 
 /**
+ * The last position we successfully obtained, kept so a failed acquisition does not empty the board.
+ *
+ * Ranking-only, and deliberately never offered to check-in: a stored position is exactly what the
+ * geofence exists to reject. `getCurrentCoords({ precise: true })` does not read this.
+ */
+const LAST_KNOWN_KEY = 'ss.jobs.lastKnownCoords';
+
+function readLastKnown(): JobCoords | null {
+  try {
+    const raw = window.localStorage.getItem(LAST_KNOWN_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { lat?: unknown; lng?: unknown };
+    return typeof parsed.lat === 'number' && typeof parsed.lng === 'number'
+      ? { lat: parsed.lat, lng: parsed.lng }
+      : null;
+  } catch {
+    // Private mode, disabled storage, corrupt value — none of which should break the board.
+    return null;
+  }
+}
+
+function writeLastKnown(coords: JobCoords): void {
+  try {
+    window.localStorage.setItem(LAST_KNOWN_KEY, JSON.stringify(coords));
+  } catch {
+    // Storage being unavailable costs a fallback, not the request that just succeeded.
+  }
+}
+
+/**
  * The device's position, for ranking things by distance.
  *
  * Rough on purpose (see `getCurrentCoords`) — this feeds nearby lists, not the check-in radius.
@@ -149,10 +179,50 @@ export function getCurrentCoords(opts: { precise?: boolean } = {}): Promise<JobC
  * only re-prompts. A timeout IS transient, but the user retries explicitly via the banner, which is
  * better than a silent loop that keeps waking the GPS.
  */
+/**
+ * The position used to RANK the board, with a fallback to the last one we knew.
+ *
+ * A plain function rather than logic inside the hook so it can be tested without mounting React —
+ * the fallback is the part that decides whether a worker sees gigs at all, which makes it the part
+ * most worth covering.
+ */
+export async function resolveRankingCoords(): Promise<JobCoords> {
+  if (isMapDemo) return DEMO_COORDS;
+  try {
+    /**
+     * `requestPosition` rather than the single 15s attempt this used to make. It tries a
+     * cached, low-accuracy fix first and only then falls back to a patient high-accuracy one —
+     * so a phone that cannot produce a fresh fix indoors still answers, instead of failing at
+     * 15s and emptying the board. The API requires coordinates, so a failure here is not a
+     * degraded list, it is no list at all.
+     *
+     * Ten minutes of cache: a position that old ranks nearby gigs identically, and nobody has
+     * walked far enough in ten minutes to reorder a list by distance meaningfully.
+     */
+    const pos = await requestPosition({ maxCachedAgeMs: 600_000 });
+    const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    writeLastKnown(coords);
+    return coords;
+  } catch (err) {
+    /**
+     * Fall back to the last position we knew, rather than showing a worker an empty board
+     * because the GPS was slow. Ranking from a slightly old position is a far smaller error
+     * than hiding every available gig — and someone opening this screen is usually looking for
+     * work now.
+     *
+     * Only when we genuinely have one: with nothing stored, the original error stands so the
+     * banner can still explain what to do.
+     */
+    const last = readLastKnown();
+    if (last) return last;
+    throw err;
+  }
+}
+
 export function useDeviceLocation() {
   return useQuery<JobCoords>({
     queryKey: keys.deviceLocation,
-    queryFn: () => getCurrentCoords(),
+    queryFn: resolveRankingCoords,
     staleTime: 60_000,
     retry: false,
   });

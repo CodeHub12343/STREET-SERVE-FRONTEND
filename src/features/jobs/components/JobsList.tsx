@@ -168,8 +168,13 @@ function NearbyFeed({
           </Button>
         }
       >
-        {error.message} Gigs are ranked by how close they are to you, and check-in has to confirm
-        you’re on site.
+        {/*
+          Only what this failure actually cost them. The check-in geofence is a separate step with
+          its own stricter rules, and naming it here made a slow GPS on the LIST read as though
+          working a gig were now impossible.
+        */}
+        {error.message} Gigs are shown nearest first, so the board needs a rough idea of where you
+        are.
       </Banner>
     );
   }

@@ -91,3 +91,55 @@ describe('accuracy is matched to what the caller actually needs', () => {
     expect(opts.maximumAge).toBe(0);
   });
 });
+
+/**
+ * The jobs board cannot be fetched without coordinates — `NearbyJobsQuery` requires lat and lng —
+ * so a failed acquisition is not a degraded list, it is no list at all. A worker opening this screen
+ * is usually looking for work now, and showing them an empty board because the GPS was slow is a far
+ * worse error than ranking from a position a few minutes old.
+ */
+describe('the board survives a failed fix', () => {
+  const STORE_KEY = 'ss.jobs.lastKnownCoords';
+
+  function withStorage(initial: Record<string, string> = {}) {
+    const store = new Map(Object.entries(initial));
+    vi.stubGlobal('window', {
+      localStorage: {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => void store.set(k, v),
+      },
+    });
+    return store;
+  }
+
+  it('remembers a good position so a later failure still ranks the board', async () => {
+    const store = withStorage();
+    vi.stubGlobal('navigator', {
+      geolocation: {
+        getCurrentPosition: (ok: PositionCallback) =>
+          ok({ coords: { latitude: 6.44, longitude: 3.39 } } as GeolocationPosition),
+      },
+    });
+
+    const { resolveRankingCoords } = await import('./hooks/useJobs');
+    const first = await resolveRankingCoords();
+    expect(first).toEqual({ lat: 6.44, lng: 3.39 });
+    expect(store.get(STORE_KEY)).toBeTruthy();
+  });
+
+  it('ranks from the remembered position when the fix fails', async () => {
+    // The whole point: a slow GPS must not empty a board that someone opened to find work today.
+    withStorage({ [STORE_KEY]: JSON.stringify({ lat: 6.44, lng: 3.39 }) });
+    mockGeolocation(ERR.TIMEOUT);
+
+    const { resolveRankingCoords } = await import('./hooks/useJobs');
+    await expect(resolveRankingCoords()).resolves.toEqual({ lat: 6.44, lng: 3.39 });
+  });
+
+  it('keeps the original error when there is no remembered position', async () => {
+    // Nothing stored means nothing to fall back to, and the banner still has to explain what to do.
+    withStorage();
+    mockGeolocation(ERR.TIMEOUT);
+    await expect(getCurrentCoords()).rejects.toMatchObject({ kind: 'timeout' });
+  });
+});
