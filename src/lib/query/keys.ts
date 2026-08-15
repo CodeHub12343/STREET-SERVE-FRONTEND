@@ -118,6 +118,7 @@ export const keys = {
 
   // Phase E — AI.
   coachPlan: ['ai', 'coach'] as const,
+  aiQuota: ['ai', 'quota'] as const,
   eventsNearby: (bbox: string) => ['events', 'nearby', bbox] as const,
   hubReallocation: (id: string) => ['hub', id, 'reallocation'] as const,
   hubAiDashboard: (id: string) => ['hub', id, 'ai-dashboard'] as const,

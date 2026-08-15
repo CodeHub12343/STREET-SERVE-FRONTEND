@@ -3,7 +3,7 @@
 /**
  * Phase E data layer — Income Coach, events, reallocation advice.
  */
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { AppApiError } from '@/lib/api/errors';
 import { endpoints } from '@/lib/api/endpoints';
@@ -11,7 +11,7 @@ import { keys } from '@/lib/query/keys';
 import { isMapDemo } from '@/lib/env';
 import { useDeviceLocation } from '@/features/jobs/hooks/useJobs';
 import { demoCoachPlan, demoEvents, demoReallocation } from '../demo';
-import type { CoachPlan, NearbyEvent, ReallocationAdvice } from '../types';
+import type { AiQuota, CoachPlan, NearbyEvent, ReallocationAdvice } from '../types';
 
 /**
  * E-9. A mutation rather than a query: a plan is generated for a goal the seller just chose, and
@@ -19,6 +19,7 @@ import type { CoachPlan, NearbyEvent, ReallocationAdvice } from '../types';
  */
 export function useCoachPlan() {
   const { data: coords } = useDeviceLocation();
+  const qc = useQueryClient();
   return useMutation<CoachPlan, AppApiError, number>({
     mutationFn: (goalCents) =>
       isMapDemo
@@ -27,6 +28,33 @@ export function useCoachPlan() {
             goalCents,
             ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
           }),
+    /**
+     * A plan spends one of the month's free suggestions, so the displayed allowance is stale the
+     * moment it succeeds. On `settled` rather than `success`: a refusal is exactly when the count
+     * matters most, and a failure the server refunded would otherwise leave the UI understating
+     * what the seller still has.
+     */
+    onSettled: () => void qc.invalidateQueries({ queryKey: keys.aiQuota }),
+  });
+}
+
+/**
+ * Free AI suggestions left this month.
+ *
+ * Read up front so the seller can see the allowance running down while they use it. A limit that
+ * only appears at the moment of refusal reads as the product breaking rather than as something they
+ * were told about — and it gives them no reason to consider the plan until it is already annoying.
+ *
+ * Refetched after every plan, since each one spends an allowance.
+ */
+export function useAiQuota() {
+  return useQuery<AiQuota>({
+    queryKey: keys.aiQuota,
+    queryFn: () =>
+      isMapDemo
+        ? Promise.resolve({ unlimited: false, used: 1, limit: 5, remaining: 4, period: '2026-08' })
+        : api.get<AiQuota>(endpoints.aiQuota),
+    staleTime: 60_000,
   });
 }
 

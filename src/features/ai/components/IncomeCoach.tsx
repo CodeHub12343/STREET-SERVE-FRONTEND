@@ -22,7 +22,7 @@ import { TabPage } from '@/components/layout/TabPage';
 import { Button } from '@/components/primitives/Button';
 import { Banner } from '@/components/feedback/Banner';
 import { formatCents } from '@/lib/money';
-import { useCoachPlan } from '../hooks/useCoach';
+import { useAiQuota, useCoachPlan } from '../hooks/useCoach';
 
 /** Round numbers people actually think in. */
 const PRESETS = [2_000, 5_000, 10_000, 20_000];
@@ -30,7 +30,14 @@ const PRESETS = [2_000, 5_000, 10_000, 20_000];
 export function IncomeCoach() {
   const [goal, setGoal] = useState(10_000);
   const plan = useCoachPlan();
+  const quota = useAiQuota();
   const result = plan.data;
+
+  /**
+   * The refusal is an offer, not a fault. Branching on the code rather than the message, per the
+   * rule in lib/api/errors.ts — copy changes, codes are the contract.
+   */
+  const outOfCredit = plan.error?.code === 'AI_QUOTA_EXCEEDED';
 
   return (
     <TabPage title="Plan my day">
@@ -58,7 +65,27 @@ export function IncomeCoach() {
         <Target size={16} aria-hidden /> Make me a plan
       </Button>
 
-      {plan.isError ? (
+      {/*
+        Shown while there is still credit, not only once it is gone. A seller who discovers the
+        limit by hitting it experiences a broken feature; one who watched it count down understands
+        an allowance — and has a reason to consider the plan before being annoyed by it.
+      */}
+      {quota.data && !quota.data.unlimited && !outOfCredit ? (
+        <QuotaNote>
+          {quota.data.remaining > 0
+            ? `${quota.data.remaining} of ${quota.data.limit} free AI suggestions left this month.`
+            : 'No free AI suggestions left this month.'}
+        </QuotaNote>
+      ) : null}
+
+      {outOfCredit ? (
+        <Spacer>
+          <Banner tone="warning" title="You’ve used this month’s free suggestions">
+            The AI Marketing Assistant makes coaching, pricing and recommendations unlimited.
+            <UpgradeLink href="/vendor/upgrade">See the plan</UpgradeLink>
+          </Banner>
+        </Spacer>
+      ) : plan.isError ? (
         <Spacer>
           <Banner tone="warning" title="Couldn’t build a plan">
             {plan.error.message}
@@ -170,6 +197,19 @@ const GoalChip = styled.button<{ $on: boolean }>`
 `;
 const Spacer = styled.div`
   margin-top: ${({ theme }) => theme.space[3]}px;
+`;
+/** Quiet by design: an allowance you still have is information, not a warning. */
+const QuotaNote = styled.p`
+  margin-top: ${({ theme }) => theme.space[2]}px;
+  font-size: 12px;
+  color: ${({ theme }) => theme.color.textTertiary};
+  text-align: center;
+`;
+const UpgradeLink = styled(Link)`
+  display: inline-block;
+  margin-top: ${({ theme }) => theme.space[2]}px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.color.accentPrimary};
 `;
 const Result = styled.div`
   display: grid;

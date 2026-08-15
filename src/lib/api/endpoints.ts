@@ -231,6 +231,8 @@ export const endpoints = {
 
   // Phase E — AI. The coach can return an UNACHIEVABLE plan; clients must respect that flag.
   coachPlan: '/ai/coach/plan',
+  /** Free AI suggestions left this month. Reading it never spends one. */
+  aiQuota: '/ai/quota',
   outcomeStats: '/ai/outcomes/stats',
   eventsNearby: '/events/nearby',
   events: '/events',

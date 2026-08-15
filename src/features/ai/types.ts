@@ -65,3 +65,18 @@ export interface OutcomeStats {
   averageSellThrough: number;
   readyForForecasting: boolean;
 }
+
+/**
+ * What is left of this month's free AI advice (`GET /ai/quota`).
+ *
+ * `unlimited` is the subscriber case and the only one where `remaining` should not be shown as a
+ * countdown — a plan that advertises "unlimited" must never render a number next to it.
+ */
+export interface AiQuota {
+  unlimited: boolean;
+  used: number;
+  limit: number;
+  remaining: number;
+  /** `YYYY-MM` — when the allowance returns, without the client having to know the rule. */
+  period: string;
+}
