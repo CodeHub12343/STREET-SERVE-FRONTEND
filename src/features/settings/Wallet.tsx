@@ -21,6 +21,7 @@ import { formatCents } from '@/lib/money';
 import { useMe } from '@/lib/auth/useMe';
 import { usePingEarnings } from './hooks/usePingEarnings';
 import { useMyTransactions, useSpotMeObligations } from './hooks/useWalletData';
+import { RtoObligationCard } from '@/features/rto';
 
 export function Wallet() {
   const router = useRouter();
@@ -46,6 +47,11 @@ export function Wallet() {
 
   return (
     <TabPage title="Wallet">
+      {/*
+        Above the balance on purpose: a due date outranks a number you are only looking at. An
+        agreement renders nothing when there is none, so this costs a non-RTO customer no space.
+      */}
+      <RtoObligationCard />
       <Balance>
         <span>Ping-tip earnings</span>
         {isLoading ? (

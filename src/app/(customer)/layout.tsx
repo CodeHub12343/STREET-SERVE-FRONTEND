@@ -3,14 +3,14 @@
 /**
  * Customer surface shell — mobile-viewport with the OrbitNav system (same navigation as the
  * vendor dashboard): a bottom dock (Messages · Map · orb · Orders · Bell) plus an orbit ring for
- * the rest (Favorites, Profile, Wallet, Settings, Help). Replaces the former five-tab bar.
+ * the rest (Rent to Own, Favorites, Profile, Wallet, Settings, Help). Replaces the former five-tab bar.
  * Guarded by useRequireAuth (UX only). The shell is phone-styled at every width, so the orbit
  * stays on at desktop too (showOnDesktop) and the dock caps at the shell's 560px column.
  */
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import styled from 'styled-components';
-import { Star, User, Wallet, Settings, LifeBuoy, MessageCircle, Map, Receipt } from 'lucide-react';
+import { Star, User, Wallet, Settings, LifeBuoy, MessageCircle, Map, Receipt, FileSignature } from 'lucide-react';
 import { OrbitNav, OrbitDockButton, OrbitDockSlot } from '@/components/navigation';
 import { ModeSwitchRow, useHasMultipleModes } from '@/features/identity';
 import { NotificationBell } from '@/features/notifications';
@@ -37,6 +37,15 @@ function isFlowRoute(pathname: string): boolean {
 /** Everything not promoted to the dock lives in the orbit ring. */
 const ORBIT_ITEMS = [
   { href: '/favorites', label: 'Favorites', icon: <Star size={18} /> },
+  /**
+   * Rent to Own had no way in at all. Four customer screens existed — browse, offer detail, my
+   * agreements, and the payment dashboard — and nothing in the app linked to any of them, so the
+   * whole marketplace was reachable only by typing the URL.
+   *
+   * Above Profile because it is a place to GO, not a setting: a self-contained marketplace belongs
+   * with the destinations, not with the account plumbing.
+   */
+  { href: '/rto', label: 'Rent to Own', icon: <FileSignature size={18} /> },
   { href: '/profile', label: 'Profile', icon: <User size={18} /> },
   { href: '/profile/wallet', label: 'Wallet', icon: <Wallet size={18} /> },
   { href: '/settings', label: 'Settings', icon: <Settings size={18} /> },

@@ -83,9 +83,11 @@ export function usePayoff(id: string) {
 // ─── Listings (§42/§44) ──────────────────────────────────────────────────────────────────────
 
 /** Public browse. Someone deciding whether RTO is for them should not have to sign in first. */
-export function useRtoListings(filter: { citySlug?: string; categoryId?: string } = {}) {
+export function useRtoListings(
+  filter: { citySlug?: string; categoryId?: string; sellerId?: string } = {},
+) {
   return useQuery<RtoListing[]>({
-    queryKey: keys.rtoListings(`${filter.citySlug ?? ''}|${filter.categoryId ?? ''}`),
+    queryKey: keys.rtoListings(`${filter.citySlug ?? ''}|${filter.categoryId ?? ''}|${filter.sellerId ?? ''}`),
     queryFn: () =>
       isMapDemo
         ? Promise.resolve([])
@@ -93,6 +95,7 @@ export function useRtoListings(filter: { citySlug?: string; categoryId?: string 
             query: {
               ...(filter.citySlug ? { citySlug: filter.citySlug } : {}),
               ...(filter.categoryId ? { categoryId: filter.categoryId } : {}),
+              ...(filter.sellerId ? { sellerId: filter.sellerId } : {}),
             },
           }),
     staleTime: 60_000,

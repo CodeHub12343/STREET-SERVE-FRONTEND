@@ -17,6 +17,7 @@ import styled, { keyframes } from 'styled-components';
 import { Clock } from 'lucide-react';
 import { Sheet } from '@/components/primitives/Sheet';
 import { FlashSaleBanner } from './FlashSaleBanner';
+import { BusinessRtoOffers } from '@/features/rto';
 import { Button } from '@/components/primitives/Button';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { ErrorState } from '@/components/feedback/ErrorState';
@@ -181,6 +182,14 @@ export function BusinessProfileSheet({
                 <PayItForwardCard businessId={biz.id} businessName={biz.name} />
               </Section>
             ) : null}
+
+            {/*
+              What this seller will let you rent to own. Renders nothing when they offer none, so a
+              profile gains the section only when there is something in it.
+            */}
+            <Section>
+              <BusinessRtoOffers businessId={biz.id} />
+            </Section>
 
             {/* Renders only while a campaign is actually live — see BoostCampaignCard. */}
             <Section>
