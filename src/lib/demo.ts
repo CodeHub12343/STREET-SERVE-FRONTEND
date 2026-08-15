@@ -569,7 +569,16 @@ export function demoAdminOverview() {
     openDisputes: 3,
     fraudFlags: 4,
     pendingLicenses: 2,
+    pendingVerifications: 5,
     newSignups: 27,
+    // Same window yesterday — the comparison is what makes a daily number mean anything.
+    previous: { gmvCents: 1_090_000, orders: 731, newSignups: 34 },
+    activity: [
+      { action: 'dispute.opened', entityType: 'dispute', entityId: 'dsp_1', at: new Date(Date.now() - 6 * 60_000).toISOString() },
+      { action: 'subscription.lapsed', entityType: 'subscription', entityId: 'sub_1', at: new Date(Date.now() - 22 * 60_000).toISOString() },
+      { action: 'rto.seller_approved', entityType: 'business', entityId: 'biz_1', at: new Date(Date.now() - 51 * 60_000).toISOString() },
+      { action: 'user.suspended', entityType: 'user', entityId: 'usr_1', at: new Date(Date.now() - 96 * 60_000).toISOString() },
+    ],
   };
 }
 
