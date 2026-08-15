@@ -200,17 +200,40 @@ describe('promote flow (§32)', () => {
     expect(screen.getByRole('button', { name: /Continue — \$15\.00/ })).toBeInTheDocument();
   });
 
-  it('describes the map surface by where it actually renders', async () => {
-    // It renders in the sheet at the bottom of the map, not across the top. Someone who buys a
-    // "banner" and studies the top of their screen concludes the product is broken.
+  it('names the screen each surface renders on, and who sees it', async () => {
+    /**
+     * A buyer must be able to go and look at what they bought.
+     *
+     * This test used to skip `mockAds`, so `useAdPricing` never resolved, the form never rendered
+     * and it failed on the label rather than on the copy — a red test that proved nothing.
+     *
+     * The copy itself matters because it has twice sent someone to the wrong screen: "banner"
+     * implied the top of the map (it renders in the sheet at the bottom), and "the full nearby
+     * list" sent a vendor to the SELLER surface to look for a CUSTOMER list. Both concluded the ad
+     * system was broken while it was serving correctly.
+     */
+    await mockAds({
+      useAdPricing: () => ({ data: PRICING, isLoading: false }),
+      useCreateFeatured: () => ({ mutate: vi.fn(), isPending: false }),
+      useCreateCampaign: () => ({ mutate: vi.fn(), isPending: false }),
+    });
     const { PromoteFlow } = await import('./components/PromoteFlow');
     render(
       <Providers>
         <PromoteFlow subject={{ kind: 'ad', businessId: 'biz_1' }} />
       </Providers>,
     );
+
     await waitFor(() => expect(screen.getByLabelText(/Where it appears/i)).toBeInTheDocument());
-    expect(screen.getByText(/nearby list at the bottom of the map/i)).toBeInTheDocument();
+
+    const options = screen.getByLabelText(/Where it appears/i).textContent ?? '';
+    // Bottom of the map, not the top — the distinction the word "banner" gets wrong.
+    expect(options).toMatch(/sheet at the bottom of the live map/i);
+    // Says WHOSE list, and how to reach it.
+    expect(options).toMatch(/To customers, in the full nearby list/i);
+    expect(options).toMatch(/List view of the map/i);
+    // The one seller-facing surface says so, so it is not mistaken for a customer screen.
+    expect(options).toMatch(/To sellers, on the Earn hub/i);
   });
 
   it('lets a buyer switch to a custom CPM budget instead of a fixed length', async () => {

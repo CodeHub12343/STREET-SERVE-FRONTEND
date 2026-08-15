@@ -46,10 +46,27 @@ import type { AdPlacementSurface, CreatedPlacement } from '../types';
  * advertise.** If a surface should reach further, mount the slot there and then change this line —
  * never the other way round. Grep `surface="…"` to check.
  */
+/**
+ * Name the screen a buyer can actually go and look at.
+ *
+ * "In the full nearby list" does not say whose list or how to reach it, and a vendor who bought
+ * `discovery_card` went looking on the SELLER surface, found nothing, and reported the promotion as
+ * broken while it was serving correctly. That is the second time this copy has produced exactly
+ * that conclusion — see the note above. Someone spending money deserves to be told where to look.
+ */
 const SURFACE_COPY: Record<AdPlacementSurface, { label: string; where: string }> = {
-  map_banner: { label: 'On the map', where: 'In the nearby list at the bottom of the map' },
-  discovery_card: { label: 'Discovery card', where: 'In the full nearby list' },
-  earn_slot: { label: 'Earn slot', where: 'On the Earn hub, where sellers pick up work' },
+  map_banner: {
+    label: 'On the map',
+    where: 'To customers, in the sheet at the bottom of the live map',
+  },
+  discovery_card: {
+    label: 'Discovery card',
+    where: 'To customers, in the full nearby list — the List view of the map',
+  },
+  earn_slot: {
+    label: 'Earn slot',
+    where: 'To sellers, on the Earn hub where they pick up work',
+  },
 };
 
 export type PromoteSubject =
