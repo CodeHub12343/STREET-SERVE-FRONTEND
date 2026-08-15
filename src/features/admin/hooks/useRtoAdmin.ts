@@ -30,6 +30,11 @@ export interface RtoMarkets {
 
 export interface RtoApproval {
   sellerId: string;
+  /**
+   * Null when the id matches no business — a permission granted against something that does not
+   * exist. Surfaced rather than filtered out, because it still has to be revocable.
+   */
+  businessName: string | null;
   approvedBy: string;
   note: string | null;
   approvedAt: string;

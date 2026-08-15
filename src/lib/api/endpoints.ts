@@ -444,6 +444,8 @@ export const endpoints = {
 
   admin: {
     overview: '/admin/overview', // GAP-2 (backend implemented)
+    /** Find a business by name, so no admin control has to ask for a Mongo ObjectId. */
+    businessSearch: '/admin/businesses/search',
     users: '/admin/users',
     suspend: (id: string) => `/admin/users/${id}/suspend`,
     auditLogs: '/admin/audit-logs',

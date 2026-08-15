@@ -212,6 +212,7 @@ export const keys = {
 
   // admin
   adminOverview: ['admin', 'overview'] as const,
+  adminBusinessSearch: (q: string) => ['admin', 'businesses', 'search', q] as const,
   adminDisputes: ['admin', 'disputes'] as const,
   categoryReview: ['admin', 'category-review'] as const,
   adminCategories: ['admin', 'categories'] as const,

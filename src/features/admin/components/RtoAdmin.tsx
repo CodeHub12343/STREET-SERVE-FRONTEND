@@ -30,6 +30,8 @@ import {
   useSetCategoryRto,
   useSetCityRto,
 } from '../hooks/useRtoAdmin';
+import { BusinessPicker } from './BusinessPicker';
+import type { AdminBusiness } from '../types';
 
 export function RtoAdmin() {
   const { show } = useToast();
@@ -39,10 +41,8 @@ export function RtoAdmin() {
   const setCategory = useSetCategoryRto();
   const revoke = useRevokeRtoSeller();
   const approve = useApproveRtoSeller();
-  const [newSellerId, setNewSellerId] = useState('');
+  const [picked, setPicked] = useState<AdminBusiness | null>(null);
   const [newNote, setNewNote] = useState('');
-  /** Business ids are Mongo ObjectIds; catching a mistyped one here beats a 404 from the server. */
-  const sellerIdValid = /^[a-f\d]{24}$/i.test(newSellerId.trim());
 
   const onError = (e: unknown) =>
     show(e instanceof AppApiError ? e.message : 'Could not update', 'danger');
@@ -154,11 +154,11 @@ export function RtoAdmin() {
           onSubmit={(e) => {
             e.preventDefault();
             approve.mutate(
-              { sellerId: newSellerId.trim(), note: newNote.trim() },
+              { sellerId: picked!.id, note: newNote.trim() },
               {
                 onSuccess: () => {
                   show('Seller approved for Rent-to-Own', 'success');
-                  setNewSellerId('');
+                  setPicked(null);
                   setNewNote('');
                 },
                 onError,
@@ -166,12 +166,12 @@ export function RtoAdmin() {
             );
           }}
         >
-          <Input
-            label="Business ID"
-            value={newSellerId}
-            onChange={(e) => setNewSellerId(e.target.value)}
-            placeholder="24-character business id"
-          />
+          {/*
+            Chosen by name, never typed as an id. The previous field asked for a 24-character
+            ObjectId, which the operator has no way to obtain and no way to check — a USER id was
+            accepted, recorded, and reported as success while the seller stayed blocked.
+          */}
+          <BusinessPicker value={picked} onChange={setPicked} label="Business" />
           <Input
             label="Why (recorded against the approval)"
             value={newNote}
@@ -186,7 +186,7 @@ export function RtoAdmin() {
           <Button
             type="submit"
             size="compact"
-            disabled={!sellerIdValid || newNote.trim().length < 3}
+            disabled={!picked || newNote.trim().length < 3}
             loading={approve.isPending}
           >
             <ShieldCheck size={14} aria-hidden /> Approve seller
@@ -201,8 +201,18 @@ export function RtoAdmin() {
             {(approvals.data ?? []).map((a) => (
               <Row key={a.sellerId}>
                 <div>
-                  <Label>{a.sellerId}</Label>
-                  <Sub>{a.note ?? 'Approved'}</Sub>
+                  {/*
+                    The name, because a hex id cannot be checked by a person — which is how a USER
+                    id sat in this list looking exactly as legitimate as a business id.
+
+                    A missing name is shown as unresolved rather than hidden: that row is a
+                    permission granted against something that no longer exists (or never did), and
+                    it has to stay visible to be revocable.
+                  */}
+                  <Label>{a.businessName ?? 'Unknown business'}</Label>
+                  <Sub>
+                    {a.businessName ? (a.note ?? 'Approved') : `No business with id ${a.sellerId}`}
+                  </Sub>
                 </div>
                 <Button
                   size="compact"

@@ -21,12 +21,37 @@ import {
   type DemoDispute,
   type DemoFraudFlag,
 } from '@/lib/demo';
+import type { AdminBusiness } from '../types';
 
 export function useAdminOverview() {
   return useQuery({
     queryKey: keys.adminOverview,
     queryFn: () => (isMapDemo ? Promise.resolve(demoAdminOverview()) : api.get<ReturnType<typeof demoAdminOverview>>(endpoints.admin.overview)),
     staleTime: isMapDemo ? Infinity : 30_000,
+  });
+}
+
+/**
+ * Businesses matching a typed name.
+ *
+ * Disabled below two characters — one letter matches most of the table and helps nobody choose,
+ * and the server refuses it anyway. Cached briefly so re-opening the picker within a form does not
+ * re-query for a term the operator has not changed.
+ */
+export function useBusinessSearch(q: string) {
+  const term = q.trim();
+  return useQuery<AdminBusiness[]>({
+    queryKey: keys.adminBusinessSearch(term),
+    enabled: term.length >= 2,
+    queryFn: () =>
+      isMapDemo
+        ? Promise.resolve(
+            [
+              { id: 'biz_taco', name: 'Taco Loco', status: 'active', isHub: false, ownerName: 'Demo Vendor', ownerEmail: null },
+            ].filter((b) => b.name.toLowerCase().includes(term.toLowerCase())),
+          )
+        : api.get<AdminBusiness[]>(endpoints.admin.businessSearch, { query: { q: term } }),
+    staleTime: 30_000,
   });
 }
 
