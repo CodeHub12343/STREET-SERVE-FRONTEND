@@ -15,6 +15,15 @@ export interface NavItem {
   href: string;
   label: string;
   icon: ReactNode;
+  /**
+   * How many things are waiting behind this destination. 0/undefined shows nothing.
+   *
+   * The navigation carried no operational state at all: an admin could see "3 disputes waiting" on
+   * the dashboard, navigate one screen away, and lose the signal entirely — the queue was only
+   * visible from the one screen they had just left. A count on the destination is what makes the
+   * nav a status surface rather than a list of links.
+   */
+  badge?: number;
 }
 
 export interface DashboardShellProps {
@@ -44,6 +53,12 @@ export function DashboardShell({ title, nav, actions, orbit, children }: Dashboa
               <NavRow $active={active} aria-current={active ? 'page' : undefined}>
                 <span aria-hidden>{n.icon}</span>
                 <label>{n.label}</label>
+                {/* Announced in the label, not only drawn — a count nobody can hear is not a count. */}
+                {n.badge ? (
+                  <NavCount aria-label={`${n.badge} waiting`}>
+                    {n.badge > 99 ? '99+' : n.badge}
+                  </NavCount>
+                ) : null}
               </NavRow>
             </Link>
           );
@@ -91,7 +106,36 @@ const Brand = styled.div`
   white-space: nowrap;
   overflow: hidden;
 `;
+/**
+ * Sits at the end of the row on the wide sidebar; on the icon-only rail it rides the icon's corner,
+ * since there is no label for it to follow.
+ */
+const NavCount = styled.span`
+  /*
+   * The narrow rail hides labels, so the count would otherwise sit alone in dead space to the right
+   * of an icon. Pinned to the icon's corner until the sidebar is wide enough to have a row to end.
+   */
+  position: absolute;
+  top: 4px;
+  left: 26px;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: ${({ theme }) => theme.radius.pill}px;
+  background: ${({ theme }) => theme.color.statusDanger};
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  line-height: 1.5;
+  ${({ theme }) => theme.media.lg} {
+    position: static;
+    margin-left: auto;
+  }
+`;
+
 const NavRow = styled.div<{ $active: boolean }>`
+  position: relative;
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.space[3]}px;
