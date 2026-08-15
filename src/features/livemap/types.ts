@@ -24,6 +24,14 @@ export interface MapPinData {
   modules?: BusinessModule[];
   /** P-19 — the paid Verified Badge, served with the pin so no per-pin lookup is needed. */
   verified?: boolean;
+  /**
+   * 7.6 — a live business-wide flash sale, as a whole percent. 0 or absent means none.
+   *
+   * Served with the pin for the same reason as `modules` and `verified`: a discovery list showing
+   * dozens of businesses cannot make a request per row. Item-scoped sales are excluded server-side
+   * — "20% off" on a pin has to be true of the whole menu, or it misleads someone into travelling.
+   */
+  discountPercent?: number;
 }
 
 /**

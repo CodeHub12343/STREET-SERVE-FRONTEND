@@ -1,5 +1,6 @@
 export { BusinessProfileSheet } from './components/BusinessProfileSheet';
 export { Reviews } from './components/Reviews';
+export { FlashSaleBanner } from './components/FlashSaleBanner';
 export {
   useBusiness,
   useMenu,

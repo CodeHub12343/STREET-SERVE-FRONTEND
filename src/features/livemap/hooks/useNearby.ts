@@ -33,6 +33,8 @@ interface RawPin {
   etaMinutes?: number | null;
   /** P-19 — the paid Verified Badge. */
   verified?: boolean;
+  /** 7.6 — business-wide flash sale percent, 0 when none is running. */
+  discountPercent?: number;
   location: { type: string; coordinates: LngLat };
 }
 
@@ -60,6 +62,7 @@ function toPin(p: RawPin): MapPinData {
     modules: (p.modules as MapPinData['modules']) ?? undefined,
     etaMin: p.etaMinutes ?? undefined,
     verified: p.verified ?? false,
+    discountPercent: p.discountPercent ?? 0,
   };
 }
 

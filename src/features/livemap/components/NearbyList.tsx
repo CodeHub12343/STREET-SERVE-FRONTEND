@@ -98,6 +98,13 @@ export function NearbyList() {
                 </Name>
                 <Meta>
                   <StatusChip status={p.status as StatusVariant} size="sm" />
+                  {/*
+                    A running flash sale, where the customer is actually choosing. The discount has
+                    always reached the price at checkout; until now nothing on any customer surface
+                    said a sale was on, so it pulled nobody in and simply reduced what the people
+                    who came anyway paid.
+                  */}
+                  {p.discountPercent ? <Deal>{p.discountPercent}% off</Deal> : null}
                   <span>· {formatDistance(p.dist)}</span>
                   {/* What this business can actually do — served with the pin, not guessed here. */}
                   {resolveActions(p.modules)[0] ? (
@@ -125,6 +132,18 @@ const Rows = styled.div`
   display: grid;
   gap: ${({ theme }) => theme.space[3]}px;
 `;
+/** Loud enough to notice in a scanning list, quiet enough not to outrank the business's own name. */
+const Deal = styled.span`
+  flex: none;
+  padding: 1px 6px;
+  border-radius: ${({ theme }) => theme.radius.pill}px;
+  background: ${({ theme }) => theme.color.accentPrimary};
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+`;
+
 const Row = styled.button`
   display: flex;
   align-items: center;

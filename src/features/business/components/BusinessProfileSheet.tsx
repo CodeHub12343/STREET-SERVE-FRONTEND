@@ -16,6 +16,7 @@ import dynamic from 'next/dynamic';
 import styled, { keyframes } from 'styled-components';
 import { Clock } from 'lucide-react';
 import { Sheet } from '@/components/primitives/Sheet';
+import { FlashSaleBanner } from './FlashSaleBanner';
 import { Button } from '@/components/primitives/Button';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { ErrorState } from '@/components/feedback/ErrorState';
@@ -159,6 +160,14 @@ export function BusinessProfileSheet({
                 <ServicesPreview services={services} />
               </Section>
             ) : null}
+
+            {/*
+              Above the menu, because it changes how the menu should be read. Renders nothing when
+              no sale is live — see FlashSaleBanner.
+            */}
+            <Section>
+              <FlashSaleBanner businessId={biz.id} />
+            </Section>
 
             {sections.menu ? (
               <Section>
