@@ -164,10 +164,21 @@ export function HubProducts({ hubId }: { hubId: string }) {
                     <span><b>{p.name}</b><small>{p.category}</small></span>
                   </NameCell>
                 </Td>
-                <Td className="tnum">{p.quantityTotal - p.quantityOut} / {p.quantityOut}</Td>
-                <Td className="tnum">{p.sellerSplitPercent}%</Td>
-                <Td className="tnum">{formatCents(p.unitPriceCents)}</Td>
-                <Td>
+                {/*
+                  `data-label` carries the column heading down to the stacked mobile layout, where
+                  the header row is hidden — otherwise "7 / 0" and "65%" become bare numbers with
+                  nothing saying what they measure.
+                */}
+                <Td className="tnum" data-label="In / Out">
+                  {p.quantityTotal - p.quantityOut} / {p.quantityOut}
+                </Td>
+                <Td className="tnum" data-label="Split">
+                  {p.sellerSplitPercent}%
+                </Td>
+                <Td className="tnum" data-label="Unit">
+                  {formatCents(p.unitPriceCents)}
+                </Td>
+                <Td $action>
                   {/* RV-11 — the entry point featured placement never had. Buying a boost for a
                       product belongs next to the product, not in a separate ads section the hub
                       owner has no reason to visit. */}
@@ -215,10 +226,12 @@ const AddCard = styled.div`
 `;
 const Grid = styled.div`
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
+  /* minmax(0, …) rather than a bare fr: an fr track has a min-content floor, so a long option in
+     the category select would push the row wider than the phone instead of shrinking. */
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
   gap: ${({ theme }) => theme.space[2]}px;
   @media (max-width: 640px) {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 `;
 const TermsToggle = styled.button`
@@ -274,6 +287,22 @@ const PermRow = styled.div`
   justify-content: space-between;
   font-size: 14px;
 `;
+/**
+ * A five-column table on a 390px phone.
+ *
+ * `width: 100%` does not save a table: its MIN-CONTENT width is the sum of what each column needs,
+ * and five columns at 16px padding a side exceed the viewport — so the row was simply cut off at
+ * the right edge, taking the Promote action with it. Nothing an ancestor does can shrink it, the
+ * same way `min-inline-size` made the postcard fieldset immovable.
+ *
+ * Below `md` the rows become blocks instead: one card per product, each value labelled from its
+ * column heading. Chosen over an `overflow-x: auto` scroller because a horizontally scrolling strip
+ * hides the action rather than clipping it — the hub owner still has to discover the scroll to find
+ * "Promote", and on a phone that is the same problem wearing a nicer name.
+ *
+ * One DOM either way. The alternative — a table for wide and a card list for narrow — is two
+ * renderings of the same data that drift apart the first time one is edited.
+ */
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
@@ -281,6 +310,31 @@ const Table = styled.table`
   border: 1px solid ${({ theme }) => theme.color.line};
   border-radius: ${({ theme }) => theme.radius.card}px;
   overflow: hidden;
+
+  /* Stacked below md; a real table from md up, where the columns fit. */
+  @media (max-width: ${({ theme }) => theme.breakpoints.md - 1}px) {
+    display: block;
+    background: none;
+    border: none;
+    border-radius: 0;
+
+    thead {
+      /* Hidden visually AND from assistive tech: every value carries its own label below, so a
+         screen reader would otherwise hear each heading twice. */
+      display: none;
+    }
+    tbody,
+    tr {
+      display: block;
+    }
+    tr {
+      margin-bottom: ${({ theme }) => theme.space[2]}px;
+      border-radius: ${({ theme }) => theme.radius.card}px;
+      background: ${({ theme }) => theme.color.surfaceRaised};
+      border: 1px solid ${({ theme }) => theme.color.line2};
+      overflow: hidden;
+    }
+  }
 `;
 const Th = styled.th`
   text-align: left;
@@ -291,7 +345,7 @@ const Th = styled.th`
   color: ${({ theme }) => theme.color.textTertiary};
   border-bottom: 1px solid ${({ theme }) => theme.color.line};
 `;
-const Td = styled.td`
+const Td = styled.td<{ $action?: boolean }>`
   padding: ${({ theme }) => theme.space[3]}px ${({ theme }) => theme.space[4]}px;
   font-size: 14px;
   border-bottom: 1px solid ${({ theme }) => theme.color.line};
@@ -302,5 +356,37 @@ const Td = styled.td`
   small {
     color: ${({ theme }) => theme.color.textTertiary};
     font-size: 12px;
+  }
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.md - 1}px) {
+    /* Label left, value right — a two-column row that cannot outgrow the phone, because the label
+       is text that wraps rather than a column that demands width. */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: ${({ theme }) => theme.space[3]}px;
+    padding: ${({ theme }) => theme.space[2]}px ${({ theme }) => theme.space[3]}px;
+
+    &::before {
+      content: attr(data-label);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: ${({ theme }) => theme.color.textTertiary};
+    }
+    /* The name cell leads the card and the action closes it; neither wants a label or a rule. */
+    &:first-child,
+    &:last-child {
+      display: block;
+      border-bottom: ${({ $action, theme }) =>
+        $action ? 'none' : `1px solid ${theme.color.line}`};
+    }
+    ${({ $action, theme }) =>
+      $action &&
+      `
+      padding-top: ${theme.space[2]}px;
+      background: ${theme.color.surfaceRaised2};
+    `}
   }
 `;

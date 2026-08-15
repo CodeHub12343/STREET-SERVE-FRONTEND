@@ -18,6 +18,7 @@ import { PhotoCapture } from '@/components/media/PhotoCapture';
 import { useToast } from '@/components/feedback/ToastProvider';
 import { newIdempotencyKey } from '@/lib/idempotency';
 import { AppApiError } from '@/lib/api/errors';
+import { ErrorState } from '@/components/feedback/ErrorState';
 import { endpoints } from '@/lib/api/endpoints';
 import { isMapDemo } from '@/lib/env';
 import { useMe } from '@/lib/auth/useMe';
@@ -34,7 +35,7 @@ const BRONZE_RANK = 1;
 export function QrCheckout({ productId, quantity }: { productId: string; quantity: number }) {
   const router = useRouter();
   const { show } = useToast();
-  const { data: product, isLoading } = useProduct(productId);
+  const { data: product, isLoading, isError, error, refetch } = useProduct(productId);
   const { tier } = useMe();
   const needsVerification = !isMapDemo && (TIER_RANK[tier ?? 'tier0'] ?? 0) < BRONZE_RANK;
   const finalize = useFinalizeCheckout();
@@ -123,7 +124,24 @@ export function QrCheckout({ productId, quantity }: { productId: string; quantit
         )
       }
     >
-      {isLoading || !product ? (
+      {isError ? (
+        /*
+         * A failed product fetch had no branch at all: `isLoading || !product` rendered a skeleton,
+         * so a 403, a 404 or a dropped connection left a seller staring at a loading placeholder
+         * that would never resolve — nothing to retry, and nothing saying what went wrong.
+         *
+         * The server's own message is shown rather than a generic line, because the likely causes
+         * here are specific and actionable: the item has already been taken, or consignment is not
+         * open in this city.
+         */
+        <ErrorState
+          title="Couldn’t load this item"
+          message={
+            error instanceof AppApiError ? error.message : 'Check your connection and try again.'
+          }
+          onRetry={() => void refetch()}
+        />
+      ) : isLoading || !product ? (
         <Skeleton $h="240px" $radius={16} />
       ) : needsVerification ? (
         // Gate the whole flow: no point scanning + photographing stock they can't yet take. Explain
