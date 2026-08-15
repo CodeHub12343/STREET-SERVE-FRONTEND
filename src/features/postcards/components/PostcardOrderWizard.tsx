@@ -168,7 +168,7 @@ export function PostcardOrderWizard({
                 $state={state}
               >
                 <StepIndex aria-hidden>{i + 1}</StepIndex>
-                <span>{s.label}</span>
+                <StepLabel>{s.label}</StepLabel>
                 <Hidden>
                   {state === 'done' ? ' — completed' : state === 'current' ? ' — current step' : ''}
                 </Hidden>
@@ -177,6 +177,15 @@ export function PostcardOrderWizard({
           );
         })}
       </Steps>
+
+      {/*
+        On a phone the row shows numbers only, so the current step needs naming somewhere. Marked
+        aria-hidden because the button itself already announces its label and position — this is the
+        same information rendered a second time for sighted users, not new information.
+      */}
+      <CurrentStep aria-hidden>
+        Step {currentIndex + 1} of {STEPS.length} — {STEPS[currentIndex]?.label}
+      </CurrentStep>
 
       {order.data?.submissionProblem ? (
         <Banner tone="danger" title="This order did not reach the printer">
@@ -256,18 +265,62 @@ const Centered = styled.div`
   padding: ${({ theme }) => theme.space[6]}px;
 `;
 
-/** Scrolls sideways on a phone rather than wrapping into an unreadable stack. */
+/**
+ * Five labelled chips do not fit across a phone, and the previous answer — scroll sideways — was
+ * the wrong one. The row auto-scrolled to the current step, so the user arrived on step 3 to find
+ * steps 1 and 2 already off the left edge and a chip clipped against it. That reads as a broken,
+ * horizontally-overflowing page, not as a scrollable control, and there is nothing on screen to
+ * suggest otherwise.
+ *
+ * Below `sm` the labels collapse (see StepLabel) and the row becomes five numbered dots that fit
+ * with room to spare — no scrolling, every step still visible and tappable, and the current step's
+ * name rendered underneath instead. The full labelled row returns at `sm` and up, where it fits.
+ */
 const Steps = styled.ol`
   display: flex;
   gap: ${({ theme }) => theme.space[2]}px;
   list-style: none;
   margin: 0;
   padding: 0 0 ${({ theme }) => theme.space[1]}px;
-  overflow-x: auto;
-  /* Belt and braces: the scroller itself must never exceed its parent. */
   max-width: 100%;
-  scrollbar-width: none;
-  &::-webkit-scrollbar {
+
+  ${({ theme }) => theme.media.sm} {
+    overflow-x: auto;
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+`;
+
+/**
+ * Clipped rather than `display: none` below `sm`: the label is what the button announces, and
+ * removing it from the accessibility tree would leave a screen-reader user with a bare number.
+ */
+const StepLabel = styled.span`
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+
+  ${({ theme }) => theme.media.sm} {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+`;
+
+const CurrentStep = styled.p`
+  margin: 0;
+  font-size: ${({ theme }) => theme.typography.scale[1]}px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.color.textSecondary};
+
+  ${({ theme }) => theme.media.sm} {
     display: none;
   }
 `;
@@ -275,6 +328,8 @@ const Steps = styled.ol`
 const StepButton = styled.button<{ $state: 'done' | 'current' | 'todo' }>`
   display: inline-flex;
   align-items: center;
+  /* Positioning context for the clipped StepLabel, so it cannot escape and affect layout. */
+  position: relative;
   gap: ${({ theme }) => theme.space[2]}px;
   min-height: 44px;
   padding: ${({ theme }) => `${theme.space[2]}px ${theme.space[3]}px`};
