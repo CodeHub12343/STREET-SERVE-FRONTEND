@@ -25,6 +25,7 @@ import styled from 'styled-components';
 import { Button } from '@/components/primitives/Button';
 import { Banner } from '@/components/feedback/Banner';
 import { AppApiError } from '@/lib/api/errors';
+import { useAgreement, useAcceptAgreement } from '@/features/vendor';
 import { useArtworkSpec, useUploadArtwork } from '../../hooks/usePostcards';
 import type { PostcardAsset } from '../../types';
 
@@ -48,16 +49,55 @@ export function ArtworkStep({
   const [asset, setAsset] = useState<PostcardAsset | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * R28 clickwrap, same shape as go-live in LiveStatusControl.
+   *
+   * `artwork.service.ts` refuses to issue an upload URL until `postcard_artwork` has been accepted,
+   * and nothing in the app offered it — so every upload failed with "You must accept the current
+   * Postcard Artwork & Acceptable Use before continuing" and there was no way to accept. Enforced,
+   * never offered: the mirror image of the "stored but never enforced" defects the audit found.
+   *
+   * Surfaced on AGREEMENT_REQUIRED rather than fetched up front, so a vendor who has already
+   * accepted never sees a wall of terms they have signed once.
+   */
+  const [needsAgreement, setNeedsAgreement] = useState(false);
+  const agreement = useAgreement('postcard_artwork', needsAgreement);
+  const acceptAgreement = useAcceptAgreement('postcard_artwork');
+  /** Held so accepting can retry the exact file the vendor already chose. */
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+
   async function handleFile(file: File | undefined): Promise<void> {
     if (!file) return;
     setError(null);
     setAsset(null);
     try {
       setAsset(await upload.mutateAsync({ file, sku }));
+      setPendingFile(null);
     } catch (err) {
+      if (err instanceof AppApiError && err.code === 'AGREEMENT_REQUIRED') {
+        // Not an upload failure — a missing signature. Keep the file so accepting can finish the job.
+        setPendingFile(file);
+        setNeedsAgreement(true);
+        return;
+      }
       setError(err instanceof AppApiError ? err.message : 'That upload did not finish. Try again.');
     }
   }
+
+  /** Accept the exact version + hash shown, then complete the upload the vendor already started. */
+  const acceptAndUpload = () => {
+    const a = agreement.data;
+    acceptAgreement.mutate(a ? { version: a.version, contentHash: a.contentHash } : undefined, {
+      onSuccess: () => {
+        setNeedsAgreement(false);
+        const file = pendingFile;
+        setPendingFile(null);
+        if (file) void handleFile(file);
+      },
+      onError: (e) =>
+        setError(e instanceof AppApiError ? e.message : 'Could not record your acceptance.'),
+    });
+  };
 
   const s = spec.data;
   const passed = asset?.prepressStatus === 'passed';
@@ -121,6 +161,42 @@ export function ArtworkStep({
         <Banner tone="danger" title="Upload failed">
           {error}
         </Banner>
+      ) : null}
+
+      {/*
+        Shown only when the server asks for it. Presenting the exact version and hash the vendor
+        reads is the point of the clickwrap — acceptance attests to what was on screen, so it stays
+        tamper-evident server-side rather than being a bare "I agree" flag.
+      */}
+      {needsAgreement ? (
+        <Agreement>
+          <AgreementTitle>
+            {agreement.data?.title ?? 'Postcard Artwork & Acceptable Use'}
+          </AgreementTitle>
+          <AgreementBody>
+            {agreement.isLoading ? 'Loading the current terms…' : agreement.data?.body}
+          </AgreementBody>
+          <AgreementActions>
+            <Button
+              size="compact"
+              variant="secondary"
+              onClick={() => {
+                setNeedsAgreement(false);
+                setPendingFile(null);
+              }}
+            >
+              Not now
+            </Button>
+            <Button
+              size="compact"
+              loading={acceptAgreement.isPending || upload.isPending}
+              disabled={!agreement.data}
+              onClick={acceptAndUpload}
+            >
+              Agree and upload
+            </Button>
+          </AgreementActions>
+        </Agreement>
       ) : null}
 
       {/**
@@ -253,6 +329,41 @@ const Findings = styled.ul`
   li + li {
     margin-top: ${({ theme }) => theme.space[1]}px;
   }
+`;
+
+/**
+ * The terms are long and the page is a wizard step, so the body scrolls inside a fixed height
+ * rather than pushing the actions off screen. `overflow-wrap` because a placeholder legal body
+ * contains long unbroken tokens.
+ */
+const Agreement = styled.div`
+  margin-top: ${({ theme }) => theme.space[3]}px;
+  padding: ${({ theme }) => theme.space[4]}px;
+  border-radius: ${({ theme }) => theme.radius.card}px;
+  background: ${({ theme }) => theme.color.surfaceRaised};
+  border: 1px solid ${({ theme }) => theme.color.line2};
+  min-width: 0;
+`;
+const AgreementTitle = styled.h3`
+  margin: 0 0 ${({ theme }) => theme.space[2]}px;
+  font-size: ${({ theme }) => theme.typography.scale[2]}px;
+`;
+const AgreementBody = styled.pre`
+  margin: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+  font-size: ${({ theme }) => theme.typography.scale[1]}px;
+  color: ${({ theme }) => theme.color.textSecondary};
+`;
+const AgreementActions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: ${({ theme }) => theme.space[2]}px;
+  margin-top: ${({ theme }) => theme.space[3]}px;
 `;
 
 const Muted = styled.p`

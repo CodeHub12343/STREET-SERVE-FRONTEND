@@ -30,3 +30,5 @@ export { useVendorPayouts } from './hooks/useVendorPayouts';
 export type { VendorPayoutsData } from './hooks/useVendorPayouts';
 export { DEMO_VENDOR_BUSINESS_ID } from '@/lib/demo';
 export type { LiveStatus, VendorOrder, WaveRequest, VendorMenuItem } from './types';
+export { useAgreement, useAcceptAgreement } from './hooks/useAgreement';
+export type { AgreementBody } from './hooks/useAgreement';
