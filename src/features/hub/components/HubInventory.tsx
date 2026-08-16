@@ -6,12 +6,14 @@
  */
 import { useState } from 'react';
 import styled from 'styled-components';
+import { MessageCircle } from 'lucide-react';
 import { Avatar } from '@/components/primitives/Avatar';
 import { Button } from '@/components/primitives/Button';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { useToast } from '@/components/feedback/ToastProvider';
 import { AppApiError } from '@/lib/api/errors';
+import { useOpenWorkThread } from '@/features/messaging/hooks/useWorkThread';
 import { useHubHolders, useRecallStock } from '../hooks/useHub';
 
 function overdue(iso: string): boolean {
@@ -22,6 +24,12 @@ export function HubInventory({ hubId }: { hubId: string }) {
   const { show } = useToast();
   const { data: holders, isLoading } = useHubHolders(hubId);
   const recall = useRecallStock(hubId);
+  /**
+   * The hub's side of the conversation. Recall serves binding notice; a message is the thing you do
+   * BEFORE that — "are you still out with these?" — and until now there was no channel for it, so
+   * the only tool a hub had for a late seller was the one that ends the arrangement.
+   */
+  const message = useOpenWorkThread();
   /** Which row is mid-confirm. Recall is binding notice, so it does not fire on one tap. */
   const [confirming, setConfirming] = useState<string | null>(null);
 
@@ -95,13 +103,34 @@ export function HubInventory({ hubId }: { hubId: string }) {
             </Confirm>
           ) : (
             /* Labelled for what it does. "Recall" implies today; §37 gives the seller days. */
-            <Button
-              size="compact"
-              variant="secondary"
-              onClick={() => setConfirming(h.checkoutId)}
-            >
-              Recall
-            </Button>
+            <RowActions>
+              <Button
+                size="compact"
+                variant="tertiary"
+                loading={message.isPending}
+                onClick={() =>
+                  message.mutate(
+                    { subjectType: 'consignment', subjectRefId: h.checkoutId },
+                    {
+                      onError: (e) =>
+                        show(
+                          e instanceof AppApiError ? e.message : 'Couldn’t open that conversation',
+                          'danger',
+                        ),
+                    },
+                  )
+                }
+              >
+                <MessageCircle size={15} /> Message
+              </Button>
+              <Button
+                size="compact"
+                variant="secondary"
+                onClick={() => setConfirming(h.checkoutId)}
+              >
+                Recall
+              </Button>
+            </RowActions>
           )}
         </Card>
       ))}
@@ -147,6 +176,11 @@ const ConfirmText = styled.p`
   color: ${({ theme }) => theme.color.textSecondary};
 `;
 const ConfirmActions = styled.div`
+  display: flex;
+  gap: ${({ theme }) => theme.space[2]}px;
+`;
+/** Message sits beside Recall — the softer action first, since it is the one to reach for. */
+const RowActions = styled.div`
   display: flex;
   gap: ${({ theme }) => theme.space[2]}px;
 `;

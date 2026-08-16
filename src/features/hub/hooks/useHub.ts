@@ -291,13 +291,21 @@ export function useStationToken(hubId: string) {
       isMapDemo
         ? Promise.resolve({
             token: 'ssq1.demo.token',
-            expiresAt: new Date(Date.now() + 30_000).toISOString(),
-            rotateSeconds: 30,
+            expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+            rotateSeconds: 3600,
             staticQrStillAccepted: false,
           })
         : api.get<StationToken>(endpoints.hubQr(hubId)),
-    // Refresh a little ahead of expiry so the displayed code is never stale.
-    refetchInterval: 20_000,
+    /**
+     * Refresh a little ahead of expiry so the displayed code is never stale — derived from the
+     * token's OWN lifetime rather than hardcoded. It was a flat 20s, which was right for a 30-second
+     * window and is now 180 pointless requests an hour against a code that has not changed. Floored
+     * at 10s so a short window (if the server ever shortens it again) still refreshes in time.
+     */
+    refetchInterval: (q) => {
+      const secs = (q.state.data as StationToken | undefined)?.rotateSeconds ?? 30;
+      return Math.max(10_000, secs * 1000 - 10_000);
+    },
     staleTime: 0,
   });
 }

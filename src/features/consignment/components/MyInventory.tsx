@@ -6,6 +6,7 @@
  */
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useOpenWorkThread } from '@/features/messaging/hooks/useWorkThread';
 import styled from 'styled-components';
 import { TabPage } from '@/components/layout/TabPage';
 import { Button } from '@/components/primitives/Button';
@@ -64,6 +65,8 @@ function Item({ checkout: c, router }: { checkout: Checkout; router: ReturnType<
   const isReturnPending = c.status === 'return_pending';
   const isAwaitingApproval = c.status === 'pending_approval';
   const { extend, reducePrice, end, setAutoRenew } = useCheckoutLifecycle(c.id);
+  /** The seller's side of the same channel the hub now has. */
+  const message = useOpenWorkThread();
   const [priceEditing, setPriceEditing] = useState(false);
   const [priceStr, setPriceStr] = useState('');
 
@@ -174,6 +177,20 @@ function Item({ checkout: c, router }: { checkout: Checkout; router: ReturnType<
             {/* Lifecycle actions (R15): extend the term, drop the price, or end early. */}
             <Button size="compact" variant="tertiary" loading={extend.isPending} onClick={() => extend.mutate(30)}>Extend 30d</Button>
             <Button size="compact" variant="tertiary" onClick={() => setPriceEditing((v) => !v)}>Reduce price</Button>
+            {/*
+              Talk to the hub. Deliberately OUTSIDE the notice conditional: a seller who has already
+              been given notice is precisely the one who most needs to reach the hub — to arrange
+              the return, or ask for more time — and hiding the channel at that point would leave
+              them with the ending and no way to discuss it.
+            */}
+            <Button
+              size="compact"
+              variant="tertiary"
+              loading={message.isPending}
+              onClick={() => message.mutate({ subjectType: 'consignment', subjectRefId: c.id })}
+            >
+              Message hub
+            </Button>
             {/* §37: this gives notice — the label says so, because "End" implies today. */}
             {!c.terminationEffectiveAt ? (
               <Button size="compact" variant="tertiary" loading={end.isPending} onClick={() => end.mutate()}>

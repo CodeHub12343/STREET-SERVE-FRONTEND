@@ -120,6 +120,11 @@ export const endpoints = {
   // messaging
   messageThreads: '/message-threads',
   messageThreadsMine: '/message-threads/mine',
+  /**
+   * Open the thread for a piece of work — a consignment checkout, or a job. Separate from
+   * `messageThreads` because membership is read off the record rather than named by the caller.
+   */
+  messageThreadOpen: '/message-threads/open',
   threadMessages: (id: string) => `/message-threads/${id}/messages`,
   threadRead: (id: string) => `/message-threads/${id}/read`,
 
