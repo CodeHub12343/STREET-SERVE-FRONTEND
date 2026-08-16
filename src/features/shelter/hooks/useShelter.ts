@@ -20,6 +20,7 @@ import type {
   EnrollResult,
   MyCustody,
   ResidentCapabilities,
+  ShelterPartner,
   ShelterReport,
   TrainingAnswer,
   TrainingCourse,
@@ -184,5 +185,46 @@ export function useShelterReport(partnerId: string) {
     enabled: Boolean(partnerId),
     queryFn: () => api.get<ShelterReport>(endpoints.shelterPartner(partnerId).reporting),
     staleTime: 30_000,
+  });
+}
+
+// ─── Admin oversight ─────────────────────────────────────────────────────────────────────────
+/**
+ * The real programme roster. The admin screen used to render `demoShelterPartners()` — two invented
+ * organisations with invented enrollment counts — in BOTH demo and live mode, so an operator on the
+ * production URL was looking at fiction. There was no list endpoint for it to call instead.
+ */
+export function useShelterPartners() {
+  return useQuery<ShelterPartner[]>({
+    queryKey: ['admin', 'shelter-partners'],
+    queryFn: () => api.get<ShelterPartner[]>(endpoints.shelterPartners),
+    staleTime: 30_000,
+  });
+}
+
+/** Register a partner. This IS the approval — only an admin can do it, and it is audited. */
+export function useRegisterShelterPartner() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { organizationName: string; ownerUserId: string }) =>
+      api.post<{ id: string; status: string }>(endpoints.shelterPartners, input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin', 'shelter-partners'] }),
+  });
+}
+
+/**
+ * Suspend or reinstate. `suspended` was in the model and reachable by nothing, so a partner
+ * mishandling residents' money could not be stopped without editing the database.
+ */
+export function useSetShelterPartnerStatus() {
+  const qc = useQueryClient();
+  return useMutation<
+    { id: string; status: string; custodyHeldCents: number },
+    unknown,
+    { id: string; status: 'verified' | 'suspended'; reason?: string }
+  >({
+    mutationFn: ({ id, status, reason }) =>
+      api.patch(endpoints.shelterPartnerStatus(id), { status, ...(reason ? { reason } : {}) }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin', 'shelter-partners'] }),
   });
 }

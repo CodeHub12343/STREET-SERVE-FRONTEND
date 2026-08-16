@@ -8,6 +8,23 @@
 import type { Cents } from '@/types';
 
 // ─── B-2: what a resident may currently do ──────────────────────────────────────────────────
+/**
+ * A partner as the admin roster shows them. Every figure is derived from real rows — the screen
+ * used to render two invented organisations from a demo fixture, in production as well as demo.
+ */
+export interface ShelterPartner {
+  id: string;
+  organizationName: string;
+  status: 'pending' | 'verified' | 'suspended';
+  ownerUserId: string;
+  residentsEnrolled: number;
+  /** Residents' money the shelter is holding and has not yet handed over. */
+  custodyHeldCents: number;
+  custodyAccepted: boolean;
+  verifiedAt: string | null;
+  createdAt: string | null;
+}
+
 export interface ResidentCapabilities {
   partnerId: string;
   organizationName: string;
