@@ -19,7 +19,7 @@
  */
 import { useState } from 'react';
 import styled from 'styled-components';
-import { Plus, Eye, UserPlus, Power, RotateCcw } from 'lucide-react';
+import { Plus, Eye, UserPlus, Power, RotateCcw, Check, X, Inbox, Clock } from 'lucide-react';
 import { Button } from '@/components/primitives/Button';
 import { Input } from '@/components/primitives/Input';
 import { StatusChip } from '@/components/primitives/StatusChip';
@@ -29,7 +29,14 @@ import { ErrorState } from '@/components/feedback/ErrorState';
 import { useToast } from '@/components/feedback/ToastProvider';
 import { AppApiError } from '@/lib/api/errors';
 import { formatCents } from '@/lib/money';
-import { useCreateSponsor, useSponsors, useUpdateSponsor } from '../hooks/useAdmin';
+import {
+  useApproveSponsor,
+  useCreateSponsor,
+  useLeads,
+  useRejectSponsor,
+  useSponsors,
+  useUpdateSponsor,
+} from '../hooks/useAdmin';
 
 /** Dollars typed by a human → cents. Empty is zero, not NaN. */
 function toCents(v: string): number {
@@ -42,6 +49,11 @@ export function SponsorManagement() {
   const { data: sponsors, isLoading, isError, refetch } = useSponsors();
   const create = useCreateSponsor();
   const update = useUpdateSponsor();
+  const approve = useApproveSponsor();
+  const reject = useRejectSponsor();
+  const leads = useLeads('sponsor');
+  const [rejecting, setRejecting] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
@@ -105,6 +117,11 @@ export function SponsorManagement() {
     );
   }
 
+  /** Paid for, not yet looked at. Shown in the queue above rather than mixed into the roster. */
+  const pendingReview = sponsors.filter((s) => s.status === 'pending_review');
+  /** Everything else — live, ended, hand-recorded, or still being paid for. */
+  const roster = sponsors.filter((s) => s.status !== 'pending_review');
+
   return (
     <Wrap>
       {adding ? (
@@ -144,6 +161,151 @@ export function SponsorManagement() {
         </TopBar>
       )}
 
+      {/*
+        ═══ The review queue. ═══
+
+        A placement that has been PAID FOR but not yet looked at. It sits above the roster because
+        someone is waiting on it and their money is already taken — and because approving is what
+        actually publishes the logo. Payment deliberately does not: anyone with a card could
+        otherwise put an arbitrary image on the landing page.
+      */}
+      {pendingReview.length > 0 ? (
+        <Queue>
+          <QueueHead>
+            <Clock size={15} aria-hidden />
+            <b>
+              {pendingReview.length} paid {pendingReview.length === 1 ? 'placement' : 'placements'}{' '}
+              waiting for you
+            </b>
+          </QueueHead>
+          <QueueHint>
+            They have paid and their logo is not live yet. Approving publishes it; refusing refunds
+            them in full.
+          </QueueHint>
+          {pendingReview.map((s) => (
+            <ReviewRow key={s.id}>
+              <ReviewInfo>
+                <Name>{s.name}</Name>
+                <Meta>
+                  {formatCents(s.paidCents ?? 0)} paid · {s.termMonths ?? 1}{' '}
+                  {(s.termMonths ?? 1) === 1 ? 'month' : 'months'} · {s.tier}
+                </Meta>
+                {s.logoUrl ? (
+                  /* The actual image, at the size it will run. Approving a URL you have not looked
+                     at is not a review. */
+                  <LogoPreview src={s.logoUrl} alt={`${s.name} logo`} />
+                ) : (
+                  <Meta>No logo supplied — will render as a text lockup.</Meta>
+                )}
+              </ReviewInfo>
+
+              {rejecting === s.id ? (
+                <RejectBox>
+                  <Input
+                    label="Why?"
+                    hint="Sent to them with the refund."
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    maxLength={300}
+                  />
+                  <AddActions>
+                    <Button
+                      size="compact"
+                      variant="secondary"
+                      disabled={rejectReason.trim().length < 3}
+                      loading={reject.isPending}
+                      onClick={() =>
+                        reject.mutate(
+                          { id: s.id, reason: rejectReason.trim() },
+                          {
+                            onSuccess: (res) => {
+                              setRejecting(null);
+                              setRejectReason('');
+                              show(
+                                res.refunded
+                                  ? `${s.name} refused and refunded in full`
+                                  : `${s.name} refused — the refund did not go through, so it needs doing by hand`,
+                                res.refunded ? 'default' : 'warning',
+                              );
+                            },
+                            onError: (e) =>
+                              show(
+                                e instanceof AppApiError ? e.message : 'Could not refuse that',
+                                'danger',
+                              ),
+                          },
+                        )
+                      }
+                    >
+                      Refuse and refund
+                    </Button>
+                    <Button size="compact" variant="tertiary" onClick={() => setRejecting(null)}>
+                      Cancel
+                    </Button>
+                  </AddActions>
+                </RejectBox>
+              ) : (
+                <ReviewActions>
+                  <Button
+                    size="compact"
+                    loading={approve.isPending}
+                    onClick={() =>
+                      approve.mutate(s.id, {
+                        onSuccess: (res) =>
+                          show(
+                            `${s.name} is live until ${new Date(res.endsAt).toLocaleDateString()}`,
+                            'success',
+                          ),
+                        onError: (e) =>
+                          show(
+                            e instanceof AppApiError ? e.message : 'Could not approve that',
+                            'danger',
+                          ),
+                      })
+                    }
+                  >
+                    <Check size={15} /> Approve
+                  </Button>
+                  <Button size="compact" variant="tertiary" onClick={() => setRejecting(s.id)}>
+                    <X size={15} /> Refuse
+                  </Button>
+                </ReviewActions>
+              )}
+            </ReviewRow>
+          ))}
+        </Queue>
+      ) : null}
+
+      {/*
+        Sponsor leads from the landing-page waitlist. These were being collected and shown to
+        nobody — the only endpoint was a bare count, so every raised hand landed in a table no
+        screen exposed.
+      */}
+      {leads.data && leads.data.length > 0 ? (
+        <Queue>
+          <QueueHead>
+            <Inbox size={15} aria-hidden />
+            <b>
+              {leads.data.length} sponsor {leads.data.length === 1 ? 'enquiry' : 'enquiries'}
+            </b>
+          </QueueHead>
+          <QueueHint>People who asked about sponsoring on the landing page.</QueueHint>
+          {leads.data.map((l) => (
+            <LeadRow key={l.id}>
+              <div>
+                <Name>{l.fullName}</Name>
+                <Meta>
+                  <a href={`mailto:${l.email}`}>{l.email}</a>
+                  {l.phone ? ` · ${l.phone}` : ''}
+                  {l.sponsorName ? ` · via ${l.sponsorName}` : ''}
+                </Meta>
+              </div>
+              <Meta>{new Date(l.createdAt).toLocaleDateString()}</Meta>
+            </LeadRow>
+          ))}
+        </Queue>
+      ) : null}
+
       {sponsors.length === 0 ? (
         <EmptyState
           icon="🤝"
@@ -151,7 +313,7 @@ export function SponsorManagement() {
           description="Add one to put their logo on the landing page and attribute signups to their link."
         />
       ) : (
-        sponsors.map((s) => (
+        roster.map((s) => (
           <Card key={s.id} $inactive={!s.active}>
             <Head>
               <div>
@@ -203,6 +365,74 @@ export function SponsorManagement() {
   );
 }
 
+const Queue = styled.section`
+  display: grid;
+  gap: ${({ theme }) => theme.space[3]}px;
+  padding: ${({ theme }) => theme.space[4]}px;
+  border-radius: ${({ theme }) => theme.radius.card}px;
+  background: ${({ theme }) => theme.color.surfaceRaised};
+  border-left: 3px solid ${({ theme }) => theme.color.accentPrimary};
+  border-top: 1px solid ${({ theme }) => theme.color.line};
+  border-right: 1px solid ${({ theme }) => theme.color.line};
+  border-bottom: 1px solid ${({ theme }) => theme.color.line};
+`;
+const QueueHead = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[2]}px;
+  font-size: 14px;
+`;
+const QueueHint = styled.p`
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.color.textSecondary};
+  margin-top: -${({ theme }) => theme.space[2]}px;
+`;
+const ReviewRow = styled.div`
+  display: grid;
+  gap: ${({ theme }) => theme.space[3]}px;
+  padding-top: ${({ theme }) => theme.space[3]}px;
+  border-top: 1px solid ${({ theme }) => theme.color.line};
+`;
+const ReviewInfo = styled.div`
+  display: grid;
+  gap: 4px;
+`;
+const ReviewActions = styled.div`
+  display: flex;
+  gap: ${({ theme }) => theme.space[2]}px;
+`;
+const RejectBox = styled.div`
+  display: grid;
+  gap: ${({ theme }) => theme.space[2]}px;
+`;
+const LogoPreview = styled.img`
+  max-height: 48px;
+  max-width: 180px;
+  object-fit: contain;
+  align-self: start;
+  margin-top: 4px;
+  padding: 6px 10px;
+  border-radius: ${({ theme }) => theme.radius.control}px;
+  background: ${({ theme }) => theme.color.surfaceBase};
+  border: 1px solid ${({ theme }) => theme.color.line};
+`;
+const LeadRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.space[3]}px;
+  padding-top: ${({ theme }) => theme.space[2]}px;
+  border-top: 1px solid ${({ theme }) => theme.color.line};
+`;
+const Meta = styled.p`
+  font-size: 12.5px;
+  color: ${({ theme }) => theme.color.textSecondary};
+  a {
+    color: inherit;
+    text-decoration: underline;
+  }
+`;
 const Wrap = styled.div`
   display: grid;
   gap: ${({ theme }) => theme.space[3]}px;

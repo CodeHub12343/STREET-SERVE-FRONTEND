@@ -290,6 +290,17 @@ export interface AdminSponsor {
   contractedCents: number;
   note: string | null;
   createdAt: string | null;
+
+  /**
+   * The self-serve half. `status` is what separates a placement waiting for review from one already
+   * running — and the review step is the whole reason paying does not publish a logo.
+   */
+  status: 'manual' | 'pending_payment' | 'pending_review' | 'active' | 'rejected' | 'expired';
+  paidCents: number;
+  contactEmail: string | null;
+  termMonths: number | null;
+  startsAt: string | null;
+  endsAt: string | null;
 }
 
 /**
@@ -328,6 +339,59 @@ export function useCreateSponsor() {
  * a term could never be closed: the logo stayed on the landing page and the UTM code kept
  * attributing signups to a partner who had stopped paying.
  */
+/**
+ * Approve a paid placement. THIS is what puts a logo on the landing page — not the payment.
+ * Publishing on payment alone would let anyone with a card put an arbitrary image on the site.
+ */
+export function useApproveSponsor() {
+  const qc = useQueryClient();
+  return useMutation<{ id: string; endsAt: string; utmCode: string }, unknown, string>({
+    mutationFn: (id: string) => api.post(endpoints.admin.sponsorApprove(id), {}),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.sponsors }),
+  });
+}
+
+/** Refuse a placement. Refunds it — turning down a logo while keeping the money is indefensible. */
+export function useRejectSponsor() {
+  const qc = useQueryClient();
+  return useMutation<{ id: string; refunded: boolean }, unknown, { id: string; reason: string }>({
+    mutationFn: ({ id, reason }) => api.post(endpoints.admin.sponsorReject(id), { reason }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.sponsors }),
+  });
+}
+
+/** A person who raised their hand on the landing page. */
+export interface Lead {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string | null;
+  intendedRole: string;
+  citySlug: string | null;
+  utmCode: string | null;
+  /** Which sponsor sent them, by NAME — a raw id tells an operator nothing. */
+  sponsorName: string | null;
+  createdAt: string;
+}
+
+/**
+ * The waitlist. It was writable by the public and readable by nothing — the only endpoint was a
+ * bare count — so every lead the landing page collected, including would-be sponsors, landed in a
+ * collection no screen exposed.
+ */
+export function useLeads(intendedRole?: string) {
+  return useQuery<Lead[]>({
+    queryKey: [...keys.sponsors, 'leads', intendedRole ?? 'all'],
+    queryFn: () =>
+      api.get<Lead[]>(
+        intendedRole
+          ? `${endpoints.admin.preregistrations}?intendedRole=${encodeURIComponent(intendedRole)}`
+          : endpoints.admin.preregistrations,
+      ),
+    staleTime: 60_000,
+  });
+}
+
 export function useUpdateSponsor() {
   const qc = useQueryClient();
   return useMutation<

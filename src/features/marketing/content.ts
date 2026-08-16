@@ -279,7 +279,11 @@ export const impact = {
   body: 'StreetServe is built with shelter and community partners from day one. Verified partners help residents get trained, start with sponsored inventory, and build a real track record — an on-ramp to income, run with dignity. Donated goods and handmade products from nonprofits move through the same map as everything else.',
   vignette:
     'A community church turns donated goods into local income. A shelter partner co-signs a resident’s first inventory. A first sale becomes a first streak.',
-  cta: { label: 'Partner with us', href: 'mailto:partners@streetserve.app' },
+  /**
+   * Points at the real thing now. This was a `mailto:` — the only way to sponsor StreetServe was to
+   * email someone and hope, which is why the sponsor feature had no sponsors: there was no path in.
+   */
+  cta: { label: 'Sponsor StreetServe', href: '/sponsor' },
 } as const;
 
 export const trust = {

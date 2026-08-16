@@ -30,6 +30,9 @@ export const endpoints = {
   sponsors: '/sponsors',
   /** Records that a sponsor's logo was actually seen. Nothing called this before. */
   sponsorImpression: '/sponsors/impression',
+  /** The public rate card + buying a placement (self-serve sponsorship). */
+  sponsorTiers: '/sponsors/tiers',
+  sponsorPurchase: '/sponsors/purchase',
 
   // live map
   mapNearby: '/map/nearby',
@@ -466,6 +469,10 @@ export const endpoints = {
     sponsors: '/admin/sponsors',
     sponsor: (id: string) => `/admin/sponsors/${id}`,
     sponsorReport: (id: string) => `/admin/sponsors/${id}/report`,
+    sponsorApprove: (id: string) => `/admin/sponsors/${id}/approve`,
+    sponsorReject: (id: string) => `/admin/sponsors/${id}/reject`,
+    /** The waitlist — writable by the public, and until now readable by nobody. */
+    preregistrations: '/admin/preregistrations',
     categorySuggestions: '/admin/category-suggestions',
     categorySuggestionReview: (id: string) => `/admin/category-suggestions/${id}/review`,
     categories: '/admin/categories',
