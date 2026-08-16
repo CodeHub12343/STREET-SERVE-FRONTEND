@@ -23,6 +23,7 @@ import type {
   ContributeResult,
   FundSettingsInput,
   MyContribution,
+  RefundResult,
 } from '../types';
 
 const DEMO_FUND: CommunityFund = {
@@ -73,6 +74,10 @@ const DEMO_MINE: MyContribution[] = [
     createdAt: new Date(Date.now() - 4 * 86_400_000).toISOString(),
     expiresAt: new Date(Date.now() + 361 * 86_400_000).toISOString(),
     expiredAt: null,
+    // Outside the 24-hour window, so the demo shows a settled gift with no take-back offered.
+    refundableCents: 0,
+    refundableUntil: null,
+    refundedCents: 0,
   },
   {
     id: 'm2',
@@ -86,6 +91,9 @@ const DEMO_MINE: MyContribution[] = [
     createdAt: new Date(Date.now() - 120_000).toISOString(),
     expiresAt: null,
     expiredAt: null,
+    refundableCents: 0,
+    refundableUntil: null,
+    refundedCents: 0,
   },
 ];
 
@@ -175,6 +183,26 @@ export function useMyContributions() {
         ? Promise.resolve(DEMO_MINE)
         : api.get<MyContribution[]>(endpoints.payForwardMine),
     staleTime: 0,
+  });
+}
+
+/**
+ * ADR-005 §7 — take back the unspent part of a gift.
+ *
+ * Only what has NOT yet reached anyone comes back; the server decides how much. The screen never
+ * computes that itself, because "how much of this gift is still unspent" is a fact about other
+ * people's orders that a client cannot know.
+ */
+export function useRefundContribution() {
+  const qc = useQueryClient();
+  return useMutation<RefundResult, unknown, string>({
+    mutationFn: (contributionId: string) =>
+      isMapDemo
+        ? Promise.resolve({ contributionId, refundedCents: 0, keptCents: 0 })
+        : api.post<RefundResult>(endpoints.payForwardRefund(contributionId), {}, {
+            idempotencyKey: newIdempotencyKey(),
+          }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.communityContributionsMine }),
   });
 }
 

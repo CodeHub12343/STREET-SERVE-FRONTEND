@@ -101,6 +101,22 @@ export interface MyContribution {
   createdAt: string;
   expiresAt: string | null;
   expiredAt: string | null;
+  /**
+   * ADR-005 §7 — how much could be taken back right now, decided by the server. The screen never
+   * re-derives it: whether a gift is still refundable depends on when the money arrived and how
+   * much has since fed somebody, and a second copy of a money rule is how the two stop agreeing.
+   */
+  refundableCents: Cents;
+  refundableUntil: string | null;
+  refundedCents: Cents;
+}
+
+/** What taking a gift back returned, and what stayed spent. */
+export interface RefundResult {
+  contributionId: string;
+  refundedCents: Cents;
+  /** Already reached someone, so it stays given. Shown so a partial never reads as a failure. */
+  keptCents: Cents;
 }
 
 export interface FundSettingsInput {

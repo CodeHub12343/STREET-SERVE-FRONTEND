@@ -424,6 +424,9 @@ export const endpoints = {
   }),
   /** The caller's own gifts, including ones still pending or that failed. Not business-scoped. */
   payForwardMine: '/pay-it-forward/contributions/mine',
+  /** ADR-005 §7 — take back the unspent part of a gift, within 24 hours. */
+  payForwardRefund: (contributionId: string) =>
+    `/pay-it-forward/contributions/${contributionId}/refund`,
 
   // tax (Phase 5)
   sellerTaxStatement: '/tax/statements/seller',

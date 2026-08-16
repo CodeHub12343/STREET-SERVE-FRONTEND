@@ -24,7 +24,9 @@ import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { formatCents } from '@/lib/money';
-import { useMyContributions } from '../hooks/usePayForward';
+import { useToast } from '@/components/feedback/ToastProvider';
+import { AppApiError } from '@/lib/api/errors';
+import { useMyContributions, useRefundContribution } from '../hooks/usePayForward';
 import type { MyContribution } from '../types';
 
 /**
@@ -81,6 +83,8 @@ type Tone = 'good' | 'muted' | 'danger';
 
 export function MyContributions() {
   const { data, isLoading, isError, refetch } = useMyContributions();
+  const { show } = useToast();
+  const refund = useRefundContribution();
 
   return (
     <TabPage title="Your gifts" backHref="/profile" backLabel="Back to profile">
@@ -112,7 +116,42 @@ export function MyContributions() {
                   <When>{new Date(c.createdAt).toLocaleDateString()}</When>
                 </StatusRow>
                 <Detail>{s.detail}</Detail>
+                {c.refundedCents > 0 ? (
+                  <Detail>You took back {formatCents(c.refundedCents)} of this.</Detail>
+                ) : null}
                 {c.note ? <Note>“{c.note}”</Note> : null}
+
+                {/*
+                  ADR-005 §7. Offered only while the server says something is refundable — the
+                  screen never works out the window or the unspent amount itself. Deliberately
+                  understated: this is an undo, not an exit ramp being advertised.
+                */}
+                {c.refundableCents > 0 ? (
+                  <TakeBack
+                    type="button"
+                    disabled={refund.isPending}
+                    onClick={() =>
+                      refund.mutate(c.id, {
+                        onSuccess: (r) =>
+                          show(
+                            r.keptCents > 0
+                              ? `${formatCents(r.refundedCents)} is on its way back. ${formatCents(r.keptCents)} had already reached someone.`
+                              : `${formatCents(r.refundedCents)} is on its way back to your card.`,
+                            'success',
+                          ),
+                        onError: (e) =>
+                          show(
+                            e instanceof AppApiError
+                              ? e.message
+                              : 'Couldn’t take that back. Please try again.',
+                            'danger',
+                          ),
+                      })
+                    }
+                  >
+                    Take back {formatCents(c.refundableCents)}
+                  </TakeBack>
+                ) : null}
               </Card>
             );
           })}
@@ -188,6 +227,22 @@ const Detail = styled.p`
   font-size: 13px;
   line-height: 1.5;
   color: ${({ theme }) => theme.color.textSecondary};
+`;
+/* Quiet by design. An undo, not an exit ramp being advertised. */
+const TakeBack = styled.button`
+  justify-self: start;
+  margin-top: 2px;
+  padding: 0;
+  font-size: 13px;
+  font-family: inherit;
+  color: ${({ theme }) => theme.color.textSecondary};
+  background: none;
+  border: none;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  &:hover:not(:disabled) { color: ${({ theme }) => theme.color.textPrimary}; }
+  &:disabled { opacity: .5; cursor: default; }
 `;
 const Note = styled.p`
   font-size: 13px;
