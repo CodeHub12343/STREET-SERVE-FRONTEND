@@ -17,16 +17,19 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api/client';
 import { endpoints } from '@/lib/api/endpoints';
 
+/** The kinds of work a thread can be about. `business` threads use `startThread` instead. */
+export type WorkSubjectType = 'consignment' | 'job' | 'delivery' | 'rto';
+
 export interface WorkThread {
   id: string;
-  subjectType: 'consignment' | 'job';
+  subjectType: WorkSubjectType;
   subjectRefId: string;
   title: string;
 }
 
 export function useOpenWorkThread() {
   const router = useRouter();
-  return useMutation<WorkThread, unknown, { subjectType: 'consignment' | 'job'; subjectRefId: string }>({
+  return useMutation<WorkThread, unknown, { subjectType: WorkSubjectType; subjectRefId: string }>({
     mutationFn: (input) => api.post<WorkThread>(endpoints.messageThreadOpen, input),
     // Straight into the conversation — opening a thread and then leaving the person on the
     // previous screen would make the button look like it did nothing.

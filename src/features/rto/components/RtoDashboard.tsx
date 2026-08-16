@@ -6,7 +6,7 @@
  */
 import { useState } from 'react';
 import styled from 'styled-components';
-import { CheckCircle2, CreditCard, PackageOpen, PauseCircle } from 'lucide-react';
+import { CheckCircle2, CreditCard, MessageCircle, PackageOpen, PauseCircle } from 'lucide-react';
 import { TabPage } from '@/components/layout/TabPage';
 import { Button } from '@/components/primitives/Button';
 import { Skeleton } from '@/components/feedback/Skeleton';
@@ -15,6 +15,7 @@ import { Banner } from '@/components/feedback/Banner';
 import { useToast } from '@/components/feedback/ToastProvider';
 import { formatCents } from '@/lib/money';
 import { PaymentSheet } from '@/features/payments/components/PaymentSheet';
+import { useOpenWorkThread } from '@/features/messaging/hooks/useWorkThread';
 import type { RtoPayoffResult, RtoResumeResult } from '../types';
 import {
   useRtoDashboard,
@@ -41,6 +42,8 @@ export function RtoDashboard({ id }: { id: string }) {
   const requestReturn = useRequestRtoReturn(id);
   /** Non-null once a payoff charge is open and the card is owed. */
   const [payingOff, setPayingOff] = useState<RtoPayoffResult | null>(null);
+  /** The customer's side of an agreement that runs for a year. */
+  const message = useOpenWorkThread();
   const payInstallment = usePayInstallment(id);
   /** Non-null once a stuck instalment has an intent waiting for the card. */
   const [resuming, setResuming] = useState<RtoResumeResult | null>(null);
@@ -135,6 +138,28 @@ export function RtoDashboard({ id }: { id: string }) {
           {formatCents(data.ownershipCreditedCents)} of {formatCents(data.cashPriceCents)} paid toward ownership
         </OwnMeta>
       </Card>
+
+      {/*
+        ═══ The button the §50 copy has always pointed at. ═══
+
+        The grace/late banner tells a customer to "message the seller: they can give you more time,
+        take a part payment, agree a catch-up plan, or pause this" — remedies that only exist if
+        they can actually ask. Until now there was no channel between these two at all, on the
+        longest-running relationship in the product: twelve instalments over a year.
+
+        Shown in every state, including completed and cancelled, because a dispute about a paid-off
+        item or about a return arrives after the money stops.
+      */}
+      <MessageRow>
+        <Button
+          size="compact"
+          variant="tertiary"
+          loading={message.isPending}
+          onClick={() => message.mutate({ subjectType: 'rto', subjectRefId: id })}
+        >
+          <MessageCircle size={15} /> Message the seller
+        </Button>
+      </MessageRow>
 
       {/*
         ═══ A finished agreement is not a paused one. ═══
@@ -519,6 +544,11 @@ const SplitTotal = styled.div`
   font-weight: 800;
   padding-top: 6px;
   border-top: 1px solid ${({ theme }) => theme.color.line};
+`;
+const MessageRow = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: ${({ theme }) => theme.space[3]}px;
 `;
 const Payoff = styled.div`
   display: flex;
