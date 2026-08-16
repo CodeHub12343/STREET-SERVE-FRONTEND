@@ -4,15 +4,31 @@
  * Notification center (docs/12 §K, GAP-3) — the in-app inbox. Tapping a notification marks it read
  * and deep-links to the right screen (ROUTING_STRUCTURE.md §9).
  */
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
-import { Hand, Receipt, Coins, ShieldAlert, BadgeCheck, MessageCircle, Bell } from 'lucide-react';
+import {
+  Hand,
+  Receipt,
+  Coins,
+  ShieldAlert,
+  BadgeCheck,
+  MessageCircle,
+  Bell,
+  Volume2,
+  VolumeX,
+} from 'lucide-react';
 import { TabPage } from '@/components/layout/TabPage';
 import { Button } from '@/components/primitives/Button';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { formatRelativeMinutes } from '@/lib/format';
 import { useMarkRead, useNotifications, type AppNotification } from '../hooks/useNotifications';
+import {
+  isNotificationSoundEnabled,
+  playNotificationSound,
+  setNotificationSoundEnabled,
+} from '../toast/notificationSound';
 
 const ICON: Record<AppNotification['category'], React.ReactNode> = {
   wave: <Hand size={16} />,
@@ -72,6 +88,43 @@ export function NotificationList({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+/**
+ * Mute the arrival sound.
+ *
+ * Read from localStorage in an effect rather than during render: the value does not exist on the
+ * server, and reading it inline would make the first client render disagree with the HTML it is
+ * hydrating. Toggling it ON plays the cue once, because a sound setting you cannot hear while
+ * setting it is a guess — and it doubles as the user gesture that unblocks the audio context.
+ */
+function SoundToggle() {
+  const [on, setOn] = useState(true);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    setOn(isNotificationSoundEnabled());
+    setReady(true);
+  }, []);
+
+  if (!ready) return null; // never render the wrong state, however briefly
+
+  return (
+    <SoundButton
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={on ? 'Notification sound on' : 'Notification sound off'}
+      onClick={() => {
+        const next = !on;
+        setOn(next);
+        setNotificationSoundEnabled(next);
+        if (next) playNotificationSound('informational');
+      }}
+    >
+      {on ? <Volume2 size={16} /> : <VolumeX size={16} />}
+    </SoundButton>
+  );
+}
+
 /** The customer's full-screen inbox. */
 export function NotificationCenter() {
   const { all } = useMarkRead();
@@ -79,15 +132,39 @@ export function NotificationCenter() {
     <TabPage
       title="Notifications"
       actions={
-        <Button size="compact" variant="tertiary" onClick={() => all.mutate()}>
-          Mark all read
-        </Button>
+        <HeaderActions>
+          <SoundToggle />
+          <Button size="compact" variant="tertiary" onClick={() => all.mutate()}>
+            Mark all read
+          </Button>
+        </HeaderActions>
       }
     >
       <NotificationList />
     </TabPage>
   );
 }
+
+const HeaderActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[1]}px;
+`;
+const SoundButton = styled.button`
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: ${({ theme }) => theme.color.textSecondary};
+  &:hover {
+    background: ${({ theme }) => theme.color.surfaceRaised2};
+    color: ${({ theme }) => theme.color.textPrimary};
+  }
+`;
 
 const List = styled.div`
   display: grid;

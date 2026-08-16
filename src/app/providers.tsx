@@ -15,7 +15,7 @@ import { SocketProvider } from '@/lib/socket/SocketProvider';
 import { ToastProvider } from '@/components/feedback/ToastProvider';
 import { OfflineBanner } from '@/components/pwa/OfflineBanner';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
-import { NotificationRealtime } from '@/features/notifications';
+import { NotificationRealtime, NotificationToaster } from '@/features/notifications';
 import { env, isAuthConfigured } from '@/lib/env';
 
 function Inner({ children }: { children: ReactNode }) {
@@ -26,11 +26,21 @@ function Inner({ children }: { children: ReactNode }) {
           <AuthTokenBridge>
             <SocketProvider>
               <ToastProvider>
+                {/*
+                  The real-time layer wraps everything BELOW the action-toast provider, because the
+                  socket that feeds it lives inside and must be able to reach `useNotificationToast`.
+                  Two toast systems on purpose: this one is top-anchored and unprompted (the system
+                  telling you something), the one above is bottom-anchored and expected (confirming
+                  something you just did). They disagree about position, duration, sound and
+                  priority, so sharing a component would force a compromise on all four.
+                */}
+                <NotificationToaster>
                 {/* Live inbox for every screen, including flows that hide the bell. */}
                 <NotificationRealtime />
                 <OfflineBanner />
                 {children}
                 <InstallPrompt />
+                </NotificationToaster>
               </ToastProvider>
             </SocketProvider>
           </AuthTokenBridge>

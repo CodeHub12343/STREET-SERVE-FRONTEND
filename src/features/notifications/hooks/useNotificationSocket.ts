@@ -26,16 +26,35 @@
  * every (re)connect refetches the inbox, which is the durable record. Without this, coming back to
  * the app would show a stale bell that only a manual reload could fix — the reported symptom.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { env, isAuthConfigured, isMapDemo } from '@/lib/env';
 import { API_JWT_TEMPLATE, useAuthCompat } from '@/lib/auth/useAuthCompat';
 import { keys } from '@/lib/query/keys';
+import { useNotificationToast } from '../toast/NotificationToaster';
+import { __notificationMap } from './useNotifications';
+import type { ToastCategory } from '../toast/NotificationToaster';
+
+/** The dispatch payload (notifications.service.ts `Notification`) — no id, no read flag. */
+interface NotifyPayload {
+  category?: string;
+  title?: string;
+  body?: string;
+  data?: Record<string, unknown>;
+}
 
 export function useNotificationSocket(): void {
   const qc = useQueryClient();
   const { isSignedIn, getToken } = useAuthCompat();
+  const { notify } = useNotificationToast();
+  /**
+   * The listener is registered once and must not tear down every time `notify` changes identity —
+   * a reconnect on each render would drop events. The ref keeps the effect's dependency list stable
+   * while always calling the current function.
+   */
+  const notifyRef = useRef(notify);
+  notifyRef.current = notify;
 
   useEffect(() => {
     if (isMapDemo || !isAuthConfigured || !isSignedIn) return;
@@ -58,15 +77,39 @@ export function useNotificationSocket(): void {
      */
     const refresh = () => void qc.invalidateQueries({ queryKey: keys.notifications });
 
+    /**
+     * ═══ Raise the toast, then refresh the inbox. ═══
+     *
+     * The payload was previously discarded entirely — `notify` only triggered a refetch, so unless
+     * you happened to be looking at the notifications screen, a payout going on hold produced
+     * nothing but a number quietly changing on a bell you were not looking at.
+     *
+     * Both halves are still needed and they do different jobs. The payload is what makes the toast
+     * INSTANT: waiting for the refetch would delay it by a round trip, and the refetch is what makes
+     * it durable and actionable, since the dispatch shape has no id and no read flag. The comment
+     * below on `refresh` explains why the inbox stays authoritative.
+     */
+    const onNotify = (payload: NotifyPayload) => {
+      refresh();
+      if (!payload?.title) return; // nothing worth showing; the inbox refetch still ran
+      const category = __notificationMap.toUiCategory(payload.category ?? 'system');
+      notifyRef.current({
+        category: category as ToastCategory,
+        title: payload.title,
+        body: payload.body ?? '',
+        deeplink: __notificationMap.toDeeplink(payload.category ?? 'system', payload.data ?? {}),
+      });
+    };
+
     socket.on('connect', refresh);
-    socket.on('notify', refresh);
+    socket.on('notify', onNotify);
     // Dispatched on its own event rather than through `notify` (hub.ts), so it needs its own listener
     // — a customer whose wave was accepted is exactly who must not wait for a poll.
     socket.on('wave:accepted', refresh);
 
     return () => {
       socket.off('connect', refresh);
-      socket.off('notify', refresh);
+      socket.off('notify', onNotify);
       socket.off('wave:accepted', refresh);
       socket.disconnect();
     };
