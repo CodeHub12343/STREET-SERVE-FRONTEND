@@ -156,14 +156,22 @@ export function RtoOfferDetail({ id }: { id: string }) {
         />
 
         {/*
-          The one number §47 exists for, restated at the moment the card is actually handed over —
-          this is the last screen before the customer is committed to paying it.
+          ═══ The stored-credential disclosure. Required, not optional. ═══
+
+          This card is kept and charged automatically for every future instalment. Card-network
+          rules require the payer to be told that before it happens, and it is the honest thing
+          regardless: someone agreeing to twelve payments should know they will be taken rather
+          than asked for. Stated here, on the screen where the card is actually handed over.
         */}
         <Help>
           {data.initialPaymentCents > 0
             ? `After this, ${formatCents(data.installmentAmountCents)} ${per} for ${data.installmentCount} payments — `
-            : ''}
-          {formatCents(data.totalToOwnCents)} in total to own. You can pay it off early at any time.
+            : `${formatCents(data.installmentAmountCents)} ${per} for ${data.installmentCount} payments — `}
+          {formatCents(data.totalToOwnCents)} in total to own.
+        </Help>
+        <Help>
+          <b>We&rsquo;ll save this card and charge each payment automatically when it&rsquo;s due.</b>{' '}
+          You can pay it off early at any time, and we&rsquo;ll tell you before every payment.
         </Help>
       </TabPage>
     );

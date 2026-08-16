@@ -6,7 +6,7 @@
  */
 import { useState } from 'react';
 import styled from 'styled-components';
-import { CheckCircle2, PackageOpen, PauseCircle } from 'lucide-react';
+import { CheckCircle2, CreditCard, PackageOpen, PauseCircle } from 'lucide-react';
 import { TabPage } from '@/components/layout/TabPage';
 import { Button } from '@/components/primitives/Button';
 import { Skeleton } from '@/components/feedback/Skeleton';
@@ -15,13 +15,14 @@ import { Banner } from '@/components/feedback/Banner';
 import { useToast } from '@/components/feedback/ToastProvider';
 import { formatCents } from '@/lib/money';
 import { PaymentSheet } from '@/features/payments/components/PaymentSheet';
-import type { RtoPayoffResult } from '../types';
+import type { RtoPayoffResult, RtoResumeResult } from '../types';
 import {
   useRtoDashboard,
   useRtoStatements,
   usePayoff,
   useRtoReturnPreview,
   useRequestRtoReturn,
+  useResumeInstallment,
 } from '../hooks/useRto';
 
 const PARTY_LABEL: Record<string, string> = {
@@ -40,6 +41,9 @@ export function RtoDashboard({ id }: { id: string }) {
   const requestReturn = useRequestRtoReturn(id);
   /** Non-null once a payoff charge is open and the card is owed. */
   const [payingOff, setPayingOff] = useState<RtoPayoffResult | null>(null);
+  const resume = useResumeInstallment(id);
+  /** Non-null once a stuck instalment has an intent waiting for the card. */
+  const [resuming, setResuming] = useState<RtoResumeResult | null>(null);
 
   if (isLoading) {
     return (
@@ -84,6 +88,28 @@ export function RtoDashboard({ id }: { id: string }) {
       ) : data.status === 'cancelled' ? (
         <Banner tone="info" title="Agreement closed">
           {data.returnDisclosure ?? 'This agreement has ended.'}
+        </Banner>
+      ) : data.paymentActionRequired ? (
+        /*
+          ═══ Stuck, but NOT delinquent. ═══
+
+          Either the bank asked the customer to approve a scheduled payment, or we have no saved
+          card to charge. Neither is their fault and neither is Grace, so this must not read like a
+          warning about missing a payment — the customer has done nothing wrong and the copy says
+          so. It sits above every other banner because it is the only one with an action that
+          resolves it.
+        */
+        <Banner
+          tone="info"
+          title={
+            data.paymentActionRequired.reason === 'authenticate'
+              ? 'Your bank needs you to confirm a payment'
+              : 'We need a payment method'
+          }
+        >
+          {data.paymentActionRequired.reason === 'authenticate'
+            ? 'There’s nothing wrong with your card — your bank just wants you to approve this one. You’re not late and no fee has been added.'
+            : 'We don’t have a card saved for this agreement, so we couldn’t take the payment automatically. You’re not late and no fee has been added.'}
         </Banner>
       ) : data.status === 'grace' || data.status === 'late' ? (
         <Banner tone="warning" title={data.status === 'late' ? 'Payment is late' : 'Payment didn’t go through'}>
@@ -142,6 +168,63 @@ export function RtoDashboard({ id }: { id: string }) {
             <span className="tnum">{formatCents(statements.data.reconciliation.grossCollectedCents)}</span>
           </SplitTotal>
         </Splits>
+      ) : null}
+
+      {/*
+        The action that unblocks a stuck payment. Above the payoff block, because someone whose
+        instalment could not be taken needs to fix that far more than they need to buy the item out.
+      */}
+      {data.paymentActionRequired && !done ? (
+        <ActionNeeded>
+          <div>
+            <PayoffLabel>
+              {data.paymentActionRequired.reason === 'authenticate'
+                ? 'Confirm your payment'
+                : 'Add a payment method'}
+            </PayoffLabel>
+            <PayoffHint>
+              Payment #{data.paymentActionRequired.installmentNumber}
+              {data.paymentActionRequired.reason === 'no_card'
+                ? ' — we’ll save this card so future payments go through on their own.'
+                : ' — one tap and it’s done.'}
+            </PayoffHint>
+          </div>
+          {resuming ? (
+            <PayoffPay>
+              <PaymentSheet
+                clientSecret={resuming.clientSecret ?? 'demo'}
+                amountCents={resuming.amountCents ?? 0}
+                onSuccess={() => {
+                  show('Payment received — thank you', 'success');
+                  setResuming(null);
+                }}
+              />
+              <CancelPay type="button" onClick={() => setResuming(null)}>
+                Not now
+              </CancelPay>
+            </PayoffPay>
+          ) : (
+            <Button
+              loading={resume.isPending}
+              onClick={() =>
+                resume.mutate(undefined, {
+                  onSuccess: (res) => {
+                    // It cleared on its own between the sweep and this tap. Nothing owed.
+                    if (res.alreadyPaid || !res.clientSecret) {
+                      show('That payment has already gone through', 'success');
+                      return;
+                    }
+                    setResuming(res);
+                  },
+                  onError: () => show('Couldn’t start that payment. Please try again.', 'danger'),
+                })
+              }
+            >
+              <CreditCard size={16} />{' '}
+              {data.paymentActionRequired.reason === 'authenticate' ? 'Confirm' : 'Add a card'}
+            </Button>
+          )}
+        </ActionNeeded>
       ) : null}
 
       {!done ? (
@@ -353,6 +436,20 @@ const CancelPay = styled.button`
   font-size: 13px;
   color: ${({ theme }) => theme.color.textSecondary};
   text-decoration: underline;
+`;
+
+/** Same shape as the payoff block, in the neutral accent — this is a task, not an upsell. */
+const ActionNeeded = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.space[3]}px;
+  flex-wrap: wrap;
+  padding: ${({ theme }) => theme.space[4]}px;
+  margin-bottom: ${({ theme }) => theme.space[3]}px;
+  border-radius: ${({ theme }) => theme.radius.card}px;
+  background: ${({ theme }) => theme.color.surfaceRaised};
+  border: 1px solid ${({ theme }) => theme.color.line2};
 `;
 
 const ReturnBlock = styled.section`

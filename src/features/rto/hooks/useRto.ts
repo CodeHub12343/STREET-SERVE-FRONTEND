@@ -15,6 +15,7 @@ import type {
   CreateRtoListingInput,
   RtoAcceptResult,
   RtoPayoffResult,
+  RtoResumeResult,
   RtoReturnQuote,
   RtoDashboard,
   RtoDisclosure,
@@ -92,6 +93,30 @@ export function usePayoff(id: string) {
             paymentIntentRef: null,
           })
         : api.post<RtoPayoffResult>(endpoints.rtoPayoff(id), {}, {
+            idempotencyKey: newIdempotencyKey(),
+          }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.rtoAgreement(id) }),
+  });
+}
+
+/**
+ * Finish a scheduled payment the automatic charge could not take — the bank wanted the customer to
+ * authenticate it, or there was no saved card to charge. Returns a client secret either way; when
+ * there is no card, the server also saves the new one so the schedule can run itself again.
+ */
+export function useResumeInstallment(id: string) {
+  const qc = useQueryClient();
+  return useMutation<RtoResumeResult, unknown, void>({
+    mutationFn: () =>
+      isMapDemo
+        ? Promise.resolve({
+            agreementId: id,
+            installmentNumber: 1,
+            amountCents: 0,
+            clientSecret: 'demo',
+            alreadyPaid: false,
+          })
+        : api.post<RtoResumeResult>(endpoints.rtoResumePayment(id), {}, {
             idempotencyKey: newIdempotencyKey(),
           }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.rtoAgreement(id) }),

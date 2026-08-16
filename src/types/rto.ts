@@ -189,6 +189,26 @@ export interface RtoDashboard extends RtoAgreement {
   ownershipPercent: number;
   payoffCents: Cents;
   schedule?: { dueAt: string; amountCents: Cents; status: string }[];
+  /**
+   * A scheduled payment the automatic charge could not take, now waiting on the customer. Neither
+   * reason is delinquency and neither is their fault, so it is its own state rather than Grace:
+   * `authenticate` is the bank asking them to approve it, `no_card` is us having nothing to charge.
+   */
+  paymentActionRequired?: {
+    installmentNumber: number;
+    reason: 'authenticate' | 'no_card';
+  } | null;
+  hasSavedCard?: boolean;
+}
+
+/** What resuming a stuck instalment returns — the secret to finish it with. */
+export interface RtoResumeResult {
+  agreementId: string;
+  installmentNumber: number;
+  amountCents?: Cents | null;
+  clientSecret: string | null;
+  /** It cleared on its own in the meantime; there is nothing to pay. */
+  alreadyPaid: boolean;
 }
 
 /**

@@ -162,6 +162,8 @@ export const endpoints = {
   rtoAgreement: (id: string) => `/rto/agreements/${id}`,
   rtoStatements: (id: string) => `/rto/agreements/${id}/statements`, // R19 3-party statements
   rtoPayoff: (id: string) => `/rto/agreements/${id}/payoff`,
+  /** Finish an instalment the automatic charge couldn't take (SCA challenge, or no card on file). */
+  rtoResumePayment: (id: string) => `/rto/agreements/${id}/resume-payment`,
   // §42/§44 — listings are the seller's offer and the source of every term on an agreement.
   /** Pre-flight: may this business publish an RTO offer at all? Asked before the form, not after. */
   rtoEligibility: '/rto/eligibility',
@@ -420,6 +422,8 @@ export const endpoints = {
     contributions: `/pay-it-forward/${businessId}/contributions`, // GET recent · POST to give
     settings: `/pay-it-forward/${businessId}/settings`,
   }),
+  /** The caller's own gifts, including ones still pending or that failed. Not business-scoped. */
+  payForwardMine: '/pay-it-forward/contributions/mine',
 
   // tax (Phase 5)
   sellerTaxStatement: '/tax/statements/seller',
