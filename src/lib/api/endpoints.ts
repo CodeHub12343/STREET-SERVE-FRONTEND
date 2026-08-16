@@ -27,6 +27,8 @@ export const endpoints = {
   launch: '/platform/launch',
   preregistrations: '/preregistrations',
   preregistrationsCount: '/preregistrations/count',
+  /** Which shelter the signed-in staff member runs. */
+  shelterMine: '/shelter-partners/mine',
   sponsors: '/sponsors',
   /** Records that a sponsor's logo was actually seen. Nothing called this before. */
   sponsorImpression: '/sponsors/impression',

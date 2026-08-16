@@ -3,7 +3,7 @@
  * (topbar) and the ModeDeck (profile hero). Adding a future mode here is the whole job: both
  * surfaces pick it up (AUTHENTICATION_IMPLEMENTATION.md §4).
  */
-import { MapPin, ShoppingBag, Truck, Warehouse, Shield, type LucideIcon } from 'lucide-react';
+import { MapPin, ShoppingBag, Truck, Warehouse, Shield, Home, type LucideIcon } from 'lucide-react';
 import type { AppMode, Role } from '@/types';
 
 export interface ModeMeta {
@@ -68,6 +68,18 @@ export const MODE_META: Record<AppMode, ModeMeta> = {
       'Automated settlements & AI insights',
     ],
   },
+  shelter: {
+    label: 'Shelter program',
+    home: '/shelter',
+    roles: ['shelter_admin'],
+    icon: Home,
+    tagline: 'Enrol residents and hold their earnings safely',
+    benefits: [
+      'Enrol residents and give them a code to join',
+      'Hold and hand over earnings for residents with no bank account',
+      'Track training, custody and payouts in one place',
+    ],
+  },
   admin: {
     label: 'Admin',
     home: '/admin',
@@ -78,13 +90,17 @@ export const MODE_META: Record<AppMode, ModeMeta> = {
   },
 };
 
-export const ALL_MODES: AppMode[] = ['customer', 'seller', 'vendor', 'hub', 'admin'];
+export const ALL_MODES: AppMode[] = ['customer', 'seller', 'vendor', 'hub', 'shelter', 'admin'];
 
 /**
  * Only these can be self-granted — mirrors the backend's SELF_GRANTABLE_ROLES, which rejects
  * anything else with CANNOT_SELF_GRANT_ROLE. Admin/ops_finance are granted by ops, never by the
  * holder, so we must not advertise "Become an Admin" as an entry point that can only ever fail.
  * Privileged modes appear only once the user actually holds them.
+ *
+ * `shelter` is deliberately absent for the same reason: a shelter partnership is granted by an
+ * admin registering the organisation, after whatever vetting that involves. Offering "Become a
+ * Shelter" would advertise a door that only ever returns CANNOT_SELF_GRANT_ROLE.
  */
 export const SELF_GRANTABLE_MODES: AppMode[] = ['seller', 'vendor', 'hub'];
 
@@ -105,6 +121,7 @@ const MODE_ROUTES: ReadonlyArray<readonly [string, AppMode]> = [
   ['/seller', 'seller'],
   ['/vendor', 'vendor'],
   ['/hub', 'hub'],
+  ['/shelter', 'shelter'],
   ['/admin', 'admin'],
   // Customer surfaces are enumerated rather than treated as a catch-all: /sign-in, /onboarding,
   // /pay/[token] and the marketing root are not a mode, and guessing "customer" for them would

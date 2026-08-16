@@ -228,3 +228,28 @@ export function useSetShelterPartnerStatus() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin', 'shelter-partners'] }),
   });
 }
+
+/** The shelter this staff member runs, or null. */
+export interface MyShelter {
+  id: string;
+  organizationName: string;
+  status: 'pending' | 'verified' | 'suspended';
+  custodyAccepted: boolean;
+  residentsEnrolled: number;
+  custodyHeldCents: number;
+}
+
+/**
+ * "Which shelter do I run?" — the question the console could not previously ask.
+ *
+ * It took its partner id from a `?partner=` query string that nothing ever generated, so the page
+ * rendered its empty state for every shelter admin who had ever been registered.
+ */
+export function useMyShelter({ enabled = true }: { enabled?: boolean } = {}) {
+  return useQuery<MyShelter | null>({
+    queryKey: ['shelter', 'mine'],
+    queryFn: () => api.get<MyShelter | null>(endpoints.shelterMine),
+    enabled,
+    staleTime: 60_000,
+  });
+}

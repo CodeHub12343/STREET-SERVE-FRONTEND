@@ -36,7 +36,7 @@ export interface Principal {
 }
 
 /** App surfaces / modes for the additive-role switcher. */
-export type AppMode = 'customer' | 'seller' | 'vendor' | 'hub' | 'admin';
+export type AppMode = 'customer' | 'seller' | 'vendor' | 'hub' | 'shelter' | 'admin';
 
 /** Integer cents — never a float. Format only at render (lib/money.ts). */
 export type Cents = number;
