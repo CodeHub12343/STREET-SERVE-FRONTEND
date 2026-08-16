@@ -29,7 +29,9 @@ import { useToast } from '@/components/feedback/ToastProvider';
 import { formatCents } from '@/lib/money';
 import { AppApiError } from '@/lib/api/errors';
 import { useAgreement } from '@/features/vendor/hooks/useAgreement';
+import { PaymentSheet } from '@/features/payments/components/PaymentSheet';
 import { useAcceptRtoListing, useRtoListing } from '../hooks/useRto';
+import type { RtoAcceptResult } from '../types';
 
 const FREQUENCY_LABEL: Record<string, string> = {
   daily: 'a day',
@@ -47,6 +49,8 @@ export function RtoOfferDetail({ id }: { id: string }) {
   const agreement = useAgreement('rto');
   const accept = useAcceptRtoListing();
   const [read, setRead] = useState(false);
+  /** Non-null once the agreement exists and the card is owed. Drives step 2. */
+  const [awaitingPay, setAwaitingPay] = useState<RtoAcceptResult | null>(null);
 
   if (isLoading) {
     return (
@@ -71,13 +75,107 @@ export function RtoOfferDetail({ id }: { id: string }) {
       { listingId: id },
       {
         onSuccess: (created) => {
-          show('Agreement accepted', 'success');
-          router.replace(`/rto/${created.id}`);
+          /**
+           * Nothing due today (no initial payment, no set-up fee). The agreement is genuinely live
+           * and there is no card to collect — straight to the dashboard.
+           */
+          if (created.amountDueNowCents <= 0) {
+            show('Agreement accepted', 'success');
+            router.replace(`/rto/${created.id}`);
+            return;
+          }
+          if (!created.clientSecret) {
+            /**
+             * The agreement exists but the payment could never be started. "Agreement accepted" here
+             * would be the old bug in miniature — they own nothing, nothing was charged, and the
+             * first instalment is not going to be taken until this is paid. Say so.
+             */
+            show(
+              'Your agreement was created but we couldn’t start the first payment. Nothing has been charged — open it from your agreements to try again.',
+              'warning',
+            );
+            router.replace(`/rto/${created.id}`);
+            return;
+          }
+          setAwaitingPay(created);
         },
         onError: (e) =>
           show(e instanceof AppApiError ? e.message : 'Could not accept the agreement', 'danger'),
       },
     );
+
+  /**
+   * ═══ Step 2 — pay. ═══
+   *
+   * This screen previously ended at `accept.mutate`, which was correct only because the server was
+   * marking the payment complete without one: no card was ever collected, and the customer was
+   * shown "Agreement accepted" over a charge that never happened. The initial payment and the
+   * set-up fee arrive as ONE intent, so this is one card form, not two.
+   *
+   * The wording promises the payment, not the ownership. Ownership is credited when Stripe's
+   * webhook settles the intent, and the dashboard's own refetch is what will show it.
+   */
+  if (awaitingPay) {
+    const setupCents = data.setupFeeCents ?? 0;
+    return (
+      <TabPage title={listing.productName} backHref="/rto" backLabel="Back to offers">
+        <Head>
+          <H2>Pay {formatCents(awaitingPay.amountDueNowCents)} to start</H2>
+          <Help>
+            Your agreement for {listing.productName} is signed and your payment schedule is locked.
+            It starts once this payment goes through.
+          </Help>
+        </Head>
+
+        <Facts aria-label="What you’re paying now">
+          {data.initialPaymentCents > 0 ? (
+            <Fact>
+              <dt>Initial payment</dt>
+              <dd className="tnum">{formatCents(data.initialPaymentCents)}</dd>
+            </Fact>
+          ) : null}
+          {setupCents > 0 ? (
+            <Fact>
+              <dt>Set-up fee</dt>
+              <dd className="tnum">{formatCents(setupCents)}</dd>
+            </Fact>
+          ) : null}
+          <Fact>
+            <dt>Due today</dt>
+            <dd className="tnum">{formatCents(awaitingPay.amountDueNowCents)}</dd>
+          </Fact>
+        </Facts>
+
+        <PaymentSheet
+          clientSecret={awaitingPay.clientSecret ?? 'demo'}
+          amountCents={awaitingPay.amountDueNowCents}
+          onSuccess={() => {
+            show('Payment received — your agreement has started', 'success');
+            router.replace(`/rto/${awaitingPay.id}`);
+          }}
+        />
+
+        {/*
+          ═══ The stored-credential disclosure. Required, not optional. ═══
+
+          This card is kept and charged automatically for every future instalment. Card-network
+          rules require the payer to be told that before it happens, and it is the honest thing
+          regardless: someone agreeing to twelve payments should know they will be taken rather
+          than asked for. Stated here, on the screen where the card is actually handed over.
+        */}
+        <Help>
+          {data.initialPaymentCents > 0
+            ? `After this, ${formatCents(data.installmentAmountCents)} ${per} for ${data.installmentCount} payments — `
+            : `${formatCents(data.installmentAmountCents)} ${per} for ${data.installmentCount} payments — `}
+          {formatCents(data.totalToOwnCents)} in total to own.
+        </Help>
+        <Help>
+          <b>We&rsquo;ll save this card and charge each payment automatically when it&rsquo;s due.</b>{' '}
+          You can pay it off early at any time, and we&rsquo;ll tell you before every payment.
+        </Help>
+      </TabPage>
+    );
+  }
 
   return (
     <TabPage title={listing.productName} backHref="/rto" backLabel="Back to offers">
@@ -166,7 +264,13 @@ export function RtoOfferDetail({ id }: { id: string }) {
           </span>
         </Tick>
         <Help id="rto-accept-help">
-          Your first payment is taken now. You can pay it off early at any time.
+          {/* Accurate about the ORDER of events: accepting signs the agreement, the next screen
+              takes the card. It used to say the payment was taken "now" while nothing was ever
+              collected at all. */}
+          {data.initialPaymentCents > 0 || data.setupFeeCents > 0
+            ? `Next you’ll pay ${formatCents(data.initialPaymentCents + data.setupFeeCents)} to start. `
+            : ''}
+          You can pay it off early at any time.
         </Help>
       </Section>
 
@@ -261,6 +365,11 @@ const Description = styled.p`
   margin-bottom: ${({ theme }) => theme.space[4]}px;
 `;
 
+const Head = styled.div`
+  display: grid;
+  gap: ${({ theme }) => theme.space[2]}px;
+  margin-bottom: ${({ theme }) => theme.space[4]}px;
+`;
 const Section = styled.section`
   display: grid;
   gap: ${({ theme }) => theme.space[3]}px;

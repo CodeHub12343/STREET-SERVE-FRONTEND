@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'styled-components';
@@ -225,5 +225,56 @@ describe('RTO offer — §47 acceptance', () => {
 
     const [payload] = acceptMutate.mock.calls[0] as [Record<string, unknown>];
     expect(Object.keys(payload)).toEqual(['listingId']);
+  });
+
+  /**
+   * ═══ Accepting is not paying. ═══
+   *
+   * The server used to mark the initial payment complete without ever collecting a card, and this
+   * screen matched it: accept → "Agreement accepted" → dashboard, no card form anywhere in the flow.
+   * Accepting now opens a charge and hands back a client secret, and the screen must actually ask
+   * for the card — an accepted agreement with no payment collected is the state the whole fix
+   * exists to make impossible.
+   */
+  it('asks for the card after accepting, rather than declaring the agreement paid', async () => {
+    await renderOffer();
+    await userEvent.click(await screen.findByRole('checkbox'));
+    await userEvent.click(screen.getByRole('button', { name: /Accept and start paying/ }));
+
+    // The server's response: agreement created, $75 due today, and a secret to confirm it with.
+    const [, opts] = acceptMutate.mock.calls[0] as [unknown, { onSuccess: (r: unknown) => void }];
+    opts.onSuccess({
+      id: 'a1',
+      amountDueNowCents: 7500,
+      clientSecret: 'demo',
+      ownershipCreditedCents: 0,
+    });
+
+    // Step 2 is a card form for the amount due, not a success screen.
+    expect(await screen.findByText('Pay $75.00 to start')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Pay \$75\.00/ })).toBeInTheDocument();
+  });
+
+  /**
+   * The agreement exists but the payment could never be started. The screen must NOT fabricate a
+   * card form out of a missing secret — a Stripe Elements mount against nothing, or a demo form
+   * that "succeeds" on a charge that was never opened, would tell the customer they had paid.
+   *
+   * (The user-facing "nothing has been charged" toast is not asserted here: `renderOffer` resets
+   * modules before importing the component, so it holds a different `ToastProvider` context
+   * instance than the one this file wraps it in, and no toast from it is ever observable.)
+   */
+  it('shows no card form when no client secret comes back', async () => {
+    await renderOffer();
+    await userEvent.click(await screen.findByRole('checkbox'));
+    await userEvent.click(screen.getByRole('button', { name: /Accept and start paying/ }));
+
+    const [, opts] = acceptMutate.mock.calls[0] as [unknown, { onSuccess: (r: unknown) => void }];
+    await act(async () => {
+      opts.onSuccess({ id: 'a1', amountDueNowCents: 7500, clientSecret: null });
+    });
+
+    expect(screen.queryByText('Pay $75.00 to start')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Pay \$75\.00/ })).not.toBeInTheDocument();
   });
 });

@@ -13,6 +13,9 @@ import { demoRtoAgreements, demoRtoDashboard, demoRtoDisclosure, demoRtoStatemen
 import { newIdempotencyKey } from '@/lib/idempotency';
 import type {
   CreateRtoListingInput,
+  RtoAcceptResult,
+  RtoPayoffResult,
+  RtoResumeResult,
   RtoReturnQuote,
   RtoDashboard,
   RtoDisclosure,
@@ -69,13 +72,53 @@ export function useRtoStatements(id: string | undefined, enabled = true) {
   });
 }
 
+/**
+ * Ask for an early payoff. **This opens a charge; it does not complete one.**
+ *
+ * The server hands back a `clientSecret` and the screen must then collect the card — ownership only
+ * transfers when Stripe's webhook settles that intent. This hook used to treat the POST itself as
+ * the payoff and the dashboard toasted "Paid off — it's yours!", which was the client half of a
+ * server bug that transferred ownership against an unconfirmed card.
+ */
 export function usePayoff(id: string) {
   const qc = useQueryClient();
-  return useMutation({
+  return useMutation<RtoPayoffResult, unknown, void>({
     mutationFn: () =>
       isMapDemo
-        ? Promise.resolve({ payoffCents: 0, completed: true })
-        : api.post(endpoints.rtoPayoff(id), {}, { idempotencyKey: newIdempotencyKey() }),
+        ? Promise.resolve({
+            agreementId: id,
+            payoffCents: 0,
+            completed: false,
+            clientSecret: 'demo',
+            paymentIntentRef: null,
+          })
+        : api.post<RtoPayoffResult>(endpoints.rtoPayoff(id), {}, {
+            idempotencyKey: newIdempotencyKey(),
+          }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.rtoAgreement(id) }),
+  });
+}
+
+/**
+ * Finish a scheduled payment the automatic charge could not take — the bank wanted the customer to
+ * authenticate it, or there was no saved card to charge. Returns a client secret either way; when
+ * there is no card, the server also saves the new one so the schedule can run itself again.
+ */
+export function useResumeInstallment(id: string) {
+  const qc = useQueryClient();
+  return useMutation<RtoResumeResult, unknown, void>({
+    mutationFn: () =>
+      isMapDemo
+        ? Promise.resolve({
+            agreementId: id,
+            installmentNumber: 1,
+            amountCents: 0,
+            clientSecret: 'demo',
+            alreadyPaid: false,
+          })
+        : api.post<RtoResumeResult>(endpoints.rtoResumePayment(id), {}, {
+            idempotencyKey: newIdempotencyKey(),
+          }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.rtoAgreement(id) }),
   });
 }
@@ -182,12 +225,16 @@ export function useSetRtoListingStatus(sellerId: string | undefined) {
 /**
  * Accept an offer. The body carries only the listing id — every term is the seller's and is read
  * server-side, so there is nothing here a customer could tilt in their own favour.
+ *
+ * **Accepting is step one of two.** The response carries a `clientSecret` for everything due today
+ * (initial payment + set-up fee, as one charge) and the screen has to collect the card before the
+ * agreement is paid into. Ownership is credited by the webhook, never by this call returning 200.
  */
 export function useAcceptRtoListing() {
   const qc = useQueryClient();
-  return useMutation({
+  return useMutation<RtoAcceptResult, unknown, { listingId: string }>({
     mutationFn: (input: { listingId: string }) =>
-      api.post<RtoDashboard>(endpoints.rtoAgreements, input, {
+      api.post<RtoAcceptResult>(endpoints.rtoAgreements, input, {
         idempotencyKey: newIdempotencyKey(),
       }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.rtoAgreementsMine }),

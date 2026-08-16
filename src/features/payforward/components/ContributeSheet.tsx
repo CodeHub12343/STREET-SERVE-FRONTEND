@@ -19,9 +19,11 @@ import { Chip } from '@/components/primitives/Chip';
 import { Input } from '@/components/primitives/Input';
 import { Switch } from '@/components/primitives/Switch';
 import { useToast } from '@/components/feedback/ToastProvider';
+import { PaymentSheet } from '@/features/payments/components/PaymentSheet';
 import { AppApiError } from '@/lib/api/errors';
 import { formatCents } from '@/lib/money';
 import { useContribute } from '../hooks/usePayForward';
+import type { ContributeResult } from '../types';
 
 /** Mirrors the backend bounds ($1–$500). The server re-checks; this only avoids a pointless round trip. */
 const MIN_CENTS = 100;
@@ -46,6 +48,8 @@ export function ContributeSheet({
   const [beNamed, setBeNamed] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [note, setNote] = useState('');
+  /** Non-null once the contribution exists and the card is owed. Drives step 2. */
+  const [awaitingPay, setAwaitingPay] = useState<ContributeResult | null>(null);
 
   const customCents = Math.round(Number(custom.replace(/[^0-9.]/g, '')) * 100);
   const effectiveCents = custom.trim() ? customCents : amountCents;
@@ -63,15 +67,79 @@ export function ContributeSheet({
         ...(note.trim() ? { note: note.trim() } : {}),
       },
       {
-        onSuccess: () => {
-          show('Thank you — your gift is on its way', 'success');
-          onClose();
+        onSuccess: (res) => {
+          if (!res.clientSecret) {
+            /**
+             * Recorded, needs paying, but no secret came back to pay with. "Thank you — your gift is
+             * on its way" here would be the original bug in miniature: nothing has been charged and
+             * no one will be helped.
+             */
+            show(
+              'We recorded your gift but couldn’t start the payment. Nothing has been charged — please try again.',
+              'warning',
+            );
+            onClose();
+            return;
+          }
+          setAwaitingPay(res);
         },
         onError: (e) =>
           show(e instanceof AppApiError ? e.message : 'Could not complete your gift', 'danger'),
       },
     );
   };
+
+  /**
+   * ═══ Step 2 — actually take the card. ═══
+   *
+   * This sheet used to end at `contribute.mutate`: it dropped the `clientSecret` on the floor and
+   * toasted "Thank you — your gift is on its way". No card was ever collected, so no contribution
+   * ever settled, so `creditContribution` never ran and the pool stayed at zero forever. That is
+   * also why the redemption half of the feature looked missing — `quoteRedemption` returns
+   * `availableCents: 0` against an empty pool, and the checkout offer correctly renders nothing.
+   * One dropped secret took the whole feature down.
+   *
+   * The identical defect was found and fixed in Boost's ContributeToCampaignSheet; this is the same
+   * shape, and the wording follows the same rule — promise the payment, not the outcome, because
+   * the pool is credited by the Stripe webhook and this screen never knows the money arrived.
+   */
+  if (awaitingPay) {
+    return (
+      <Sheet
+        open={open}
+        onClose={onClose}
+        ariaLabel={`Pay your gift to ${businessName}'s community fund`}
+        initialSnap="full"
+      >
+        <Head>
+          <Title>Pay {formatCents(awaitingPay.amountCents)}</Title>
+          <Sub>
+            Your gift to {businessName}&rsquo;s community fund is reserved. It reaches the fund once
+            this payment goes through.
+          </Sub>
+        </Head>
+
+        <Section>
+          <PaymentSheet
+            clientSecret={awaitingPay.clientSecret ?? 'demo'}
+            amountCents={awaitingPay.amountCents}
+            onSuccess={() => {
+              show('Payment received — thank you for paying it forward', 'success');
+              setAwaitingPay(null);
+              onClose();
+            }}
+          />
+        </Section>
+
+        {/* The CR-6 line again, at the moment the card is actually handed over. */}
+        <FinePrint>
+          A gift to a local business&rsquo;s community fund, not a charitable donation, and not
+          tax-deductible. Unused money passes to other community funds in this city — never back to
+          the business or to StreetServe.
+        </FinePrint>
+      </Sheet>
+    );
+  }
 
   return (
     <Sheet

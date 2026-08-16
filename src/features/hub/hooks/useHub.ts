@@ -188,6 +188,47 @@ export function useRespondCheckout(hubId: string) {
   return { approve, decline };
 }
 
+/** What the server hands back when notice is given — the deadline is the whole point of the reply. */
+export interface RecallResult {
+  id: string;
+  terminationEffectiveAt: string | null;
+  terminationNoticeDays: number | null;
+  terminatedBy: 'seller' | 'hub' | null;
+}
+
+/**
+ * ═══ H-04 recall — §37 termination notice, given by the hub owner. ═══
+ *
+ * The Recall button was wired to nothing at all: it called `show('Recall requested from …')` and
+ * returned. No request was sent, the seller was never told, no deadline was ever set, and the hub
+ * owner was left believing they had acted. `POST /checkouts/:id/end` has supported the hub-owner
+ * caller since it was written — the button simply never reached it.
+ *
+ * The copy matters as much as the call. This is **notice, not a request**: the seller cannot
+ * decline it, and it does not take effect today. The checkout stays active for the agreed notice
+ * period (3/7/14–30 days by the goods' value), auto-renewal is cancelled, both parties are
+ * notified, and a sweep completes it into settlement when the deadline passes. So the UI states the
+ * date the server returns rather than claiming anything has already happened — "Recall requested"
+ * was wrong twice over, implying both a request the seller could refuse and an effect that was
+ * never scheduled.
+ */
+export function useRecallStock(hubId: string) {
+  const qc = useQueryClient();
+  return useMutation<RecallResult, unknown, string>({
+    mutationFn: (checkoutId: string) =>
+      isMapDemo
+        ? Promise.resolve({
+            id: checkoutId,
+            terminationEffectiveAt: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+            terminationNoticeDays: 7,
+            terminatedBy: 'hub' as const,
+          })
+        : api.post<RecallResult>(endpoints.checkout(checkoutId).end, {}),
+    // The holder row now carries a deadline, and the stock is on its way back to the hub's books.
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.hubProducts(hubId) }),
+  });
+}
+
 /** A settled checkout reconciliation row (H-05). */
 export interface HubSettlementRow {
   checkoutId: string;

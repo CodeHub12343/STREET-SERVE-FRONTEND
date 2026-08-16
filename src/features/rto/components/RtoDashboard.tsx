@@ -4,8 +4,9 @@
  * U9 Rent-to-Own progress dashboard — where a customer sees exactly where they stand: how much they
  * own, what's next, and the live "pay off early" amount (the locked formula, R23). Supportive tone.
  */
+import { useState } from 'react';
 import styled from 'styled-components';
-import { CheckCircle2, PackageOpen, PauseCircle } from 'lucide-react';
+import { CheckCircle2, CreditCard, PackageOpen, PauseCircle } from 'lucide-react';
 import { TabPage } from '@/components/layout/TabPage';
 import { Button } from '@/components/primitives/Button';
 import { Skeleton } from '@/components/feedback/Skeleton';
@@ -13,12 +14,15 @@ import { ErrorState } from '@/components/feedback/ErrorState';
 import { Banner } from '@/components/feedback/Banner';
 import { useToast } from '@/components/feedback/ToastProvider';
 import { formatCents } from '@/lib/money';
+import { PaymentSheet } from '@/features/payments/components/PaymentSheet';
+import type { RtoPayoffResult, RtoResumeResult } from '../types';
 import {
   useRtoDashboard,
   useRtoStatements,
   usePayoff,
   useRtoReturnPreview,
   useRequestRtoReturn,
+  useResumeInstallment,
 } from '../hooks/useRto';
 
 const PARTY_LABEL: Record<string, string> = {
@@ -35,6 +39,11 @@ export function RtoDashboard({ id }: { id: string }) {
   const payoff = usePayoff(id);
   const returnQuote = useRtoReturnPreview(id);
   const requestReturn = useRequestRtoReturn(id);
+  /** Non-null once a payoff charge is open and the card is owed. */
+  const [payingOff, setPayingOff] = useState<RtoPayoffResult | null>(null);
+  const resume = useResumeInstallment(id);
+  /** Non-null once a stuck instalment has an intent waiting for the card. */
+  const [resuming, setResuming] = useState<RtoResumeResult | null>(null);
 
   if (isLoading) {
     return (
@@ -79,6 +88,28 @@ export function RtoDashboard({ id }: { id: string }) {
       ) : data.status === 'cancelled' ? (
         <Banner tone="info" title="Agreement closed">
           {data.returnDisclosure ?? 'This agreement has ended.'}
+        </Banner>
+      ) : data.paymentActionRequired ? (
+        /*
+          ═══ Stuck, but NOT delinquent. ═══
+
+          Either the bank asked the customer to approve a scheduled payment, or we have no saved
+          card to charge. Neither is their fault and neither is Grace, so this must not read like a
+          warning about missing a payment — the customer has done nothing wrong and the copy says
+          so. It sits above every other banner because it is the only one with an action that
+          resolves it.
+        */
+        <Banner
+          tone="info"
+          title={
+            data.paymentActionRequired.reason === 'authenticate'
+              ? 'Your bank needs you to confirm a payment'
+              : 'We need a payment method'
+          }
+        >
+          {data.paymentActionRequired.reason === 'authenticate'
+            ? 'There’s nothing wrong with your card — your bank just wants you to approve this one. You’re not late and no fee has been added.'
+            : 'We don’t have a card saved for this agreement, so we couldn’t take the payment automatically. You’re not late and no fee has been added.'}
         </Banner>
       ) : data.status === 'grace' || data.status === 'late' ? (
         <Banner tone="warning" title={data.status === 'late' ? 'Payment is late' : 'Payment didn’t go through'}>
@@ -139,23 +170,122 @@ export function RtoDashboard({ id }: { id: string }) {
         </Splits>
       ) : null}
 
+      {/*
+        The action that unblocks a stuck payment. Above the payoff block, because someone whose
+        instalment could not be taken needs to fix that far more than they need to buy the item out.
+      */}
+      {data.paymentActionRequired && !done ? (
+        <ActionNeeded>
+          <div>
+            <PayoffLabel>
+              {data.paymentActionRequired.reason === 'authenticate'
+                ? 'Confirm your payment'
+                : 'Add a payment method'}
+            </PayoffLabel>
+            <PayoffHint>
+              Payment #{data.paymentActionRequired.installmentNumber}
+              {data.paymentActionRequired.reason === 'no_card'
+                ? ' — we’ll save this card so future payments go through on their own.'
+                : ' — one tap and it’s done.'}
+            </PayoffHint>
+          </div>
+          {resuming ? (
+            <PayoffPay>
+              <PaymentSheet
+                clientSecret={resuming.clientSecret ?? 'demo'}
+                amountCents={resuming.amountCents ?? 0}
+                onSuccess={() => {
+                  show('Payment received — thank you', 'success');
+                  setResuming(null);
+                }}
+              />
+              <CancelPay type="button" onClick={() => setResuming(null)}>
+                Not now
+              </CancelPay>
+            </PayoffPay>
+          ) : (
+            <Button
+              loading={resume.isPending}
+              onClick={() =>
+                resume.mutate(undefined, {
+                  onSuccess: (res) => {
+                    // It cleared on its own between the sweep and this tap. Nothing owed.
+                    if (res.alreadyPaid || !res.clientSecret) {
+                      show('That payment has already gone through', 'success');
+                      return;
+                    }
+                    setResuming(res);
+                  },
+                  onError: () => show('Couldn’t start that payment. Please try again.', 'danger'),
+                })
+              }
+            >
+              <CreditCard size={16} />{' '}
+              {data.paymentActionRequired.reason === 'authenticate' ? 'Confirm' : 'Add a card'}
+            </Button>
+          )}
+        </ActionNeeded>
+      ) : null}
+
       {!done ? (
         <Payoff>
           <div>
             <PayoffLabel>Pay off early</PayoffLabel>
             <PayoffHint>Own it today for {formatCents(data.payoffCents)} — no further rental cost.</PayoffHint>
           </div>
-          <Button
-            loading={payoff.isPending}
-            onClick={() =>
-              payoff.mutate(undefined, {
-                onSuccess: () => show('Paid off — it’s yours!', 'success'),
-                onError: () => show('Couldn’t complete payoff. Please try again.', 'danger'),
-              })
-            }
-          >
-            <CheckCircle2 size={16} /> Pay {formatCents(data.payoffCents)}
-          </Button>
+          {/*
+            ═══ Paying off takes a card. It always should have. ═══
+
+            This button used to POST and toast "Paid off — it's yours!", because the server
+            transferred ownership at the moment the charge was OPENED. Nobody was ever asked to pay.
+            The mutation now returns a client secret and the sheet below collects it; ownership
+            transfers when Stripe's webhook settles that intent, which is why nothing here claims
+            the item is theirs.
+          */}
+          {payingOff ? (
+            <PayoffPay>
+              <PaymentSheet
+                clientSecret={payingOff.clientSecret ?? 'demo'}
+                amountCents={payingOff.payoffCents}
+                onSuccess={() => {
+                  show('Payment received — we’ll confirm your ownership in a moment', 'success');
+                  setPayingOff(null);
+                }}
+              />
+              <CancelPay type="button" onClick={() => setPayingOff(null)}>
+                Not now
+              </CancelPay>
+            </PayoffPay>
+          ) : (
+            <Button
+              loading={payoff.isPending}
+              onClick={() =>
+                payoff.mutate(undefined, {
+                  onSuccess: (res) => {
+                    /**
+                     * Already fully credited — the server had nothing to charge and transferred
+                     * ownership outright. The only case where "it's yours" is true on this call.
+                     */
+                    if (res.completed) {
+                      show('Paid off — it’s yours!', 'success');
+                      return;
+                    }
+                    if (!res.clientSecret) {
+                      show(
+                        'We couldn’t start your payoff payment. Nothing has been charged — please try again.',
+                        'warning',
+                      );
+                      return;
+                    }
+                    setPayingOff(res);
+                  },
+                  onError: () => show('Couldn’t start the payoff. Please try again.', 'danger'),
+                })
+              }
+            >
+              <CheckCircle2 size={16} /> Pay {formatCents(data.payoffCents)}
+            </Button>
+          )}
         </Payoff>
       ) : null}
       {/*
@@ -293,6 +423,33 @@ const PayoffLabel = styled.p`
 const PayoffHint = styled.p`
   font-size: 13px;
   color: ${({ theme }) => theme.color.textSecondary};
+`;
+
+/** The card form takes the full width of the payoff card rather than sitting beside the copy. */
+const PayoffPay = styled.div`
+  flex: 1 1 100%;
+  display: grid;
+  gap: ${({ theme }) => theme.space[3]}px;
+`;
+const CancelPay = styled.button`
+  justify-self: center;
+  font-size: 13px;
+  color: ${({ theme }) => theme.color.textSecondary};
+  text-decoration: underline;
+`;
+
+/** Same shape as the payoff block, in the neutral accent — this is a task, not an upsell. */
+const ActionNeeded = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.space[3]}px;
+  flex-wrap: wrap;
+  padding: ${({ theme }) => theme.space[4]}px;
+  margin-bottom: ${({ theme }) => theme.space[3]}px;
+  border-radius: ${({ theme }) => theme.radius.card}px;
+  background: ${({ theme }) => theme.color.surfaceRaised};
+  border: 1px solid ${({ theme }) => theme.color.line2};
 `;
 
 const ReturnBlock = styled.section`

@@ -188,6 +188,8 @@ export const keys = {
   communityImpact: (businessId: string) => ['business', businessId, 'community-impact'] as const,
   communityContributions: (businessId: string) =>
     ['business', businessId, 'community-contributions'] as const,
+  /** Scoped to the caller, not a business — a giver's gifts span every business they gave to. */
+  communityContributionsMine: ['me', 'community-contributions'] as const,
 
   // Delivery
   driverProfile: ['me', 'driver-profile'] as const,

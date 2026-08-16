@@ -82,6 +82,43 @@ export interface ContributeResult {
   clientSecret: string | null;
 }
 
+/**
+ * A gift as its GIVER sees it — the only view that shows one which did not settle.
+ *
+ * `status` is the point of this shape. A contribution returns no order, no goods and no receipt
+ * screen, so without it a giver has no way to answer "did that actually go through?".
+ */
+export interface MyContribution {
+  id: string;
+  businessId: string;
+  businessName: string | null;
+  amountCents: Cents;
+  status: 'pending' | 'succeeded' | 'failed';
+  /** How much of this gift is still waiting for someone. Zero unless it settled. */
+  remainingCents: Cents;
+  note: string | null;
+  anonymous: boolean;
+  createdAt: string;
+  expiresAt: string | null;
+  expiredAt: string | null;
+  /**
+   * ADR-005 §7 — how much could be taken back right now, decided by the server. The screen never
+   * re-derives it: whether a gift is still refundable depends on when the money arrived and how
+   * much has since fed somebody, and a second copy of a money rule is how the two stop agreeing.
+   */
+  refundableCents: Cents;
+  refundableUntil: string | null;
+  refundedCents: Cents;
+}
+
+/** What taking a gift back returned, and what stayed spent. */
+export interface RefundResult {
+  contributionId: string;
+  refundedCents: Cents;
+  /** Already reached someone, so it stays given. Shown so a partial never reads as a failure. */
+  keptCents: Cents;
+}
+
 export interface FundSettingsInput {
   accepting?: boolean;
   maxPerRedemptionCents?: Cents | null;

@@ -12,7 +12,7 @@
  */
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
-import { ShieldCheck, Settings, HelpCircle, Wallet, Bell, Pencil } from 'lucide-react';
+import { ShieldCheck, Settings, HelpCircle, Wallet, Bell, Pencil, HeartHandshake } from 'lucide-react';
 import { Avatar } from '@/components/primitives/Avatar';
 import { StatusChip } from '@/components/primitives/StatusChip';
 import { Skeleton } from '@/components/feedback/Skeleton';
@@ -87,6 +87,17 @@ export default function ProfilePage() {
             description="Verify your identity"
             icon={<ShieldCheck size={18} />}
             onClick={() => router.push('/profile/verification')}
+          />
+          {/*
+            A Pay It Forward gift returns no order and no receipt, so without a row here there was
+            nowhere in the app to find out whether one had gone through — or whether it had reached
+            anyone yet.
+          */}
+          <SettingsRow
+            label="Your gifts"
+            description="Pay It Forward you've given"
+            icon={<HeartHandshake size={18} />}
+            onClick={() => router.push('/pay-it-forward')}
           />
           <SettingsRow
             label="Notifications"
