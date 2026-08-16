@@ -11,7 +11,9 @@ import { useState } from 'react';
 import styled from 'styled-components';
 import { MapPin, Plus, UserX, X } from 'lucide-react';
 import { TabPage } from '@/components/layout/TabPage';
+import { MessageCircle } from 'lucide-react';
 import { Button } from '@/components/primitives/Button';
+import { useOpenWorkThread } from '@/features/messaging/hooks/useWorkThread';
 import { Input } from '@/components/primitives/Input';
 import { Modal } from '@/components/primitives/Modal';
 import { Skeleton } from '@/components/feedback/Skeleton';
@@ -258,6 +260,8 @@ export function EmployerJobs({ businessId }: { businessId: string }) {
 /** Who claimed a gig, where each got to, and the on-site code for a worker whose GPS won't work. */
 function ApplicantsModal({ job, onClose }: { job: PostedJob | null; onClose: () => void }) {
   const { data, isLoading } = useJobApplicants(job?.id);
+  /** The employer's side: reach one applicant about their claim on this gig. */
+  const message = useOpenWorkThread();
   // Only fetched while the sheet is open — this code authorises a check-in, so it isn't kept warm.
   const qr = useJobCheckInToken(job?.id, Boolean(job));
   return (
@@ -288,13 +292,29 @@ function ApplicantsModal({ job, onClose }: { job: PostedJob | null; onClose: () 
                   {a.payoutCents > 0 ? ` · ${formatCents(a.payoutCents)} paid` : ''}
                 </Meta>
               </div>
-              <StatusChip
-                status={
-                  a.status === 'completed' ? 'free' : a.status === 'checked_in' ? 'parked' : a.status === 'no_show' ? 'discount' : 'popup'
-                }
-                label={a.status.replace('_', ' ')}
-                size="sm"
-              />
+              <ApplicantActions>
+                <StatusChip
+                  status={
+                    a.status === 'completed' ? 'free' : a.status === 'checked_in' ? 'parked' : a.status === 'no_show' ? 'discount' : 'popup'
+                  }
+                  label={a.status.replace('_', ' ')}
+                  size="sm"
+                />
+                {/*
+                  Per APPLICANT, not per posting. One thread for the whole gig would put every
+                  applicant in a room together — the server keys the thread on the application for
+                  exactly that reason, and the UI has to match or it would be offering a
+                  conversation the server will not open.
+                */}
+                <Button
+                  size="compact"
+                  variant="tertiary"
+                  loading={message.isPending}
+                  onClick={() => message.mutate({ subjectType: 'job', subjectRefId: a.id })}
+                >
+                  <MessageCircle size={14} /> Message
+                </Button>
+              </ApplicantActions>
             </Applicant>
           ))}
         </List>
@@ -360,6 +380,12 @@ const Hint = styled.p`
     flex: none;
     margin-top: 2px;
   }
+`;
+/** Status and the message action share the row's right edge. */
+const ApplicantActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[2]}px;
 `;
 const Applicant = styled.div`
   display: flex;

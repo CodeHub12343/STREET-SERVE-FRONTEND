@@ -14,9 +14,10 @@
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import { useState } from 'react';
-import { ArrowLeft, MapPin, Clock, Wallet, CheckCircle2, Navigation, QrCode } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, Wallet, CheckCircle2, Navigation, QrCode, MessageCircle } from 'lucide-react';
 import { QRScanner } from '@/components/media/QRScanner';
 import { Button } from '@/components/primitives/Button';
+import { useOpenWorkThread } from '@/features/messaging/hooks/useWorkThread';
 import { Badge } from '@/components/primitives/Badge';
 import { Banner } from '@/components/feedback/Banner';
 import { Skeleton } from '@/components/feedback/Skeleton';
@@ -47,6 +48,8 @@ export function JobDetail({ id }: { id: string }) {
   const [scanning, setScanning] = useState(false);
   const checkOut = useCheckOutOfJob(id);
   const payouts = usePayoutStatus();
+  /** The worker's side of the channel. Keyed on their own application, never the posting. */
+  const message = useOpenWorkThread();
 
   if (isLoading) {
     return (
@@ -204,7 +207,28 @@ export function JobDetail({ id }: { id: string }) {
         </Banner>
       ) : null}
 
-      <Actions>{renderAction()}</Actions>
+      <Actions>
+        {renderAction()}
+        {/*
+          ═══ Reach the employer, in every state. ═══
+
+          Outside `renderAction` on purpose: the switch below changes with the application's status,
+          and needing to talk does not. A worker waiting on a decision, one whose phone cannot get a
+          location, and one disputing a no-show all need the same channel — and the check-in footnote
+          already tells them to "ask the employer for the on-site code", which until now was an
+          instruction with nothing behind it.
+        */}
+        {app ? (
+          <Button
+            fullWidth
+            variant="tertiary"
+            loading={message.isPending}
+            onClick={() => message.mutate({ subjectType: 'job', subjectRefId: app.id })}
+          >
+            <MessageCircle size={16} aria-hidden /> Message the employer
+          </Button>
+        ) : null}
+      </Actions>
     </Wrap>
   );
 
