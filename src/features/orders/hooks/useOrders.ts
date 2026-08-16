@@ -36,6 +36,9 @@ interface BackendOrder {
   /** Server-authoritative itemization (R9) — authoritative over any client estimate. */
   breakdown?: ServerBreakdown;
   transactionId?: string | null;
+  /** What the community fund covered, and what is still owed. See the note on `Order`. */
+  payItForwardCents?: number | null;
+  amountDueCents?: number | null;
   createdAt?: string | null;
   payment?: { clientSecret?: string | null; status?: string | null; transactionId?: string | null };
 }
@@ -144,6 +147,10 @@ export function useCreateTransaction() {
         createdAt: new Date().toISOString(),
         payoutTiming: 'Payout timing is set by your trust tier',
         transactionId: res.transactionId ?? res.payment?.transactionId ?? undefined,
+        // The server's own answer to "is anything still owed?" — a fully covered order returns 0
+        // and must never be routed to a payment screen.
+        payItForwardCents: res.payItForwardCents ?? 0,
+        amountDueCents: res.amountDueCents ?? undefined,
       };
     },
     onSuccess: (txn) => qc.setQueryData(keys.order(txn.id), txn),
@@ -302,6 +309,13 @@ export function useOrder(id: string | undefined) {
         status: mapOrderStatus(found.status),
         items: backendItems(found),
         transactionId: found.transactionId ?? base.transactionId,
+        /**
+         * From the SERVER, always — never the cached create-result. A refresh on the payment URL of
+         * a fully covered order must be able to tell "nothing is owed" from "your session died",
+         * and only the server knows.
+         */
+        payItForwardCents: found.payItForwardCents ?? base.payItForwardCents ?? 0,
+        amountDueCents: found.amountDueCents ?? base.amountDueCents,
       };
     },
     initialData: () => qc.getQueryData<OrderTxn>(keys.order(id ?? 'none')),

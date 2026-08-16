@@ -6,6 +6,7 @@
  * webhook/socket is the authoritative settle; we advance the order and route to the receipt (window)
  * or the tracker (order-ahead). Missing/expired intent → a recoverable error, never a stuck screen.
  */
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import { WizardFlow } from '@/components/layout/WizardFlow';
@@ -22,7 +23,37 @@ export function PaymentPage({ id }: { id: string }) {
   const markPaid = useMarkPaid(id);
   const clearCart = useCartStore((s) => s.clear);
 
+  const nothingToPay = Boolean(txn) && (txn!.amountDueCents ?? txn!.breakdown.totalCents) <= 0;
+
+  useEffect(() => {
+    if (!nothingToPay || !txn) return;
+    clearCart();
+    router.replace(txn.context === 'window' ? `/order/${id}/receipt` : `/order/${id}`);
+  }, [nothingToPay, txn, id, clearCart, router]);
+
   if (isLoading) {
+    return (
+      <Screen>
+        <Skeleton $h="220px" $radius={16} />
+      </Screen>
+    );
+  }
+
+  /**
+   * ═══ Nothing left to pay is a SUCCESS, not a dead session. ═══
+   *
+   * A fully covered Pay It Forward order has no charge at all, so there is no client secret — and
+   * this screen used to read that as expiry and tell the customer "this payment session expired,
+   * nothing was charged". The order had in fact been placed and the vendor was already making it.
+   * The customer was told their order failed at the exact moment the community had paid for it in
+   * full, and the likely response is to order again, or to walk away from food someone had bought
+   * them.
+   *
+   * `amountDueCents` is the server's own answer to "is anything owed?", so it is the thing to read.
+   * `OrderReview` no longer routes here in this case at all; this handles a refresh or a
+   * bookmarked URL, which is exactly when a customer is already unsure whether it worked.
+   */
+  if (nothingToPay) {
     return (
       <Screen>
         <Skeleton $h="220px" $radius={16} />

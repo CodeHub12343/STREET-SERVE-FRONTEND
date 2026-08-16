@@ -88,6 +88,26 @@ export function OrderTracking({ id }: { id: string }) {
   return (
     <Screen>
       <Eta>{ETA[txn.status] ?? 'In progress'}</Eta>
+
+      {/*
+        ═══ Say who paid, once, without ceremony. ═══
+
+        A customer whose order was covered lands here having entered no card, so without this the
+        screen is silently ambiguous — "did that actually go through?" — which is the same doubt the
+        expired-session bug caused, just quieter.
+
+        Stated as a plain fact, in the past tense, about a neighbour. No thanks to give, nobody to
+        thank, and no celebration: someone short of money this week does not want their phone to
+        make an occasion of it (§PIF tone rules, same as the checkout prompt).
+      */}
+      {(txn.payItForwardCents ?? 0) > 0 ? (
+        <Covered>
+          {(txn.amountDueCents ?? 0) <= 0
+            ? `Someone in the community covered this — you paid nothing.`
+            : `Someone in the community covered ${formatCents(txn.payItForwardCents!)} of this.`}
+        </Covered>
+      ) : null}
+
       {txn.deliveryId ? <DeliveryTracking deliveryId={txn.deliveryId} /> : null}
       <Card>
         <Tracker steps={STEPS} activeIndex={INDEX[txn.status]} />
@@ -176,6 +196,12 @@ const Screen = styled.div`
 `;
 const Eta = styled.h1`
   font-size: 24px;
+`;
+/* An ordinary line, not a badge. Deliberately not the success green — this is a fact, not a prize. */
+const Covered = styled.p`
+  font-size: 14px;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.color.textSecondary};
 `;
 const Card = styled.div`
   padding: ${({ theme }) => theme.space[5]}px;

@@ -37,6 +37,8 @@ export function OrderReview({ businessId, context }: { businessId: string; conte
 
   const { lines, tip, customTipCents, discountPercent, queuePosition, setContext, addItem, setQty, setTip } =
     useCartStore();
+  // Needed on the fully-covered path, which skips the payment screen that would normally clear it.
+  const clearCart = useCartStore((st) => st.clear);
   const storeBusinessId = useCartStore((s) => s.businessId);
 
   // Ensure the cart is scoped to this business. Keeps a queue-locked discount if already set.
@@ -102,7 +104,27 @@ export function OrderReview({ businessId, context }: { businessId: string; conte
         idempotencyKey: idemKey.current,
       },
       {
-        onSuccess: (txn) => router.push(`/order/${txn.id}/pay`),
+        /**
+         * ═══ A fully covered order has nothing to pay, so it must not go to a payment screen. ═══
+         *
+         * This pushed to `/pay` unconditionally. An order the community fund covered in full has no
+         * charge at all — so there is no client secret, and the payment page could not tell "nothing
+         * left to pay" from "your session died". It showed **"This payment session expired — nothing
+         * was charged"** at the exact moment Pay It Forward had worked perfectly: the order was
+         * placed, the vendor was already making it, and the customer was told it had failed.
+         *
+         * The worst outcome of that is not confusion, it is a second order — or walking away from
+         * food someone had already paid for.
+         */
+        onSuccess: (txn) => {
+          const due = txn.amountDueCents ?? txn.breakdown.totalCents;
+          if (due <= 0) {
+            clearCart();
+            router.replace(txn.context === 'window' ? `/order/${txn.id}/receipt` : `/order/${txn.id}`);
+            return;
+          }
+          router.push(`/order/${txn.id}/pay`);
+        },
         onError: (e) => show(e instanceof AppApiError ? e.message : 'Could not start payment', 'danger'),
       },
     );

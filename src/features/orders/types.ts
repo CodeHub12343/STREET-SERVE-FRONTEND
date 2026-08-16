@@ -41,6 +41,14 @@ export interface OrderTxn {
   cancelReason?: string;
   /** Settled transaction backing this order — required to leave a review (H3). */
   transactionId?: string;
+  /**
+   * What the community fund covered, and what is actually left to pay. `totalCents` is what the
+   * MEAL cost, so a client reading only that cannot tell a fully covered order from an unpaid one —
+   * which is how the payment screen came to report "session expired" on an order that had been paid
+   * for in full. Read `amountDueCents` for any "is anything owed?" decision.
+   */
+  payItForwardCents?: number;
+  amountDueCents?: number;
 }
 
 /** Refund disclosure (R13/U6) — what the customer gets back, mirrors payments/refundPolicy. */
