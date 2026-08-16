@@ -28,6 +28,8 @@ export const endpoints = {
   preregistrations: '/preregistrations',
   preregistrationsCount: '/preregistrations/count',
   sponsors: '/sponsors',
+  /** Records that a sponsor's logo was actually seen. Nothing called this before. */
+  sponsorImpression: '/sponsors/impression',
 
   // live map
   mapNearby: '/map/nearby',
@@ -462,6 +464,8 @@ export const endpoints = {
     disputes: '/admin/disputes',
     fraudFlags: '/admin/fraud-flags',
     sponsors: '/admin/sponsors',
+    sponsor: (id: string) => `/admin/sponsors/${id}`,
+    sponsorReport: (id: string) => `/admin/sponsors/${id}/report`,
     categorySuggestions: '/admin/category-suggestions',
     categorySuggestionReview: (id: string) => `/admin/category-suggestions/${id}/review`,
     categories: '/admin/categories',

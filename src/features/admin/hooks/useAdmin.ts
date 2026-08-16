@@ -269,10 +269,73 @@ export function useSuspendUser() {
 }
 
 // ---- Sponsors (A-07) ----
+/**
+ * A sponsorship as the admin roster shows it.
+ *
+ * `contractedCents` is recorded BY HAND and nothing is collected through the platform —
+ * sponsorships are negotiated and settled off-platform. The screen previously showed a "Spend"
+ * column against no stored field at all: the figure came from a demo fixture, so it reported a
+ * number nobody had entered and nothing could verify.
+ */
+export interface AdminSponsor {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  tier: string;
+  utmCode: string;
+  launchCitySlug: string | null;
+  active: boolean;
+  impressions: number;
+  attributedSignups: number;
+  contractedCents: number;
+  note: string | null;
+  createdAt: string | null;
+}
+
+/**
+ * The roster. This called `GET /admin/sponsors`, which did not exist — the request 404'd, the data
+ * stayed undefined, and the component's `if (isLoading || !sponsors)` rendered its loading skeleton
+ * for ever. The page could only ever be blank.
+ */
 export function useSponsors() {
-  return useQuery({
+  return useQuery<AdminSponsor[]>({
     queryKey: keys.sponsors,
-    queryFn: () => (isMapDemo ? Promise.resolve(demoSponsors()) : api.get<ReturnType<typeof demoSponsors>>(endpoints.admin.sponsors)),
+    queryFn: () =>
+      isMapDemo
+        ? Promise.resolve(demoSponsors() as unknown as AdminSponsor[])
+        : api.get<AdminSponsor[]>(endpoints.admin.sponsors),
     staleTime: isMapDemo ? Infinity : 60_000,
+  });
+}
+
+export function useCreateSponsor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      name: string;
+      utmCode: string;
+      tier?: string;
+      logoUrl?: string;
+      contractedCents?: number;
+      note?: string;
+    }) => api.post<{ id: string }>(endpoints.admin.sponsors, input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.sponsors }),
+  });
+}
+
+/**
+ * Edit a sponsorship, including ending one. `active` was in the model and reachable by nothing, so
+ * a term could never be closed: the logo stayed on the landing page and the UTM code kept
+ * attributing signups to a partner who had stopped paying.
+ */
+export function useUpdateSponsor() {
+  const qc = useQueryClient();
+  return useMutation<
+    { id: string; active: boolean; impressions: number; attributedSignups: number },
+    unknown,
+    { id: string; active?: boolean; contractedCents?: number; note?: string | null }
+  >({
+    mutationFn: ({ id, ...patch }) => api.patch(endpoints.admin.sponsor(id), patch),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.sponsors }),
   });
 }
