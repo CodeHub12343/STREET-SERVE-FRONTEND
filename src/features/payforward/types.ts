@@ -82,6 +82,27 @@ export interface ContributeResult {
   clientSecret: string | null;
 }
 
+/**
+ * A gift as its GIVER sees it — the only view that shows one which did not settle.
+ *
+ * `status` is the point of this shape. A contribution returns no order, no goods and no receipt
+ * screen, so without it a giver has no way to answer "did that actually go through?".
+ */
+export interface MyContribution {
+  id: string;
+  businessId: string;
+  businessName: string | null;
+  amountCents: Cents;
+  status: 'pending' | 'succeeded' | 'failed';
+  /** How much of this gift is still waiting for someone. Zero unless it settled. */
+  remainingCents: Cents;
+  note: string | null;
+  anonymous: boolean;
+  createdAt: string;
+  expiresAt: string | null;
+  expiredAt: string | null;
+}
+
 export interface FundSettingsInput {
   accepting?: boolean;
   maxPerRedemptionCents?: Cents | null;

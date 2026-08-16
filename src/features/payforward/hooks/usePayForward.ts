@@ -22,6 +22,7 @@ import type {
   ContributeInput,
   ContributeResult,
   FundSettingsInput,
+  MyContribution,
 } from '../types';
 
 const DEMO_FUND: CommunityFund = {
@@ -57,6 +58,36 @@ const DEMO_IMPACT: CommunityImpact = {
   redemptionCount: 71,
   peopleHelped: 58,
 };
+
+/** Deliberately carries a `pending` row: the state a giver most needs this screen to be able to show. */
+const DEMO_MINE: MyContribution[] = [
+  {
+    id: 'm1',
+    businessId: 'biz_taco',
+    businessName: 'Taco Libre',
+    amountCents: 2000,
+    status: 'succeeded',
+    remainingCents: 500,
+    note: 'For whoever needs it today.',
+    anonymous: false,
+    createdAt: new Date(Date.now() - 4 * 86_400_000).toISOString(),
+    expiresAt: new Date(Date.now() + 361 * 86_400_000).toISOString(),
+    expiredAt: null,
+  },
+  {
+    id: 'm2',
+    businessId: 'biz_taco',
+    businessName: 'Taco Libre',
+    amountCents: 1000,
+    status: 'pending',
+    remainingCents: 0,
+    note: null,
+    anonymous: true,
+    createdAt: new Date(Date.now() - 120_000).toISOString(),
+    expiresAt: null,
+    expiredAt: null,
+  },
+];
 
 /** The pot, and the vendor's terms for using it. Public. */
 export function useCommunityFund(businessId: string | undefined) {
@@ -126,6 +157,24 @@ export function useContribute(businessId: string) {
       void qc.invalidateQueries({ queryKey: keys.communityContributions(businessId) });
       void qc.invalidateQueries({ queryKey: keys.communityImpact(businessId) });
     },
+  });
+}
+
+/**
+ * The caller's own gifts. Includes ones still pending and ones that failed — this is the only
+ * screen where a contribution that did not land is the most important row on it.
+ *
+ * `staleTime: 0` because the interesting case is a gift that has just been paid for and is waiting
+ * on the webhook: the giver is refreshing this page precisely to watch `pending` become `succeeded`.
+ */
+export function useMyContributions() {
+  return useQuery<MyContribution[]>({
+    queryKey: keys.communityContributionsMine,
+    queryFn: () =>
+      isMapDemo
+        ? Promise.resolve(DEMO_MINE)
+        : api.get<MyContribution[]>(endpoints.payForwardMine),
+    staleTime: 0,
   });
 }
 

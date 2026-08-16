@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'styled-components';
@@ -165,6 +165,65 @@ describe('giving to the fund', () => {
   it('says where unused money goes — never back to the business', async () => {
     await renderSheet();
     expect(screen.getByText(/never goes back to the business/i)).toBeInTheDocument();
+  });
+
+  /**
+   * ═══ Giving takes a card. THE bug that killed the whole feature. ═══
+   *
+   * This sheet dropped the `clientSecret` on the floor and toasted "Thank you — your gift is on its
+   * way". No card was ever collected, so no contribution ever settled, so `creditContribution`
+   * never ran and every pool stayed at zero for ever. That is also why the RECEIVING half looked
+   * unbuilt: `quoteRedemption` returns `availableCents: 0` against an empty pool, and the checkout
+   * offer correctly renders nothing at all. One dropped secret took down both ends of the feature.
+   */
+  it('asks for the card after the gift is recorded, rather than declaring it given', async () => {
+    const user = userEvent.setup();
+    await renderSheet();
+    await user.click(screen.getByRole('button', { name: /give/i }));
+
+    const [, opts] = mocks.contribute.mock.calls[0] as [
+      unknown,
+      { onSuccess: (r: unknown) => void },
+    ];
+    await act(async () => {
+      opts.onSuccess({
+        contributionId: 'c1',
+        businessId: 'b1',
+        amountCents: 1000,
+        balanceCents: 0,
+        clientSecret: 'demo',
+      });
+    });
+
+    // The heading and the pay button both name the amount — hence `findAllByText`.
+    expect(await screen.findAllByText('Pay $10.00')).not.toHaveLength(0);
+    expect(screen.getByRole('button', { name: /Pay \$10\.00/ })).toBeInTheDocument();
+    expect(screen.getByText(/reaches the fund once this payment goes through/i)).toBeInTheDocument();
+    // The pool is credited by the webhook, so nothing here may claim the gift has landed.
+    expect(screen.queryByText(/your gift is on its way/i)).not.toBeInTheDocument();
+  });
+
+  /** Recorded but unpayable. Reporting thanks here would be the original defect in miniature. */
+  it('shows no card form when no client secret comes back', async () => {
+    const user = userEvent.setup();
+    await renderSheet();
+    await user.click(screen.getByRole('button', { name: /give/i }));
+
+    const [, opts] = mocks.contribute.mock.calls[0] as [
+      unknown,
+      { onSuccess: (r: unknown) => void },
+    ];
+    await act(async () => {
+      opts.onSuccess({
+        contributionId: 'c1',
+        businessId: 'b1',
+        amountCents: 1000,
+        balanceCents: 0,
+        clientSecret: null,
+      });
+    });
+
+    expect(screen.queryAllByText('Pay $10.00')).toHaveLength(0);
   });
 });
 
