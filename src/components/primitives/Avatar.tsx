@@ -9,12 +9,22 @@ import styled from 'styled-components';
 
 export interface AvatarProps {
   src?: string;
-  name: string;
+  /**
+   * Nullable on purpose. This was typed `string`, which TypeScript happily believed — but every
+   * caller feeds it a name straight off an API response, and a business or seller with no name set
+   * sends `null`. `initials(null)` then threw on `.trim()` DURING RENDER, which React escalates to
+   * the route's error boundary: one unnamed record on the map took out the entire /map page with
+   * "This didn't load".
+   *
+   * A missing name is a cosmetic problem. It must never be a page-level crash, and a shared
+   * primitive rendered from server data in a dozen places is exactly where that has to be enforced.
+   */
+  name: string | null | undefined;
   size?: number;
 }
 
-function initials(name: string): string {
-  return name
+function initials(name: string | null | undefined): string {
+  return (name ?? '')
     .trim()
     .split(/\s+/)
     .slice(0, 2)
@@ -26,7 +36,7 @@ export function Avatar({ src, name, size = 40 }: AvatarProps) {
   const [failed, setFailed] = useState(false);
   const showImage = src && !failed;
   return (
-    <Root $size={size} role="img" aria-label={name} title={name}>
+    <Root $size={size} role="img" aria-label={name ?? 'No name'} title={name ?? undefined}>
       {showImage ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt="" onError={() => setFailed(true)} />
