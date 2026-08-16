@@ -136,24 +136,70 @@ export function RtoDashboard({ id }: { id: string }) {
         </OwnMeta>
       </Card>
 
-      <Grid>
-        <Stat>
-          <span>Payments made</span>
-          <b className="tnum">{data.installmentsPaid}/{data.installmentCount}</b>
-        </Stat>
-        <Stat>
-          <span>Each payment</span>
-          <b className="tnum">{formatCents(data.installmentAmountCents)}</b>
-        </Stat>
-        <Stat>
-          <span>Next due</span>
-          <b>{data.nextDueAt ? new Date(data.nextDueAt).toLocaleDateString() : '—'}</b>
-        </Stat>
-        <Stat>
-          <span>Total to own</span>
-          <b className="tnum">{formatCents(data.totalToOwnCents)}</b>
-        </Stat>
-      </Grid>
+      {/*
+        ═══ A finished agreement is not a paused one. ═══
+
+        These four stats used to render identically whether the agreement was running or paid off,
+        so someone who owned their item outright was still shown "Next due 30 Aug 2026" — a date
+        nothing was owed on — beside "Payments made 1/12", which reads as unfinished, and "Total to
+        own $240", which they never paid because clearing the equity early costs less than running
+        the schedule to its end. Three of the four numbers were wrong the moment it completed.
+
+        So completion gets its own set: what they paid, what that saved them, and when it became
+        theirs. Nothing about a schedule that no longer exists.
+      */}
+      {done ? (
+        <Grid>
+          <Stat>
+            <span>You paid</span>
+            <b className="tnum">{formatCents(data.totalPaidCents ?? data.ownershipCreditedCents)}</b>
+          </Stat>
+          {data.savedByPayingEarlyCents ? (
+            <Stat>
+              <span>Saved by finishing early</span>
+              <b className="tnum">{formatCents(data.savedByPayingEarlyCents)}</b>
+            </Stat>
+          ) : (
+            <Stat>
+              <span>Payments made</span>
+              <b className="tnum">
+                {data.installmentsPaid}/{data.installmentCount}
+              </b>
+            </Stat>
+          )}
+          <Stat>
+            <span>Owned since</span>
+            <b>
+              {data.ownershipTransferredAt
+                ? new Date(data.ownershipTransferredAt).toLocaleDateString()
+                : 'today'}
+            </b>
+          </Stat>
+          <Stat>
+            <span>Cash price</span>
+            <b className="tnum">{formatCents(data.cashPriceCents)}</b>
+          </Stat>
+        </Grid>
+      ) : (
+        <Grid>
+          <Stat>
+            <span>Payments made</span>
+            <b className="tnum">{data.installmentsPaid}/{data.installmentCount}</b>
+          </Stat>
+          <Stat>
+            <span>Each payment</span>
+            <b className="tnum">{formatCents(data.installmentAmountCents)}</b>
+          </Stat>
+          <Stat>
+            <span>Next due</span>
+            <b>{data.nextDueAt ? new Date(data.nextDueAt).toLocaleDateString() : '—'}</b>
+          </Stat>
+          <Stat>
+            <span>Total to own</span>
+            <b className="tnum">{formatCents(data.totalToOwnCents)}</b>
+          </Stat>
+        </Grid>
+      )}
 
       {/* Consignment-RTO (R19): how each payment splits across the three parties. */}
       {data.isConsignment && statements.data ? (

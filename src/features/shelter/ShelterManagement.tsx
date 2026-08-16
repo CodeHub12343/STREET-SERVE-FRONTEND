@@ -183,6 +183,42 @@ export function ShelterManagement() {
                 />
               </Row>
 
+              {/*
+                ═══ WHAT HAPPENS NEXT. ═══
+
+                Registering a partner grants their named contact the `shelter_admin` role, and from
+                that moment the whole programme runs on THEIR side of the app — but this screen said
+                nothing about it. An admin registered an organisation, saw "0 residents enrolled",
+                and had no way to know whether something had gone wrong, whether they were meant to
+                enrol people themselves, or that they were now waiting on somebody else entirely.
+                A screen that shows a zero and no next step reads as broken.
+
+                Shown only while nobody is enrolled, because after that the count IS the status and
+                a permanent instruction block would just be noise.
+              */}
+              {!suspended && s.residentsEnrolled === 0 ? (
+                <NextSteps>
+                  <NextTitle>Nothing to do here &mdash; it&rsquo;s with them now</NextTitle>
+                  <NextList>
+                    <li>
+                      Their contact has been given shelter-admin access. They sign in and open{' '}
+                      <code>/shelter</code>.
+                    </li>
+                    <li>
+                      They enrol a resident there, which produces a <b>claim code</b>.
+                    </li>
+                    <li>
+                      The resident enters that code in the app to link their account. This number
+                      moves when they do.
+                    </li>
+                  </NextList>
+                  <NextHint>
+                    Residents are enrolled by the shelter, never by you — they are the ones who know
+                    who is actually staying there.
+                  </NextHint>
+                </NextSteps>
+              ) : null}
+
               {confirming === s.id ? (
                 <Confirm>
                   <ConfirmText>
@@ -277,6 +313,41 @@ const Meta = styled.p`
 const Actions = styled.div`
   display: flex;
   justify-content: flex-end;
+`;
+const NextSteps = styled.div`
+  display: grid;
+  gap: ${({ theme }) => theme.space[2]}px;
+  padding: ${({ theme }) => theme.space[3]}px ${({ theme }) => theme.space[4]}px;
+  border-radius: ${({ theme }) => theme.radius.control}px;
+  background: ${({ theme }) => theme.color.surfaceRaised2};
+`;
+const NextTitle = styled.p`
+  font-size: 13px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.color.textPrimary};
+`;
+const NextList = styled.ol`
+  display: grid;
+  gap: 4px;
+  padding-left: 18px;
+  li {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: ${({ theme }) => theme.color.textSecondary};
+    list-style: decimal;
+  }
+  code {
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: ${({ theme }) => theme.color.surfaceBase};
+  }
+`;
+const NextHint = styled.p`
+  font-size: 12px;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.color.textTertiary};
 `;
 const Confirm = styled.div`
   display: grid;

@@ -188,6 +188,12 @@ export interface RtoDashboard extends RtoAgreement {
   installmentsRemaining: number;
   ownershipPercent: number;
   payoffCents: Cents;
+  /** Everything actually handed over, ledger-derived. */
+  totalPaidCents?: Cents;
+  /** What paying off early saved, against the full rental total. Zero unless completed. */
+  savedByPayingEarlyCents?: Cents;
+  /** The moment it became theirs. Stored since R25 and never surfaced until now. */
+  ownershipTransferredAt?: string | null;
   schedule?: { dueAt: string; amountCents: Cents; status: string }[];
   /**
    * A scheduled payment the automatic charge could not take, now waiting on the customer. Neither
