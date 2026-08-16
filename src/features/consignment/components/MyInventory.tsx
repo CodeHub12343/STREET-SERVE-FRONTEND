@@ -7,6 +7,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useOpenWorkThread } from '@/features/messaging/hooks/useWorkThread';
+import { SellerLiveControl } from '@/features/seller/components/SellerLiveControl';
+import { useMe } from '@/lib/auth/useMe';
 import styled from 'styled-components';
 import { TabPage } from '@/components/layout/TabPage';
 import { Button } from '@/components/primitives/Button';
@@ -35,6 +37,7 @@ function termCountdown(expiresIso?: string | null): string | null {
 
 export function MyInventory() {
   const router = useRouter();
+  const { principal } = useMe();
   const { data: checkouts, isLoading } = useCheckouts();
   // Pending reservations belong here too — the seller needs to see what they're waiting on (H-03).
   const active = (checkouts ?? []).filter((c) =>
@@ -43,6 +46,14 @@ export function MyInventory() {
 
   return (
     <TabPage title="My inventory">
+      {/*
+        Going live belongs HERE, next to the stock it is about. A seller carrying a hub's inventory
+        is the one person whose position the hub is entitled to see, and until now nothing in the
+        product could start a seller session at all — which is why the hub's "where my stock is" map
+        was permanently empty. Hidden when nothing is checked out: there is no reason to ask someone
+        to share their location when they are carrying nothing.
+      */}
+      {active.length > 0 && principal?.userId ? <SellerLiveControl userId={principal.userId} /> : null}
       {isLoading ? (
         <List><Skeleton $h="140px" $radius={16} /><Skeleton $h="140px" $radius={16} /></List>
       ) : active.length === 0 ? (

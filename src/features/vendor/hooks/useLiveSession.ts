@@ -79,7 +79,21 @@ function getCurrentCoords(): Promise<{ lat: number; lng: number }> {
   );
 }
 
-export function useLiveSession(businessId: string) {
+/**
+ * ═══ WHO is broadcasting. ═══
+ *
+ * Every one of these hooks hardcoded `actorType: 'business'`, and the only screen that mounted them
+ * was the vendor dashboard — so a STREET SELLER could never start a live session at all. The
+ * backend has always supported `actor_type: 'seller'` (including the fuzzed-precision path built
+ * for exactly that case), and the hub's inventory map queries for seller sessions specifically,
+ * which is why that map was structurally incapable of ever showing a pin: nothing in the product
+ * could create the row it reads.
+ *
+ * Defaulted to `business` so every existing vendor call site is unchanged.
+ */
+export type LiveActorType = 'business' | 'seller';
+
+export function useLiveSession(businessId: string, actorType: LiveActorType = 'business') {
   const qc = useQueryClient();
   return useQuery<LiveSession | null>({
     queryKey: keys.liveSession(businessId),
@@ -91,7 +105,7 @@ export function useLiveSession(businessId: string) {
         ? Promise.resolve(qc.getQueryData<LiveSession | null>(keys.liveSession(businessId)) ?? null)
         : api
             .get<LiveSession | null>(endpoints.liveSessions.current, {
-              query: { actorType: 'business', actorId: businessId },
+              query: { actorType, actorId: businessId },
             })
             .then((s) => s ?? null),
     staleTime: 15_000,
@@ -202,7 +216,7 @@ export function useLiveLocationTracking(
   return lastPushAt;
 }
 
-export function useStartSession(businessId: string) {
+export function useStartSession(businessId: string, actorType: LiveActorType = 'business') {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (): Promise<LiveSession> => {
@@ -217,7 +231,7 @@ export function useStartSession(businessId: string) {
       // Backend StartSessionBody requires actorType/actorId + the live coordinates.
       const { lat, lng } = await getCurrentCoords();
       return api.post<LiveSession>(endpoints.liveSessions.start, {
-        actorType: 'business',
+        actorType,
         actorId: businessId,
         lat,
         lng,
