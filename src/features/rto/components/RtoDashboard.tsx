@@ -22,7 +22,7 @@ import {
   usePayoff,
   useRtoReturnPreview,
   useRequestRtoReturn,
-  useResumeInstallment,
+  usePayInstallment,
 } from '../hooks/useRto';
 
 const PARTY_LABEL: Record<string, string> = {
@@ -41,9 +41,11 @@ export function RtoDashboard({ id }: { id: string }) {
   const requestReturn = useRequestRtoReturn(id);
   /** Non-null once a payoff charge is open and the card is owed. */
   const [payingOff, setPayingOff] = useState<RtoPayoffResult | null>(null);
-  const resume = useResumeInstallment(id);
+  const payInstallment = usePayInstallment(id);
   /** Non-null once a stuck instalment has an intent waiting for the card. */
   const [resuming, setResuming] = useState<RtoResumeResult | null>(null);
+  /** Non-null once a voluntary "pay it now" has an intent waiting for the card. */
+  const [payingInstallment, setPayingInstallment] = useState<RtoResumeResult | null>(null);
 
   if (isLoading) {
     return (
@@ -171,6 +173,73 @@ export function RtoDashboard({ id }: { id: string }) {
       ) : null}
 
       {/*
+        ═══ How the remaining payments actually happen. ═══
+
+        The screen showed "0/12 payments made · next due 23 Aug" and nothing else, so a customer had
+        no way to know whether the schedule ran itself or whether they were meant to do something —
+        and the only button on it was a full payoff. Naming the card matters as much as naming the
+        date: agreeing to eleven more automatic charges without being told which card they come off
+        is a surprise waiting to happen, not informed consent.
+
+        Hidden when a payment is already stuck, because that block below is the thing to act on.
+      */}
+      {!done && data.nextInstallment && !data.paymentActionRequired ? (
+        <NextUp>
+          <div>
+            <PayoffLabel>
+              Next payment · {formatCents(data.nextInstallment.amountCents)}
+            </PayoffLabel>
+            <PayoffHint>
+              {data.nextInstallment.overdue
+                ? 'Due now — we’ll try again shortly.'
+                : `Taken automatically on ${new Date(data.nextInstallment.dueAt).toLocaleDateString()}`}
+              {data.savedCard
+                ? ` from your ${data.savedCard.brand ?? 'card'} ending ${data.savedCard.last4}.`
+                : '.'}
+              {' '}
+              You don’t need to do anything.
+            </PayoffHint>
+          </div>
+          {payingInstallment ? (
+            <PayoffPay>
+              <PaymentSheet
+                clientSecret={payingInstallment.clientSecret ?? 'demo'}
+                amountCents={payingInstallment.amountCents ?? data.nextInstallment.amountCents}
+                onSuccess={() => {
+                  show('Payment received — thank you', 'success');
+                  setPayingInstallment(null);
+                }}
+              />
+              <CancelPay type="button" onClick={() => setPayingInstallment(null)}>
+                Not now
+              </CancelPay>
+            </PayoffPay>
+          ) : (
+            /* For people who would rather not wait, or would rather not rely on auto-pay. */
+            <Button
+              variant="secondary"
+              size="compact"
+              loading={payInstallment.isPending}
+              onClick={() =>
+                payInstallment.mutate(undefined, {
+                  onSuccess: (res) => {
+                    if (res.alreadyPaid || !res.clientSecret) {
+                      show('That payment has already gone through', 'success');
+                      return;
+                    }
+                    setPayingInstallment(res);
+                  },
+                  onError: () => show('Couldn’t start that payment. Please try again.', 'danger'),
+                })
+              }
+            >
+              Pay it now
+            </Button>
+          )}
+        </NextUp>
+      ) : null}
+
+      {/*
         The action that unblocks a stuck payment. Above the payoff block, because someone whose
         instalment could not be taken needs to fix that far more than they need to buy the item out.
       */}
@@ -205,9 +274,9 @@ export function RtoDashboard({ id }: { id: string }) {
             </PayoffPay>
           ) : (
             <Button
-              loading={resume.isPending}
+              loading={payInstallment.isPending}
               onClick={() =>
-                resume.mutate(undefined, {
+                payInstallment.mutate(undefined, {
                   onSuccess: (res) => {
                     // It cleared on its own between the sweep and this tap. Nothing owed.
                     if (res.alreadyPaid || !res.clientSecret) {
@@ -439,6 +508,19 @@ const CancelPay = styled.button`
 `;
 
 /** Same shape as the payoff block, in the neutral accent — this is a task, not an upsell. */
+/* Same shape as the payoff block, in the neutral surface — informational, not an upsell. */
+const NextUp = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.space[3]}px;
+  flex-wrap: wrap;
+  padding: ${({ theme }) => theme.space[4]}px;
+  margin-bottom: ${({ theme }) => theme.space[3]}px;
+  border-radius: ${({ theme }) => theme.radius.card}px;
+  background: ${({ theme }) => theme.color.surfaceRaised};
+  border: 1px solid ${({ theme }) => theme.color.line2};
+`;
 const ActionNeeded = styled.div`
   display: flex;
   align-items: center;

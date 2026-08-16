@@ -100,11 +100,12 @@ export function usePayoff(id: string) {
 }
 
 /**
- * Finish a scheduled payment the automatic charge could not take — the bank wanted the customer to
- * authenticate it, or there was no saved card to charge. Returns a client secret either way; when
- * there is no card, the server also saves the new one so the schedule can run itself again.
+ * Pay an instalment with the customer present: one the automatic charge could not take (an SCA
+ * challenge, or no saved card), or simply the next one paid ahead of its due date. Asking twice
+ * returns the SAME intent rather than opening a second charge. The card is kept either way, so the
+ * schedule runs itself afterwards.
  */
-export function useResumeInstallment(id: string) {
+export function usePayInstallment(id: string) {
   const qc = useQueryClient();
   return useMutation<RtoResumeResult, unknown, void>({
     mutationFn: () =>
@@ -116,7 +117,7 @@ export function useResumeInstallment(id: string) {
             clientSecret: 'demo',
             alreadyPaid: false,
           })
-        : api.post<RtoResumeResult>(endpoints.rtoResumePayment(id), {}, {
+        : api.post<RtoResumeResult>(endpoints.rtoPayInstallment(id), {}, {
             idempotencyKey: newIdempotencyKey(),
           }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.rtoAgreement(id) }),

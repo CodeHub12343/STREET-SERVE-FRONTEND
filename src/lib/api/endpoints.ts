@@ -162,8 +162,8 @@ export const endpoints = {
   rtoAgreement: (id: string) => `/rto/agreements/${id}`,
   rtoStatements: (id: string) => `/rto/agreements/${id}/statements`, // R19 3-party statements
   rtoPayoff: (id: string) => `/rto/agreements/${id}/payoff`,
-  /** Finish an instalment the automatic charge couldn't take (SCA challenge, or no card on file). */
-  rtoResumePayment: (id: string) => `/rto/agreements/${id}/resume-payment`,
+  /** Pay an instalment with the customer present — a stuck one, or the next one paid early. */
+  rtoPayInstallment: (id: string) => `/rto/agreements/${id}/pay-installment`,
   // §42/§44 — listings are the seller's offer and the source of every term on an agreement.
   /** Pre-flight: may this business publish an RTO offer at all? Asked before the form, not after. */
   rtoEligibility: '/rto/eligibility',
@@ -295,6 +295,9 @@ export const endpoints = {
    * Shelter Partner Program (Phase B). Two audiences, deliberately separate: `/residents/*` needs
    * no staff permission — a resident must never need shelter-admin rights to see their own money.
    */
+  /** Admin-only: the real programme roster, and suspend/reinstate. */
+  shelterPartners: '/shelter-partners',
+  shelterPartnerStatus: (id: string) => `/shelter-partners/${id}/status`,
   shelterPartner: (id: string) => ({
     enrollments: `/shelter-partners/${id}/enrollments`,
     exit: `/shelter-partners/${id}/enrollments/exit`,

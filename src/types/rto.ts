@@ -199,6 +199,15 @@ export interface RtoDashboard extends RtoAgreement {
     reason: 'authenticate' | 'no_card';
   } | null;
   hasSavedCard?: boolean;
+  /** The card the schedule comes off, as a human recognises it. */
+  savedCard?: { brand: string | null; last4: string } | null;
+  /** The very next payment, as one object so the screen can state it in one sentence. */
+  nextInstallment?: {
+    installmentNumber: number;
+    amountCents: Cents;
+    dueAt: string;
+    overdue: boolean;
+  } | null;
 }
 
 /** What resuming a stuck instalment returns — the secret to finish it with. */

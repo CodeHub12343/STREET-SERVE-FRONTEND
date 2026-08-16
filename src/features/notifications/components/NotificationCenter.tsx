@@ -24,18 +24,31 @@ const ICON: Record<AppNotification['category'], React.ReactNode> = {
   system: <Bell size={16} />,
 };
 
-export function NotificationCenter() {
+/**
+ * The inbox itself, with no page chrome — so the same list can be a full screen for customers and a
+ * sheet over whatever a vendor or admin is doing.
+ *
+ * It was only ever a page, living in the `(customer)` route group, and the bell pushed to it from
+ * every shell. A vendor tapping the bell was therefore dropped into the customer layout, bottom tab
+ * bar and all: it read as being silently switched into customer mode, and the only way back was the
+ * browser's back button.
+ */
+export function NotificationList({ onNavigate }: { onNavigate?: () => void }) {
   const router = useRouter();
   const { data: notifications, isLoading } = useNotifications();
-  const { one, all } = useMarkRead();
+  const { one } = useMarkRead();
 
   const open = (n: AppNotification) => {
     one.mutate(n.id);
-    if (n.deeplink) router.push(n.deeplink);
+    if (n.deeplink) {
+      // Close the sheet first when there is one, so the deep link doesn't land behind it.
+      onNavigate?.();
+      router.push(n.deeplink);
+    }
   };
 
   return (
-    <TabPage title="Notifications" actions={<Button size="compact" variant="tertiary" onClick={() => all.mutate()}>Mark all read</Button>}>
+    <>
       {isLoading ? (
         <List><Skeleton $h="64px" $radius={16} /><Skeleton $h="64px" $radius={16} /></List>
       ) : !notifications || notifications.length === 0 ? (
@@ -55,6 +68,23 @@ export function NotificationCenter() {
           ))}
         </List>
       )}
+    </>
+  );
+}
+
+/** The customer's full-screen inbox. */
+export function NotificationCenter() {
+  const { all } = useMarkRead();
+  return (
+    <TabPage
+      title="Notifications"
+      actions={
+        <Button size="compact" variant="tertiary" onClick={() => all.mutate()}>
+          Mark all read
+        </Button>
+      }
+    >
+      <NotificationList />
     </TabPage>
   );
 }
