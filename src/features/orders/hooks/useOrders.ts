@@ -75,11 +75,21 @@ export function useOrderQuote(args: {
   });
 }
 
-/** Backend order status → the UI's richer OrderStatus. */
+/**
+ * Backend order status → the UI's richer OrderStatus.
+ *
+ * `pending` used to map to `pending_payment`, so a PAID order waiting on the vendor was labelled
+ * "pending payment" to the customer who had just paid for it. The backend had no state for
+ * "created but unpaid" at all — it notified the vendor the moment an order was placed — so there
+ * was nothing truthful to map. Now there is: `pending_payment` means the card is not confirmed,
+ * `pending` means paid and waiting on the vendor, which is what `paid` was always for.
+ */
 function mapOrderStatus(s: string): OrderStatus {
   switch (s) {
-    case 'pending':
+    case 'pending_payment':
       return 'pending_payment';
+    case 'pending':
+      return 'paid';
     case 'accepted':
       return 'accepted';
     case 'ready':
