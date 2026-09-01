@@ -42,12 +42,19 @@ export function HubInventory({ hubId }: { hubId: string }) {
     <Wrap>
       {holders.map((h) => (
         <Card key={h.checkoutId} $overdue={overdue(h.returnDeadline)}>
-          <Avatar name={h.sellerName} size={40} />
-          <Info>
-            <Seller>{h.sellerName}</Seller>
-            <Prod>{h.quantity - h.soldQty} of {h.quantity} {h.productName} remaining</Prod>
-          </Info>
-          {overdue(h.returnDeadline) ? <Overdue>Overdue</Overdue> : null}
+          {/*
+            Who and what, kept together on one line at every width. Only the ACTIONS drop to their
+            own row on a narrow screen — splitting the avatar from the name would be a worse card,
+            not a more responsive one.
+          */}
+          <Head>
+            <Avatar name={h.sellerName} size={40} />
+            <Info>
+              <Seller>{h.sellerName}</Seller>
+              <Prod>{h.quantity - h.soldQty} of {h.quantity} {h.productName} remaining</Prod>
+            </Info>
+            {overdue(h.returnDeadline) ? <Overdue>Overdue</Overdue> : null}
+          </Head>
           {/*
             ═══ Two taps, because this is binding. ═══
 
@@ -143,14 +150,42 @@ const Wrap = styled.div`
   gap: ${({ theme }) => theme.space[3]}px;
   max-width: 640px;
 `;
+/**
+ * ═══ A card on mobile, a row on desktop. ═══
+ *
+ * This was one flex row holding an avatar, two lines of text, an OVERDUE badge and two buttons. At
+ * 430px that is four competing children on a single line: the product name wrapped to four words a
+ * line and "Recall" was pushed clean off the right edge, taking the page into a horizontal scroll.
+ * The most important action on the screen was the one you could not reach.
+ *
+ * Mobile-first: stack by default, and only go back to a single row once there is genuinely room
+ * (sm = 640px). `min-width: 0` on the grid is what actually lets the text shrink — without it a
+ * long product name sets the track width and the overflow comes straight back.
+ */
 const Card = styled.div<{ $overdue: boolean }>`
-  display: flex;
-  align-items: center;
+  display: grid;
   gap: ${({ theme }) => theme.space[3]}px;
+  min-width: 0;
   padding: ${({ theme }) => theme.space[3]}px ${({ theme }) => theme.space[4]}px;
   border-radius: ${({ theme }) => theme.radius.card}px;
   background: ${({ theme }) => theme.color.surfaceRaised};
   border: 1px solid ${({ theme, $overdue }) => ($overdue ? theme.color.statusDanger : theme.color.line)};
+
+  ${({ theme }) => theme.media.sm} {
+    display: flex;
+    align-items: center;
+  }
+`;
+/** Avatar + name + badge — one line at every width. */
+const Head = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[3]}px;
+  min-width: 0;
+
+  ${({ theme }) => theme.media.sm} {
+    flex: 1;
+  }
 `;
 const Info = styled.div`
   flex: 1;
@@ -164,11 +199,15 @@ const Prod = styled.p`
   font-size: 13px;
   color: ${({ theme }) => theme.color.textSecondary};
 `;
-/** The confirm takes the row's full width — it replaces the button rather than crowding it. */
+/** The confirm takes the card's full width — it replaces the buttons rather than crowding them. */
 const Confirm = styled.div`
-  flex: 1 1 100%;
   display: grid;
   gap: ${({ theme }) => theme.space[2]}px;
+  min-width: 0;
+
+  ${({ theme }) => theme.media.sm} {
+    flex: 1 1 100%;
+  }
 `;
 const ConfirmText = styled.p`
   font-size: 13px;
@@ -179,12 +218,28 @@ const ConfirmActions = styled.div`
   display: flex;
   gap: ${({ theme }) => theme.space[2]}px;
 `;
-/** Message sits beside Recall — the softer action first, since it is the one to reach for. */
+/**
+ * Message sits beside Recall — the softer action first, since it is the one to reach for.
+ *
+ * On mobile the two split the full width, which both removes the overflow and gives each a real
+ * tap target instead of two buttons crushed against the right edge.
+ */
 const RowActions = styled.div`
   display: flex;
   gap: ${({ theme }) => theme.space[2]}px;
+
+  > * {
+    flex: 1;
+  }
+  ${({ theme }) => theme.media.sm} {
+    > * {
+      flex: initial;
+    }
+  }
 `;
 const Overdue = styled.span`
+  /* Never squeezed: it is the reason the row is worth reading. */
+  flex: none;
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
