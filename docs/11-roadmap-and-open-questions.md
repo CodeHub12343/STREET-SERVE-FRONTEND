@@ -46,7 +46,7 @@
 - Dependencies: Milestones 0, 3 (verification tiers). Complexity: Medium technically, High on the legal/compliance review needed before launch (flagged as an open question below).
 
 **Milestone 7 — Pilot Launch (Modesto, CA)**
-- Load testing on realtime/geospatial paths, staged rollout, sponsor integration (Wonder Ice), monitoring/alerting live
+- Load testing on realtime/geospatial paths, staged rollout, sponsor integration, monitoring/alerting live
 - Dependencies: Milestones 1–4 minimum; 5–6 can follow shortly after launch rather than gating it.
 
 **Post-Launch — V1.x & Future**
@@ -76,7 +76,7 @@ Each question below carries a **recommended default** — the answer this bluepr
    **Recommended default:** 30-day retention on precise location history, then purge or aggregate to city-level/anonymized data. Do not independently store ID/selfie verification documents at all — leave those with the KYC provider (Persona/Stripe Identity) under their own compliance retention policy, minimizing StreetServe's own CCPA exposure.
 8. **Category taxonomy ownership:** Should the ~100-category mobile-business taxonomy be finalized now (as a fixed launch list) or should the platform support hub/vendor-submitted new categories with an admin-approval step from day one?
    **Recommended default:** Launch with a small curated list (roughly 15–25 categories actually vetted for the pilot city), with a vendor "suggest a category" submission that requires admin approval — not open self-service category creation. Expand the taxonomy market by market as licensing is checked.
-9. **Sponsor program scope:** What exactly does a "launch sponsor" (e.g., Wonder Ice) receive — logo placement only, in-app feature placement, or a data/reporting relationship — and does that need its own lightweight sponsor-facing dashboard at MVP or can it be handled manually for the pilot?
+9. **Sponsor program scope:** What exactly does a "launch sponsor" receive — logo placement only, in-app feature placement, or a data/reporting relationship — and does that need its own lightweight sponsor-facing dashboard at MVP or can it be handled manually for the pilot?
    **Recommended default:** MVP is logo placement plus manual reporting (UTM-tagged landing links, a shared report) — no dedicated sponsor dashboard until sponsor volume actually justifies building one (moved to V1.x, consistent with the "don't build ahead of demonstrated need" principle applied to the AI layer).
 10. **Multi-role trust portability:** If a single user is both a Street Seller and, later, registers a Mobile Vendor business, should Trust Score be shared/portable across those roles, or tracked entirely separately? The current recommendation (separate scores per role, one identity) should be confirmed against the client's intent.
     **Recommended default:** Keep Trust/Seller/Business scores separate per role (the behaviors measured are genuinely different), but make **identity verification** (KYC tier) portable across roles — no reason to redo ID/liveness checks when a Seller later registers as a Vendor.

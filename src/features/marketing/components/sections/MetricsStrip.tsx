@@ -30,12 +30,19 @@ export function MetricsStrip() {
     <Root aria-label="Launch status">
       <RevealRow stagger>
         <Tile>
-          <Value>{marketingConfig.launchCity}</Value>
+          <Value>
+            {marketingConfig.isLive ? marketingConfig.coverage : marketingConfig.launchCity}
+          </Value>
           <Label>{marketingConfig.isLive ? 'Live now' : 'Launching first'}</Label>
         </Tile>
+        {/*
+          This tile named a launch partner. The partner is gone, and a legitimacy band is the last
+          place to leave a stale name — so it states something that stays true instead of being
+          dropped, which would leave the strip with a hole where a claim used to be.
+        */}
         <Tile>
-          <Value>Wonder Ice</Value>
-          <Label>National launch partner</Label>
+          <Value>$0 upfront</Value>
+          <Label>Start selling on consignment</Label>
         </Tile>
         <Tile>
           <Value>3 sides, 1 map</Value>

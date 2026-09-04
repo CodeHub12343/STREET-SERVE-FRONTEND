@@ -20,7 +20,7 @@ Specified in IA doc §3. Components: `MarketingNav`, `AnnouncementBanner`.
   - Eyebrow: `● LIVE — the mobile economy, on the map` (pulsing live dot)
   - H1: **"Your city is open for business. Right now."** (alt: "The street just got a map.")
   - Support: "StreetServe puts every food truck, mobile pro, and street seller on one live map — wave them down, skip the line with early-bird discounts, or start earning today with zero inventory of your own."
-  - Trust line (under CTAs, 13px): "Launching first in Modesto, CA · Backed by Wonder Ice · Free for customers"
+  - Trust line (under CTAs, 13px): "Launching first in Modesto, CA · Free for customers · Works on any phone" / live: "Live in all states Nationwide · Free for customers · Works on any phone"
 - **CTAs:** Primary "Get early access" · Secondary (outline) "Explore the live map ↗".
 - **Map content:** see hero spec — animated vendor pins (business logos in status rings per `docs/06 §2.5`), a wave-down request/accept vignette, a queue filling with discount chips, a ping-chain ripple, Block Party cluster glow. "Simulated preview" caption chip bottom-right (honesty rule).
 - **Success test:** screenshot the hero, show it to someone for 5 seconds — they should say "it's a live map of vendors near you."
@@ -29,7 +29,7 @@ Specified in IA doc §3. Components: `MarketingNav`, `AnnouncementBanner`.
 
 - **Purpose:** legitimacy at the moment of peak curiosity; bridge wonder → comprehension.
 - **Layout:** one slim band (`--surface-raised`), 3 stat tiles + sponsor mark. Count-up animation on first reveal (tabular numerals).
-- **Content:** `{N} pre-registered` (live from API) · `Launching first: Modesto, CA` · `{N} local sponsors & partners` · Wonder Ice logo lockup "National launch partner."
+- **Content:** `{N} pre-registered` (live from API) · coverage tile (`Launching first: Modesto, CA` pre-launch / `all states Nationwide` live) · `$0 upfront — start selling on consignment`. No named launch partner: the strip carries only claims that stay true.
 - **Rule:** real numbers only. If a count is embarrassingly small pre-launch, show the launch-city line + sponsor lockup and omit the count (config-driven) — never inflate.
 
 ## 3. How StreetServe works (`#how-it-works`)
@@ -105,7 +105,7 @@ Specified in IA doc §3. Components: `MarketingNav`, `AnnouncementBanner`.
 
 ## 10. Partners & sponsors (`#partners`)
 
-- H2 **"Backed by people who believe in the street."** Sponsor logo row (Wonder Ice lead lockup + local sponsors), shelter/nonprofit partner marks, "Become a launch sponsor →" tertiary CTA. Grayscale logos, brand color on hover. Real logos only, with permission.
+- H2 **"Backed by people who believe in the street."** Sponsor logo row from `GET /sponsors`; with no approved sponsors it falls back to a "Your logo here" invitation rather than a named placeholder. Shelter/nonprofit partner marks, "Become a launch sponsor →" CTA to `/sponsor`. Grayscale logos, brand color on hover. Real logos only, with permission.
 
 ## 11. FAQ (`#faq`)
 

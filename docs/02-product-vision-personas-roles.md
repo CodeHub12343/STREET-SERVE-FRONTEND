@@ -80,7 +80,7 @@ A fourth, adjacent group — **Consignment Hubs / Inventory Owners** (businesses
 | **Mobile Vendor (Business)** | Operate a live business presence | Broadcast live location, manage queue/discount tiers, trigger Pop-Up mode, fund/manage paid ping balance, view vendor dashboard, accept Spot Me terms | Requires business verification (and category-specific license proof where applicable) |
 | **Consignment Hub / Inventory Owner** | Supply inventory to sellers | Upload products, set consignment/wholesale/rental/donation terms, manage hub location(s), view AI business dashboard, approve seller checkouts | Can overlap with Mobile Vendor role (a vendor can also be a hub) |
 | **Shelter/Community Partner Admin** | Sponsor vulnerable sellers | Verify resident identity, co-sign starter inventory allocation, view aggregate (non-sensitive) outcome reporting | Acts as guarantor in the trust model; distinct from a normal Hub |
-| **Sponsor** | Brand visibility during pre-launch/launch | Logo placement, sponsor dashboard (impressions/signups attributed), no transactional access | E.g., "Wonder Ice — national partner" |
+| **Sponsor** | Brand visibility during pre-launch/launch | Logo placement, sponsor dashboard (impressions/signups attributed), no transactional access | E.g., a regional brand taking the national launch-partner slot |
 | **Platform Admin / Trust & Safety** | Operate the platform | Full read access, dispute arbitration, account suspension, fraud-flag review, category/compliance metadata management, payout holds | Internal role, tiered (support agent vs. full admin) |
 | **Platform Ops / Finance** | Manage money movement | Payout configuration, fee schedule, sponsor billing, reconciliation reports | Internal role, least-privilege by default |
 

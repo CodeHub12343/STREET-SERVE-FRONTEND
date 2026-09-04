@@ -20,7 +20,7 @@ Everything else on the page exists to deepen that first impression for whichever
 |---|---|---|
 | 1 | **Grow the pre-launch waitlist** in the pilot market (Modesto, CA) and beyond | Pre-registration is the primary conversion event on every viewport (`docs/03` Flow 1a: name, email, phone optional, role, city, notify opt-in) |
 | 2 | **Seed all three sides of the marketplace** — a map with no vendors is worthless | Role-segmented value sections + role selector inside the pre-registration flow; vendor/seller CTAs are first-class, not footnotes |
-| 3 | **Establish credibility for a money-moving platform** | Fintech-grade polish, security/trust section, transparent fee language, sponsor logos ("Wonder Ice — national partner") |
+| 3 | **Establish credibility for a money-moving platform** | Fintech-grade polish, security/trust section, transparent fee language, sponsor logos (real, approved placements only) |
 | 4 | **Feed the product** | "Explore the live demo" secondary path into the built PWA (`/map`) for stakeholders, sponsors, and press |
 | 5 | **Rank for local discovery intent** | SSR marketing route, semantic HTML, structured data (Organization, FAQPage), fast LCP |
 

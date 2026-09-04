@@ -5,7 +5,7 @@
  * 24px of scroll. Center anchors (≥1024px) with active-section highlight via IntersectionObserver;
  * mobile collapses to wordmark + primary CTA + hamburger opening a full-snap Sheet menu.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import styled, { css } from 'styled-components';
@@ -13,7 +13,7 @@ import { Sheet } from '@/components/primitives/Sheet';
 
 
 import { ConversionCta } from './ConversionCta';
-import { cta, navLinks } from '../content';
+import { cta, navLinks, sectionAnchors } from '../content';
 import { marketingConfig } from '../marketing.config';
 import { glass } from '../mk';
 
@@ -40,7 +40,9 @@ export function MarketingNav() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const sectionIds = useMemo(() => navLinks.map((l) => l.href.slice(1)), []);
+  // Only same-page anchors can be scroll-spied; `/map` and `/sponsor` navigate away, and asking
+  // the observer for an element called `map` would silently watch nothing.
+  const sectionIds = sectionAnchors;
 
   // Active-anchor highlight: the topmost section crossing the upper half of the viewport wins.
   useEffect(() => {
@@ -76,11 +78,19 @@ export function MarketingNav() {
           </Wordmark>
 
           <Anchors aria-label="Page sections">
-            {navLinks.map((l) => (
-              <AnchorLink key={l.href} href={l.href} $active={active === l.href.slice(1)}>
-                {l.label}
-              </AnchorLink>
-            ))}
+            {navLinks.map((l) =>
+              l.href.startsWith('#') ? (
+                <AnchorLink key={l.href} href={l.href} $active={active === l.href.slice(1)}>
+                  {l.label}
+                </AnchorLink>
+              ) : (
+                // A route, not a scroll target — routed through next/link so it prefetches and
+                // does not full-page reload out of the marketing shell.
+                <RouteLink key={l.href} href={l.href} $active={false}>
+                  {l.label}
+                </RouteLink>
+              ),
+            )}
           </Anchors>
 
           <Actions>
@@ -107,14 +117,20 @@ export function MarketingNav() {
         ariaLabel="Menu"
       >
         <MenuList>
-          {navLinks.map((l) => (
-            <MenuLink key={l.href} href={l.href} onClick={() => setMenuOpen(false)}>
-              {l.label}
-            </MenuLink>
-          ))}
-          <MenuLink href={marketingConfig.signInHref} onClick={() => setMenuOpen(false)}>
+          {navLinks.map((l) =>
+            l.href.startsWith('#') ? (
+              <MenuLink key={l.href} href={l.href} onClick={() => setMenuOpen(false)}>
+                {l.label}
+              </MenuLink>
+            ) : (
+              <MenuRouteLink key={l.href} href={l.href} onClick={() => setMenuOpen(false)}>
+                {l.label}
+              </MenuRouteLink>
+            ),
+          )}
+          <MenuRouteLink href={marketingConfig.signInHref} onClick={() => setMenuOpen(false)}>
             Sign in
-          </MenuLink>
+          </MenuRouteLink>
           <MenuCta>
             <ConversionCta
               source="nav-menu"
@@ -163,7 +179,14 @@ const Inner = styled.div`
   gap: ${({ theme }) => theme.space[4]}px;
   ${({ theme }) => theme.media.md} {
     height: 64px;
+    /* The anchor row went from four entries to six and md is only 1024px wide, so the shell's own
+       gutters and gap are what give it room. Both relax again at lg where there is space. */
+    padding: 0 20px;
+    gap: ${({ theme }) => theme.space[2]}px;
+  }
+  ${({ theme }) => theme.media.lg} {
     padding: 0 32px;
+    gap: ${({ theme }) => theme.space[4]}px;
   }
 `;
 
@@ -186,14 +209,26 @@ const Anchors = styled.nav`
   display: none;
   ${({ theme }) => theme.media.md} {
     display: flex;
+    align-items: center;
+    /* Six entries, not four. They must not push the CTA off the bar at 768px, so the row tightens
+       up at md and only gets its full spacing back when there is room for it. */
+    gap: 2px;
+    min-width: 0;
+  }
+  ${({ theme }) => theme.media.lg} {
     gap: ${({ theme }) => theme.space[2]}px;
   }
 `;
 
-const AnchorLink = styled.a<{ $active: boolean }>`
-  padding: 8px 14px;
+const anchorLinkStyles = css<{ $active: boolean }>`
+  padding: 8px 8px;
+  white-space: nowrap;
+  font-size: 13px;
+  ${({ theme }) => theme.media.lg} {
+    padding: 8px 14px;
+    font-size: 14px;
+  }
   border-radius: ${({ theme }) => theme.radius.pill}px;
-  font-size: 14px;
   font-weight: 650;
   color: ${({ theme, $active }) => ($active ? theme.color.textPrimary : theme.color.textSecondary)};
   background: ${({ theme, $active }) => ($active ? theme.color.surfaceRaised2 : 'transparent')};
@@ -203,6 +238,15 @@ const AnchorLink = styled.a<{ $active: boolean }>`
   &:hover {
     color: ${({ theme }) => theme.color.textPrimary};
   }
+`;
+
+const AnchorLink = styled.a<{ $active: boolean }>`
+  ${anchorLinkStyles}
+`;
+
+/** Same chrome as an anchor, but it routes. Visually identical so the bar reads as one row. */
+const RouteLink = styled(Link)<{ $active: boolean }>`
+  ${anchorLinkStyles}
 `;
 
 const Actions = styled.div`
@@ -247,6 +291,17 @@ const MenuList = styled.nav`
 `;
 
 const MenuLink = styled.a`
+  padding: 14px 12px;
+  font-size: 18px;
+  font-weight: 700;
+  border-radius: ${({ theme }) => theme.radius.control}px;
+  &:hover {
+    background: ${({ theme }) => theme.color.surfaceRaised2};
+  }
+`;
+
+/** The routed twin of MenuLink, for nav entries that leave the page. */
+const MenuRouteLink = styled(Link)`
   padding: 14px 12px;
   font-size: 18px;
   font-weight: 700;

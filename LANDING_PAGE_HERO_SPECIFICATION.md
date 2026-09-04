@@ -97,7 +97,8 @@ Support:   Every food truck, mobile pro, and street seller on one live map.
            Or start earning today — no inventory, nothing upfront.
 CTA 1:     Get early access
 CTA 2:     Explore the live map ↗
-Trust:     Launching first in Modesto, CA · Backed by Wonder Ice · Free for customers
+Trust:     Launching first in Modesto, CA · Free for customers · Works on any phone
+           (live) Live in all states Nationwide · Free for customers · Works on any phone
 Caption:   Simulated preview
 ```
 

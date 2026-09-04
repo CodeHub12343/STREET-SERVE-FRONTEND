@@ -18,6 +18,7 @@
  *    The name is real either way; the image is the part that waits on permissions (D3).
  */
 import { useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import styled from 'styled-components';
 import { api } from '@/lib/api/client';
@@ -75,10 +76,15 @@ export function PartnersSection() {
       <Reveal>
         <LogoRow ref={row}>
           {sponsors.length === 0 ? (
-            /* No sponsors yet — the lead partner lockup, as before. Never an empty band. */
+            /*
+              No sponsors yet. The fallback used to name a launch partner; with that partner gone,
+              inventing a name to fill the band would be exactly the fabrication the rest of this
+              page's flags exist to prevent. An open invitation is true whether or not anyone has
+              signed, and it is also the CTA — so the band still does work when it is empty.
+            */
             <Lockup>
-              <LockupName>Wonder Ice</LockupName>
-              <LockupRole>National launch partner</LockupRole>
+              <LockupName>Your logo here</LockupName>
+              <LockupRole>{partners.empty}</LockupRole>
             </Lockup>
           ) : (
             sponsors.map((s) =>
@@ -127,6 +133,7 @@ const LogoRow = styled.div`
 const Lockup = styled.div`
   display: grid;
   gap: 4px;
+  max-width: 340px;
   padding: ${({ theme }) => theme.space[5]}px ${({ theme }) => theme.space[6]}px;
   border-radius: ${({ theme }) => theme.radius.card}px;
   border: 1px solid ${({ theme }) => theme.color.line};
@@ -152,7 +159,8 @@ const CtaRow = styled.div`
   margin-top: ${({ theme }) => theme.space[6]}px;
 `;
 
-const SponsorLink = styled.a`
+/* Now a route (`/sponsor`), not a `mailto:` — so it must route rather than reload the app. */
+const SponsorLink = styled(Link)`
   font-size: 15px;
   font-weight: 700;
   color: ${({ theme }) => theme.color.accentSecondary};

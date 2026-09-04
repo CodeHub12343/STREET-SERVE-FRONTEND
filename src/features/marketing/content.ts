@@ -4,7 +4,7 @@
  * always "smart"/"AI-assisted", no blanket license claims, no unqualified instant-payout claims,
  * real numbers only.
  */
-import { launchState } from './marketing.config';
+import { launchState, marketingConfig } from './marketing.config';
 
 /**
  * Resolves a launch-state copy variant. The page has always had a `prelaunch | live` switch, but
@@ -25,12 +25,29 @@ export const cta = {
   compact: v({ prelaunch: 'Get early access', live: 'Get started' }),
 } as const;
 
+/**
+ * Main nav. Two kinds of entry now live here: `#anchor` links that scroll within the landing page,
+ * and real routes that navigate away. The nav used to assume every entry was an anchor — it fed
+ * `href.slice(1)` straight to `getElementById` for the active-section highlight — so a route entry
+ * would have been observed as the element `map`, which does not exist. Callers must branch on
+ * `href.startsWith('#')`; `sectionAnchors` below does that once for the observer.
+ *
+ * The live map earns a top-level slot because it is the product; sponsorship and investment share
+ * one entry because they share one page (client requirement: a single link, not two).
+ */
 export const navLinks = [
+  { href: '/map', label: 'Live map' },
   { href: '#how-it-works', label: 'How it works' },
   { href: '#features', label: 'Features' },
   { href: '#benefits', label: 'Who it’s for' },
   { href: '#faq', label: 'FAQ' },
+  { href: marketingConfig.sponsorHref, label: 'Sponsorships & Investors' },
 ] as const;
+
+/** The subset of nav targets that are sections of this page — the only ones scroll-spy can track. */
+export const sectionAnchors = navLinks
+  .filter((l) => l.href.startsWith('#'))
+  .map((l) => l.href.slice(1));
 
 export const hero = {
   // Pre-launch the old eyebrow claimed "Live" while the button underneath said "Get early access" —
@@ -46,8 +63,8 @@ export const hero = {
   ctaPrimary: cta.primary,
   ctaSecondary: 'Explore the live map',
   trustLine: v({
-    prelaunch: 'Launching first in Modesto, CA · Backed by Wonder Ice · Free for customers',
-    live: 'Live in Modesto, CA · Backed by Wonder Ice · Free for customers',
+    prelaunch: `Launching first in ${marketingConfig.launchCity} · Free for customers · Works on any phone`,
+    live: `Live in ${marketingConfig.coverage} · Free for customers · Works on any phone`,
   }),
   simChip: 'Simulated preview',
   /** Offscreen text alternative for the map scene (LANDING_PAGE_ACCESSIBILITY.md §5). */
@@ -142,6 +159,18 @@ export const features = {
       icon: '📅',
       title: 'Scheduling',
       body: 'Book the mobile groomer for Tuesday. Reminders included.',
+    },
+    /**
+     * Direct-mail postcards were fully built — ordering wizard, artwork moderation, print
+     * fulfilment — and named nowhere a prospective vendor could see before signing up. A paid
+     * feature that only existing users can discover is a feature nobody buys.
+     */
+    {
+      key: 'postcards',
+      size: 'small',
+      icon: '📮',
+      title: 'Direct-Mail Postcards',
+      body: 'Print and mail real postcards to the streets around you. Pick the area, we handle the rest.',
     },
   ],
   categories: [
@@ -325,8 +354,56 @@ export const trust = {
 export const partners = {
   eyebrow: 'Partners',
   title: 'Backed by people who believe in the street.',
-  lead: 'Wonder Ice — national launch partner',
-  cta: { label: 'Become a launch sponsor', href: 'mailto:partners@streetserve.app' },
+  /**
+   * There is no named lead partner any more. The honest thing to show when the sponsor roster is
+   * empty is an invitation, not a placeholder name — a logo band naming a partner we cannot point
+   * at is the same fabrication the flags elsewhere in this file exist to avoid.
+   */
+  empty: 'The first logos here are still open. Sponsors appear once their placement is approved.',
+  cta: { label: 'Become a launch sponsor', href: marketingConfig.sponsorHref },
+} as const;
+
+/**
+ * ═══ Sponsorships & Investors — one public page, two audiences. ═══
+ *
+ * Sponsorship and investment used to be the same thing here: a `mailto:`. They are not the same
+ * thing, and conflating them is how a serious investor enquiry ended up in the same inbox as a
+ * logo placement. They share a page because the client asked for a single nav entry, but the page
+ * separates them, because what each one is buying is different:
+ *
+ *  • A **sponsor** buys a placement. It is priced, it is self-serve, and it is transactional.
+ *  • An **investor** is not buying anything on a web page. There is no instrument to sell and no
+ *    price to quote, so the only honest CTA is a conversation — anything resembling a "buy in"
+ *    button would be a solicitation this page is in no position to make.
+ */
+export const sponsorPage = {
+  title: 'Sponsorships & Investors',
+  lede:
+    'Two ways to back the street economy: put your name on the map, or back the company building it.',
+  sponsor: {
+    eyebrow: 'Sponsorships',
+    title: 'Put your logo on the map.',
+    body:
+      'Your logo on the landing page and a link that credits you with every person who signs up through it. One payment for the term you choose — no recurring charge, no auto-renewal.',
+  },
+  investors: {
+    eyebrow: 'Investors',
+    title: 'Back the company.',
+    body:
+      'StreetServe is building the live map of the mobile economy — food trucks, mobile pros, and street sellers, on one map, in all states Nationwide. If you invest in early-stage marketplaces, we would like to talk.',
+    /**
+     * Deliberately not a payment. Nothing on this page offers or sells a security, and no figure
+     * appears that we cannot stand behind — an investor page that quotes a valuation or a return
+     * it has not committed to is a liability, not a lead.
+     */
+    points: [
+      'Three sides on one map: customers, vendors, and sellers.',
+      'Consignment, rent-to-own, and direct-mail marketing already shipped and in use.',
+      'Revenue from transaction fees, vendor subscriptions, and marketing placements.',
+    ],
+    cta: { label: 'Contact us about investing', href: `mailto:${marketingConfig.contactEmail}?subject=${encodeURIComponent('StreetServe — investor enquiry')}` },
+    note: 'This page is information only. It is not an offer to sell, or a solicitation of an offer to buy, any security.',
+  },
 } as const;
 
 export const faq = {
@@ -344,7 +421,7 @@ export const faq = {
       a: v({
         prelaunch:
           'We’re launching first in Modesto, CA. Pre-register from anywhere — your city and role help us decide where the map lights up next.',
-        live: 'We’re live in Modesto, CA. You can sign up from anywhere — your city and role help us decide where the map lights up next.',
+        live: `We’re live in ${marketingConfig.coverage}. Sign up from anywhere — your city and role help us decide where the map lights up brightest next.`,
       }),
     },
     {
@@ -412,7 +489,8 @@ export const footer = {
       links: [
         { label: 'Our mission', href: '#impact' },
         { label: 'Partners', href: '#partners' },
-        { label: 'Contact', href: 'mailto:hello@streetserve.app' },
+        { label: 'Contact', href: `mailto:${marketingConfig.contactEmail}` },
+        { label: 'Sponsorships & Investors', href: marketingConfig.sponsorHref },
       ],
     },
     {
@@ -433,7 +511,7 @@ export const footer = {
     cta: { label: v({ prelaunch: 'Join the waitlist', live: 'Get started' }), href: '#cta' },
   },
   legalLine: v({
-    prelaunch: `© ${new Date().getFullYear()} StreetServe · Launching first in Modesto, CA`,
-    live: `© ${new Date().getFullYear()} StreetServe · Live in Modesto, CA`,
+    prelaunch: `© ${new Date().getFullYear()} StreetServe · Launching first in ${marketingConfig.launchCity}`,
+    live: `© ${new Date().getFullYear()} StreetServe · Live in ${marketingConfig.coverage}`,
   }),
 } as const;

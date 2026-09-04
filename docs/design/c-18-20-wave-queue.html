@@ -301,7 +301,7 @@
           </div>
           <div class="card altcard">
             <span class="face" style="border-color:var(--status-driving)">🍦</span>
-            <div><b>Wonder Ice</b><small>★ 4.9 · <span class="num">5 min away</span> · Driving</small></div>
+            <div><b>Chill Cart</b><small>★ 4.9 · <span class="num">5 min away</span> · Driving</small></div>
             <button class="btn primary" id="waveAlt">Wave</button>
           </div>
           <button class="btn secondary" id="backMap1">Back to map</button>
@@ -316,7 +316,7 @@
           </div>
           <div class="card altcard">
             <span class="face" style="border-color:var(--status-driving)">🍦</span>
-            <div><b>Wonder Ice</b><small>★ 4.9 · <span class="num">5 min away</span> · Driving</small></div>
+            <div><b>Chill Cart</b><small>★ 4.9 · <span class="num">5 min away</span> · Driving</small></div>
             <button class="btn primary" id="waveAlt2">Wave</button>
           </div>
           <button class="btn secondary" id="backMap2">Back to map</button>
@@ -454,8 +454,8 @@
   $('#sendWave').addEventListener('click',()=>go('waiting'));
   $('#cancelWave').addEventListener('click',()=>{ show('Wave cancelled — nothing charged'); go('confirm'); });
   $('#toQueue').addEventListener('click',()=>go('queue'));
-  $('#waveAlt').addEventListener('click',()=>{ show('Waving Wonder Ice…'); go('waiting'); });
-  $('#waveAlt2').addEventListener('click',()=>{ show('Waving Wonder Ice…'); go('waiting'); });
+  $('#waveAlt').addEventListener('click',()=>{ show('Waving Chill Cart…'); go('waiting'); });
+  $('#waveAlt2').addEventListener('click',()=>{ show('Waving Chill Cart…'); go('waiting'); });
   $('#backMap1').addEventListener('click',()=>go('confirm'));
   $('#backMap2').addEventListener('click',()=>go('confirm'));
   $('#leaveLine').addEventListener('click',()=>{ show('Left the line — your 15% tier was released'); pos=4; go('confirm'); });

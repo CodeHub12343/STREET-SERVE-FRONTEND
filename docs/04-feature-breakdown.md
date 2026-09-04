@@ -78,4 +78,4 @@ Legend: **MVP** = required for pilot launch (Modesto, CA). **V1.x** = advanced, 
 - Inventory insurance (future)
 - Advertising / featured placement (products, sellers, hubs)
 - Training certification fees (optional paid certification tracks within AI Seller Academy)
-- Sponsor packages (pre-launch and ongoing, per the "1+ launch sponsors" model already validated by Wonder Ice)
+- Sponsor packages (pre-launch and ongoing, per the "1+ launch sponsors" model)

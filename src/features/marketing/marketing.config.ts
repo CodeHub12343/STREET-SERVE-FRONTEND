@@ -20,6 +20,20 @@ export const marketingConfig = {
   launchState,
   isLive,
   launchCity: 'Modesto, CA',
+  /**
+   * The coverage claim shown to the public. It used to be the launch city spelled out in six
+   * separate strings, so widening the footprint meant editing six lines and missing one — the
+   * footer and the hero could disagree about where StreetServe actually operates. One value now.
+   */
+  coverage: 'all states Nationwide',
+  /**
+   * Where every public contact route lands: the footer's Contact link, the partner/investor
+   * enquiry CTAs, and the sponsorship page. Single value so a change of inbox is one edit, not a
+   * hunt through the copy for `mailto:` strings.
+   */
+  contactEmail: 'jbowser727@gmail.com',
+  /** The unified Sponsorships & Investors page — one destination for both audiences. */
+  sponsorHref: '/sponsor',
   /** Real testimonials don't exist pre-launch — section stays off until they do (D4). */
   showTestimonials: false,
   /**
@@ -34,7 +48,7 @@ export const marketingConfig = {
    */
   announcement: isLive
     ? {
-        message: '🗺️ StreetServe is live in Modesto, CA — open the map and see who’s out right now.',
+        message: '🗺️ StreetServe is live in all states Nationwide — open the map and see who’s out right now.',
         dismissKey: 'ss-banner-live-modesto',
       }
     : {

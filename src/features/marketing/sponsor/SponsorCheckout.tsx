@@ -16,8 +16,16 @@
  *     of keeping money for nothing.
  *  3. **The term is fixed and it ends.** No auto-renewal, no recurring charge — one payment, one
  *     term, and the placement comes down when it runs out.
+ *
+ * **Reading is public; paying is not.** The page and this rate card are visible to anyone, because
+ * a prospective sponsor has to be able to see what a placement costs before deciding whether to
+ * make an account. The purchase itself needs a signed-in owner: `POST /sponsors/purchase` is
+ * authenticated server-side, so without this guard an anonymous visitor filled the whole form,
+ * pressed Continue, and got a bare 401 toast with no idea what to do about it. The guard sends
+ * them to sign-up and back here instead.
  */
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useMutation } from '@tanstack/react-query';
 import styled from 'styled-components';
@@ -33,6 +41,8 @@ import { endpoints } from '@/lib/api/endpoints';
 import { AppApiError } from '@/lib/api/errors';
 import { formatCents } from '@/lib/money';
 import { newIdempotencyKey } from '@/lib/idempotency';
+import { useAuthCompat } from '@/lib/auth/useAuthCompat';
+import { isAuthConfigured } from '@/lib/env';
 
 interface Tier {
   slug: string;
@@ -53,8 +63,20 @@ interface PurchaseResult {
   status: 'pending_payment';
 }
 
+/** Where sign-up returns to, so a sponsor lands back on the page they were paying from. */
+const RETURN_TO = '/sponsor';
+
 export function SponsorCheckout() {
   const { show } = useToast();
+  const router = useRouter();
+  /**
+   * `isLoaded` matters: Clerk reports `isSignedIn === false` while it is still resolving the
+   * session, so guarding on that alone would bounce a signed-in sponsor to sign-up on a slow load.
+   * When Clerk isn't configured at all (dev without keys) there is no session to check and the
+   * guard stands down — the backend is still the thing that actually enforces this.
+   */
+  const { isLoaded, isSignedIn } = useAuthCompat();
+  const mustSignIn = isAuthConfigured && isLoaded && !isSignedIn;
   const { data, isLoading, isError, refetch } = useQuery<RateCard>({
     queryKey: ['sponsor', 'tiers'],
     queryFn: () => api.get<RateCard>(endpoints.sponsorTiers),
@@ -130,12 +152,6 @@ export function SponsorCheckout() {
 
   return (
     <Wrap>
-      <H1>Sponsor StreetServe</H1>
-      <Lede>
-        Your logo on the landing page, and a link that credits you with every person who signs up
-        through it.
-      </Lede>
-
       <Tiers role="radiogroup" aria-label="Sponsorship tier">
         {data.tiers.map((t) => (
           <TierCard
@@ -203,11 +219,30 @@ export function SponsorCheckout() {
         </span>
       </Reassure>
 
+      {/*
+        Said before the button, not after it: someone who is going to have to make an account
+        should know that while they are still deciding, not at the moment they press pay.
+      */}
+      {mustSignIn ? (
+        <SignInNote>
+          You’ll be asked to sign in or create an account before paying — a sponsorship has an owner
+          we can tell when it goes live, when it ends, and if we can’t run it.
+        </SignInNote>
+      ) : null}
+
       <Button
         fullWidth
         disabled={!ready}
         loading={purchase.isPending}
-        onClick={() =>
+        onClick={() => {
+          /**
+           * The guard. Nothing is charged and no placement is created for a signed-out visitor —
+           * we send them to sign-up with a return path and they come back to this form.
+           */
+          if (mustSignIn) {
+            router.push(`/sign-up?redirect_url=${encodeURIComponent(RETURN_TO)}`);
+            return;
+          }
           purchase.mutate(undefined, {
             onSuccess: (res) => {
               if (!res.clientSecret) {
@@ -224,10 +259,14 @@ export function SponsorCheckout() {
                 e instanceof AppApiError ? e.message : 'Could not start your sponsorship',
                 'danger',
               ),
-          })
-        }
+          });
+        }}
       >
-        {selected ? `Continue — ${formatCents(totalCents)}` : 'Choose a tier'}
+        {!selected
+          ? 'Choose a tier'
+          : mustSignIn
+            ? `Sign up to continue — ${formatCents(totalCents)}`
+            : `Continue — ${formatCents(totalCents)}`}
       </Button>
     </Wrap>
   );
@@ -236,9 +275,16 @@ export function SponsorCheckout() {
 const Wrap = styled.div`
   display: grid;
   gap: ${({ theme }) => theme.space[4]}px;
-  max-width: 560px;
-  margin: 0 auto;
-  padding: ${({ theme }) => theme.space[6]}px ${({ theme }) => theme.space[5]}px;
+`;
+
+const SignInNote = styled.p`
+  font-size: 13px;
+  line-height: 1.55;
+  color: ${({ theme }) => theme.color.textSecondary};
+  padding: ${({ theme }) => theme.space[3]}px ${({ theme }) => theme.space[4]}px;
+  border-radius: ${({ theme }) => theme.radius.card}px;
+  background: ${({ theme }) => theme.color.surfaceRaised};
+  border: 1px dashed ${({ theme }) => theme.color.line2};
 `;
 const H1 = styled.h1`
   font-family: ${({ theme }) => theme.typography.fontDisplay};

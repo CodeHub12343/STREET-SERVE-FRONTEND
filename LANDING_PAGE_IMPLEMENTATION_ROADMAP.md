@@ -11,7 +11,7 @@
 |---|---|---|---|
 | D1 | Final copy (hero block, H2s, FAQ answers) | drafts in Section Breakdown | client + us |
 | D2 | Launch-state: ship pre-launch or live variant first | pre-launch (`NEXT_PUBLIC_LAUNCH_STATE=prelaunch`) | client |
-| D3 | Sponsor logos + permissions (Wonder Ice lockup) | required assets before §LP-4 | client |
+| D3 | Sponsor logos + permissions | required assets before §LP-4 | client |
 | D4 | Testimonials: real quotes available? | section off via config until real | client |
 | D5 | "Founding-member perks" claim in final CTA | omit until defined | client |
 | D6 | Partner-contact channel (impact section CTA) | mailto → shared inbox | client |

@@ -23,7 +23,11 @@ import {
 
 const title = 'StreetServe — the live map of your city’s mobile economy';
 const description =
-  'Every food truck, mobile pro, and street seller on one live map. Wave them down, skip the line with early-bird discounts, or start earning today with nothing upfront. Launching first in Modesto, CA.';
+  `Every food truck, mobile pro, and street seller on one live map. Wave them down, skip the line with early-bird discounts, or start earning today with nothing upfront. ${
+    marketingConfig.isLive
+      ? `Live in ${marketingConfig.coverage}.`
+      : `Launching first in ${marketingConfig.launchCity}.`
+  }`;
 
 export const metadata: Metadata = {
   title: { absolute: title },
@@ -50,7 +54,7 @@ const organizationJsonLd = {
   description,
   slogan: 'See good, do good.',
   logo: marketingConfig.logoSrc,
-  areaServed: marketingConfig.launchCity,
+  areaServed: marketingConfig.isLive ? marketingConfig.coverage : marketingConfig.launchCity,
 };
 
 const faqJsonLd = {

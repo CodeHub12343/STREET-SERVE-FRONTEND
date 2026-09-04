@@ -20,6 +20,10 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/welcome',
   '/map(.*)', // map browse + list view (docblock: public reads; landing "Explore the live map" CTA)
+  // The Sponsorships & Investors page. Its whole audience is people without an account, so gating
+  // the rate card behind sign-in guaranteed nobody read it. Paying is guarded in the component,
+  // and `POST /sponsors/purchase` is authenticated server-side regardless.
+  '/sponsor',
   '/business/(.*)', // public profile + menu
   '/gift/(.*)', // redemption (guest)
   '/api/health',
