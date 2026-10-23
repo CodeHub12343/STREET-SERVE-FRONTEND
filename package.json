@@ -5,7 +5,7 @@
   "description": "StreetServe frontend — Next.js App Router + React 18 + TypeScript PWA (Milestone 0: Foundation)",
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=20 <21"
+    "node": "24.x"
   },
   "scripts": {
     "predev": "node scripts/clean-sw.mjs",
