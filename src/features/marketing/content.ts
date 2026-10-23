@@ -351,6 +351,113 @@ export const trust = {
   },
 } as const;
 
+/**
+ * Annual sponsorship tiers (client brief, 2027 program). Five fixed packages — $10K → $1M.
+ * The landing section renders these as a card grid; the full self-serve purchase lives on
+ * `/sponsor`. Numbers are the client's proposed annual deliverables and are what a sponsor
+ * is quoted. Keep them in one place so the comparison table and the per-card stats cannot
+ * drift apart.
+ */
+export const sponsorshipTiers = {
+  eyebrow: 'Sponsorships',
+  title: 'Five ways to put your brand on the map.',
+  support:
+    'Annual packages from $10,000 to $1,000,000. Every tier includes 12-month logo placement, a full company profile with a clickable link, and a monthly delivery schedule for shoutouts, social videos, and direct-mail postcards.',
+  cta: { label: 'See full details & become a sponsor', href: '/sponsor#sponsorships' },
+  /** The one tier card we lift visually. The client called out Platinum as the headline tier. */
+  featuredSlug: 'platinum',
+  tiers: [
+    {
+      slug: 'silver',
+      name: 'Silver',
+      kicker: 'Small Business Sponsor',
+      priceAnnual: 10_000,
+      summary:
+        'An entry-level annual package for local businesses, startups, restaurants, retailers, and service companies seeking consistent exposure.',
+      deliverables: { shoutouts: 100, videos: 48, postcards: 5_000 },
+      perks: [
+        '12-month logo placement',
+        'Dedicated business profile + clickable link',
+        'Promotional posts featuring your products',
+        'Postcards with branded QR codes',
+        'Quarterly performance reports',
+      ],
+    },
+    {
+      slug: 'gold',
+      name: 'Gold',
+      kicker: 'Business Growth Sponsor',
+      priceAnnual: 50_000,
+      summary:
+        'For growing businesses, regional companies, and service providers that want a daily marketing presence and consistent customer outreach.',
+      deliverables: { shoutouts: 365, videos: 100, postcards: 10_000 },
+      perks: [
+        '12-month logo placement',
+        'Enhanced profile + sponsor directory listing',
+        'Daily shoutout cadence (365/yr)',
+        'Postcard ads with QR codes & offers',
+        'Quarterly performance reports',
+      ],
+    },
+    {
+      slug: 'platinum',
+      name: 'Platinum',
+      kicker: 'Premium Business Sponsor',
+      priceAnnual: 100_000,
+      summary:
+        'Frequent social media exposure, consistent video marketing, and substantial postcard distribution — the headline mid-tier.',
+      deliverables: { shoutouts: 730, videos: 200, postcards: 50_000 },
+      perks: [
+        'Priority sponsor logo placement',
+        'Enhanced profile with product highlights',
+        'Two shoutouts daily (730/yr)',
+        'Branded postcards with QR codes & offers',
+        'Monthly reports + quarterly planning',
+      ],
+    },
+    {
+      slug: 'diamond',
+      name: 'Diamond',
+      kicker: 'Elite Corporate Sponsor',
+      priceAnnual: 500_000,
+      summary:
+        'For established national and regional brands seeking continuous visibility, premium placement, and a major social presence.',
+      deliverables: { shoutouts: 730, videos: 300, postcards: 20_000 },
+      perks: [
+        'Premium placement in all sponsor areas',
+        'Dedicated promotional landing page',
+        'Featured sponsor-directory positioning',
+        'Priority scheduling for launches & seasons',
+        'Monthly reports + quarterly strategy reviews',
+      ],
+    },
+    {
+      slug: 'kingdom-legacy',
+      name: 'Kingdom Legacy',
+      kicker: 'Premier Corporate Sponsor',
+      priceAnnual: 1_000_000,
+      summary:
+        'National-scale brand exposure and a leading promotional partnership — our highest tier, for major corporations.',
+      deliverables: { shoutouts: 730, videos: 365, postcards: 500_000 },
+      perks: [
+        'Premier logo placement site-wide',
+        'Dedicated sponsor landing page + trackable QR',
+        'Priority scheduling & co-branded campaigns',
+        'Monthly reports + quarterly strategy meetings',
+        '~41,667 postcards distributed monthly',
+      ],
+    },
+  ],
+  pillars: [
+    'Website logo placement — prominence by tier',
+    'Full sponsor profile with clickable links',
+    'Social shoutouts & branded videos',
+    'Direct-mail postcards with trackable QR',
+  ],
+  footnote:
+    'All figures are proposed annual deliverables. Monthly cadence is averaged; exact schedules are agreed in each contract and the full annual quantity is guaranteed.',
+} as const;
+
 export const partners = {
   eyebrow: 'Partners',
   title: 'Backed by people who believe in the street.',

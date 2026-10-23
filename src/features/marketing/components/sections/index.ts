@@ -8,5 +8,6 @@ export { ImpactSection } from './ImpactSection';
 export { Testimonials } from './Testimonials';
 export { TrustSection } from './TrustSection';
 export { PartnersSection } from './PartnersSection';
+export { SponsorshipTiers } from './SponsorshipTiers';
 export { FaqSection } from './FaqSection';
 export { FinalCta } from './FinalCta';

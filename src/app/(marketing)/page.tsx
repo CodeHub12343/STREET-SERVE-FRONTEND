@@ -17,6 +17,7 @@ import {
   MapShowcase,
   MetricsStrip,
   PartnersSection,
+  SponsorshipTiers,
   Testimonials,
   TrustSection,
 } from '@/features/marketing/components/sections';
@@ -88,6 +89,7 @@ export default function HomePage() {
       <Testimonials />
       <TrustSection />
       <PartnersSection />
+      <SponsorshipTiers />
       <FaqSection />
       <FinalCta />
     </>
