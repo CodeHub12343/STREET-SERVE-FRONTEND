@@ -17,12 +17,21 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#0E0F12',
     categories: ['shopping', 'food', 'business'],
     icons: [
-      // Single scalable SVG (installable in Chromium); swap for rasterized PNGs before store listing.
       /**
-       * The real brand mark, replacing the placeholder SVG. `purpose: 'any'` only — deliberately
-       * NOT maskable: Android crops a maskable icon to a circle and would cut the wordmark in half.
-       * A proper maskable version needs a square mark with padding, which this lockup is not.
+       * Chrome needs ≥192 and ≥512 PNG declarations in the manifest or it refuses to install the
+       * PWA and the "Add to Home Screen" shortcut falls back to a generic letter + Chrome overlay
+       * (which is what Android home screens were showing). The 192/512 variants are rasterised from
+       * the 1024 brand mark at build-prep time; they live in /public/.
        */
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      /**
+       * Maskable variant with a built-in safe zone (72% centre, dark backdrop) so Android's circle
+       * crop doesn't cut off the mark. Only used by the OS launcher; `any` icons above are what the
+       * browser tab and share sheet pick up.
+       */
+      { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      /** Original 1024 kept for high-DPI contexts (store listings, splash). */
       { src: '/1000020693.png', sizes: '1024x1024', type: 'image/png', purpose: 'any' },
     ],
   };

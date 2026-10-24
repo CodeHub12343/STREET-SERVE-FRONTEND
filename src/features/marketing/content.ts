@@ -40,8 +40,9 @@ export const navLinks = [
   { href: '#how-it-works', label: 'How it works' },
   { href: '#features', label: 'Features' },
   { href: '#benefits', label: 'Who it’s for' },
+  { href: '#sponsorships', label: 'Sponsorships' },
   { href: '#faq', label: 'FAQ' },
-  { href: marketingConfig.sponsorHref, label: 'Sponsorships & Investors' },
+  { href: marketingConfig.sponsorHref, label: 'Sponsor / Invest' },
 ] as const;
 
 /** The subset of nav targets that are sections of this page — the only ones scroll-spy can track. */
