@@ -11,6 +11,7 @@ import {
   FaqSection,
   FeatureGrid,
   FinalCta,
+  GiveawayCallout,
   HeroSection,
   HowItWorks,
   ImpactSection,
@@ -90,6 +91,7 @@ export default function HomePage() {
       <TrustSection />
       <PartnersSection />
       <SponsorshipTiers />
+      <GiveawayCallout />
       <FaqSection />
       <FinalCta />
     </>

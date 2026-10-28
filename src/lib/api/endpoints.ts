@@ -56,6 +56,9 @@ export const endpoints = {
     `/me/brands/${encodeURIComponent(brandId)}/operators`,
   myBrandOperatorRetire: (operatorId: string) =>
     `/me/brand-operators/${encodeURIComponent(operatorId)}/retire`,
+  /** Disable franchise mode — reverse of convert-to-brand, owner-only. */
+  myBrandDisable: (brandId: string) =>
+    `/me/brands/${encodeURIComponent(brandId)}/disable`,
   /** Franchise Phase 3 — revoke a pending invite. */
   brandInviteRevoke: (inviteId: string) =>
     `/brand-invites/${encodeURIComponent(inviteId)}/revoke`,

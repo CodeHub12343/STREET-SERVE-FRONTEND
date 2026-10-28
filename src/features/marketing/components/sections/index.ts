@@ -9,5 +9,6 @@ export { Testimonials } from './Testimonials';
 export { TrustSection } from './TrustSection';
 export { PartnersSection } from './PartnersSection';
 export { SponsorshipTiers } from './SponsorshipTiers';
+export { GiveawayCallout } from './GiveawayCallout';
 export { FaqSection } from './FaqSection';
 export { FinalCta } from './FinalCta';

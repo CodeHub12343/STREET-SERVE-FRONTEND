@@ -673,6 +673,32 @@ export const footer = {
  * what the sponsor would otherwise pay for that item, kept so the "proposed value" line matches
  * the one quoted in the backend constants.
  */
+/**
+ * Landing-page callout for the Great Ice Cream Giveaway. Displayed between the platform
+ * annual sponsorships and the FAQ — the point of difference ("timely 90-day campaign vs the
+ * ongoing annual tiers above") is deliberately explicit in the copy.
+ */
+export const giveawayCallout = {
+  eyebrow: 'Current 90-day campaign',
+  title: 'The Great Ice Cream Giveaway.',
+  body:
+    "Sponsor a Silicon Valley community campaign and get your brand on every cone we hand out. Four 90-day packages from $3K to $25K cover shout-outs, giveaway videos, printed postcards, and logo placement at every event. We're building toward a Guinness World Records attempt — your brand rides along.",
+  stats: [
+    { label: 'Packages', value: '4' },
+    { label: 'From', value: '$3K' },
+    { label: 'Campaign', value: '90 days' },
+    { label: 'Market', value: 'Silicon Valley' },
+  ],
+  bullets: [
+    'Professional shout-outs and branded promotional videos.',
+    '500 to 5,000 postcards distributed to real households.',
+    'Logo placement + sponsor recognition across every giveaway event.',
+    'Monthly campaign reporting on Platinum and Diamond.',
+  ],
+  primaryCta: { label: 'Explore the giveaway', href: '/sponsor/ice-cream-giveaway' },
+  secondaryCta: { label: 'Contact us about Diamond', href: `mailto:${marketingConfig.contactEmail}?subject=${encodeURIComponent('Great Ice Cream Giveaway — Diamond sponsorship enquiry')}` },
+} as const;
+
 export const giveawayProgram = {
   slug: 'ice_cream_giveaway' as const,
   title: 'The Great Ice Cream Giveaway',

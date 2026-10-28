@@ -20,14 +20,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
 import Link from 'next/link';
 import {
+  AlertTriangle,
   CheckCircle2,
   HeartHandshake,
+  Power,
   Rocket,
   Send,
   Store,
   Trash2,
   Users,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/primitives/Button';
 import { Input } from '@/components/primitives/Input';
 import { Skeleton } from '@/components/feedback/Skeleton';
@@ -75,6 +78,7 @@ interface Overview {
 
 export function VendorFranchiseMode() {
   const qc = useQueryClient();
+  const router = useRouter();
   const { show } = useToast();
   const { businessId } = useVendorBusiness();
   const { data: biz } = useBusiness(businessId ?? undefined);
@@ -165,6 +169,21 @@ export function VendorFranchiseMode() {
     },
     onError: (err) =>
       show(err instanceof AppApiError ? err.message : 'Could not revoke invite.', 'danger'),
+  });
+
+  const disableFranchise = useMutation({
+    mutationFn: () => api.post(endpoints.myBrandDisable(brandId!), {}),
+    onSuccess: () => {
+      show('Franchise Mode is off. You’re back to a normal profile.', 'success');
+      void qc.invalidateQueries({ queryKey: ['me', 'brand-memberships'] });
+      /** Soft-reload the page so the context banner reflects the new state too. */
+      router.refresh();
+    },
+    onError: (err) =>
+      show(
+        err instanceof AppApiError ? err.message : 'Could not disable Franchise Mode.',
+        'danger',
+      ),
   });
 
   const savePolicy = useMutation({
@@ -447,14 +466,48 @@ export function VendorFranchiseMode() {
       </StepCard>
 
       {ownedBrand ? (
-        <ActionGrid>
-          <ActionCard href={`/brand/${ownedBrand.brandId}/overview`}>
-            <Store size={16} aria-hidden /> Open full brand overview
-          </ActionCard>
-          <ActionCard href={`/brand/${ownedBrand.brandId}/members`}>
-            <Users size={16} aria-hidden /> Member settings
-          </ActionCard>
-        </ActionGrid>
+        <>
+          <ActionGrid>
+            <ActionCard href={`/brand/${ownedBrand.brandId}/overview`}>
+              <Store size={16} aria-hidden /> Open full brand overview
+            </ActionCard>
+            <ActionCard href={`/brand/${ownedBrand.brandId}/members`}>
+              <Users size={16} aria-hidden /> Member settings
+            </ActionCard>
+          </ActionGrid>
+
+          {/*
+            Danger Zone — self-serve reversal. Deliberately styled apart from the three
+            happy-path steps so a mis-tap doesn't land here. The server enforces the real
+            guards (active operators / pending invites block the delete), but we hint at
+            them in the copy so the owner knows what to clean up first.
+          */}
+          <DangerZone>
+            <DangerHead>
+              <AlertTriangle size={16} aria-hidden /> Danger zone
+            </DangerHead>
+            <DangerBody>
+              Turning Franchise Mode off deletes the brand and goes back to a normal single-truck
+              profile. Your business, orders, reviews, and followers all stay. Retire any active
+              operators and revoke any pending invites first — the server will refuse otherwise.
+            </DangerBody>
+            <DangerBtn
+              type="button"
+              disabled={disableFranchise.isPending}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `Turn off Franchise Mode for ${ownedBrand.brandName}? This deletes the brand. Your business and its data stay.`,
+                  )
+                ) {
+                  disableFranchise.mutate();
+                }
+              }}
+            >
+              <Power size={14} aria-hidden /> Disable Franchise Mode
+            </DangerBtn>
+          </DangerZone>
+        </>
       ) : null}
     </Page>
   );
@@ -709,5 +762,55 @@ const ActionCard = styled(Link)`
   font-size: 14px;
   &:hover {
     background: ${({ theme }) => theme.color.surfaceRaised2};
+  }
+`;
+
+const DangerZone = styled.section`
+  display: grid;
+  gap: ${({ theme }) => theme.space[2]}px;
+  padding: ${({ theme }) => theme.space[4]}px;
+  border-radius: ${({ theme }) => theme.radius.card}px;
+  background: ${({ theme }) => theme.color.surfaceRaised};
+  border: 1px dashed ${({ theme }) => theme.color.line2};
+  margin-top: ${({ theme }) => theme.space[3]}px;
+`;
+
+const DangerHead = styled.p`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: ${({ theme }) => theme.color.textSecondary};
+`;
+
+const DangerBody = styled.p`
+  font-size: 13px;
+  line-height: 1.55;
+  color: ${({ theme }) => theme.color.textSecondary};
+`;
+
+const DangerBtn = styled.button`
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: ${({ theme }) => theme.radius.pill}px;
+  background: transparent;
+  border: 1px solid ${({ theme }) => theme.color.line};
+  color: ${({ theme }) => theme.color.textSecondary};
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  &:hover {
+    background: ${({ theme }) => theme.color.surfaceRaised2};
+    color: ${({ theme }) => theme.color.textPrimary};
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: wait;
   }
 `;
