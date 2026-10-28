@@ -29,7 +29,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useMutation } from '@tanstack/react-query';
 import styled from 'styled-components';
-import { Check, FileText, Image as ImageIcon, ShieldCheck, Upload, X } from 'lucide-react';
+import { Check, Image as ImageIcon, ShieldCheck, Upload, X } from 'lucide-react';
 import { Button } from '@/components/primitives/Button';
 import { Input } from '@/components/primitives/Input';
 import { Skeleton } from '@/components/feedback/Skeleton';
@@ -176,8 +176,8 @@ export function SponsorCheckout({ program = 'platform', returnTo = '/sponsor' }:
    */
   const agreement = useAgreement('sponsorship', !mustSignIn);
   const acceptAgreement = useAcceptAgreement('sponsorship');
-  const [agreed, setAgreed] = useState(false);
-  const [signatoryName, setSignatoryName] = useState('');
+  const [agreed, _setAgreed] = useState(false);
+  const [signatoryName, _setSignatoryName] = useState('');
 
   const purchase = useMutation<PurchaseResult, unknown, void>({
     mutationFn: () =>
@@ -344,21 +344,23 @@ export function SponsorCheckout({ program = 'platform', returnTo = '/sponsor' }:
             ref={fileInput}
             type="file"
             accept="image/png,image/jpeg,image/webp"
-            onChange={async (e) => {
+            onChange={(e) => {
               const file = e.target.files?.[0];
               if (!file) return;
               setUploading(true);
-              try {
-                const { url } = await uploadImage(file, 'business-logo');
-                setLogoUrl(url);
-                show('Logo uploaded', 'success');
-              } catch (err) {
-                show(err instanceof Error ? err.message : 'Logo upload failed', 'danger');
-              } finally {
-                setUploading(false);
-                /** Reset so re-selecting the same file still fires `onChange`. */
-                if (fileInput.current) fileInput.current.value = '';
-              }
+              void (async () => {
+                try {
+                  const { url } = await uploadImage(file, 'business-logo');
+                  setLogoUrl(url);
+                  show('Logo uploaded', 'success');
+                } catch (err) {
+                  show(err instanceof Error ? err.message : 'Logo upload failed', 'danger');
+                } finally {
+                  setUploading(false);
+                  /** Reset so re-selecting the same file still fires `onChange`. */
+                  if (fileInput.current) fileInput.current.value = '';
+                }
+              })();
             }}
           />
           {logoUrl ? (
@@ -741,63 +743,3 @@ const LogoFallback = styled.p`
   color: ${({ theme }) => theme.color.textTertiary};
 `;
 
-const AgreementBox = styled.div`
-  display: grid;
-  gap: ${({ theme }) => theme.space[3]}px;
-  padding: ${({ theme }) => theme.space[4]}px;
-  border-radius: ${({ theme }) => theme.radius.card}px;
-  border: 1px solid ${({ theme }) => theme.color.line};
-  background: ${({ theme }) => theme.color.surfaceRaised};
-`;
-
-const AgreementHead = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.space[2]}px;
-  font-weight: 800;
-  font-size: 14px;
-`;
-
-const AgreementVersion = styled.span`
-  margin-left: auto;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: ${({ theme }) => theme.color.surfaceRaised2};
-  font-weight: 600;
-  font-size: 11px;
-  color: ${({ theme }) => theme.color.textSecondary};
-  letter-spacing: 0.03em;
-`;
-
-const AgreementBody = styled.pre`
-  margin: 0;
-  padding: ${({ theme }) => theme.space[3]}px;
-  background: ${({ theme }) => theme.color.surfaceRaised2};
-  border-radius: ${({ theme }) => theme.radius.control}px;
-  font-size: 12px;
-  line-height: 1.55;
-  color: ${({ theme }) => theme.color.textPrimary};
-  white-space: pre-wrap;
-  font-family: ${({ theme }) => theme.typography.fontBody};
-  max-height: 240px;
-  overflow-y: auto;
-`;
-
-const AgreementRow = styled.div`
-  display: flex;
-  align-items: flex-start;
-  gap: ${({ theme }) => theme.space[2]}px;
-  font-size: 13.5px;
-  line-height: 1.5;
-  color: ${({ theme }) => theme.color.textPrimary};
-  label {
-    cursor: pointer;
-  }
-`;
-
-const AgreementCheck = styled.input`
-  margin-top: 3px;
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-`;

@@ -14,7 +14,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
-import Link from 'next/link';
 import {
   CalendarClock,
   Eye,
