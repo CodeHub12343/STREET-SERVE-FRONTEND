@@ -23,6 +23,7 @@ import { formatCents } from '@/lib/money';
 import { newIdempotencyKey } from '@/lib/idempotency';
 import { AppApiError } from '@/lib/api/errors';
 import { PayItForwardOffer } from '@/features/payforward';
+import { PayItForwardItemPicker } from '@/features/payforward/components/PayItForwardItemPicker';
 import { computeBreakdown } from '../breakdown';
 import { useCreateTransaction, useOrderQuote } from '../hooks/useOrders';
 import type { OrderContext } from '../types';
@@ -66,8 +67,21 @@ export function OrderReview({ businessId, context }: { businessId: string; conte
    * on someone who did not ask for it is the wrong surprise on both sides of the transaction.
    */
   const [usePayItForward, setUsePayItForward] = useState(false);
+  /**
+   * PIF-II — the specific suspended item (if any) the customer picked off the queue. Mutually
+   * exclusive with the pool opt-in both server-side and in this UI. When set, we send the id
+   * and skip the pool checkbox entirely.
+   */
+  const [claimPifItemContributionId, setClaimPifItemContributionId] = useState<string | null>(
+    null,
+  );
+  const [claimPifItemCoverCents, setClaimPifItemCoverCents] = useState(0);
   const offer = breakdown.payItForward ?? undefined;
-  const coveredCents = usePayItForward ? Math.min(offer?.availableCents ?? 0, breakdown.totalCents) : 0;
+  const coveredCents = claimPifItemContributionId
+    ? Math.min(claimPifItemCoverCents, breakdown.totalCents)
+    : usePayItForward
+      ? Math.min(offer?.availableCents ?? 0, breakdown.totalCents)
+      : 0;
   const dueCents = Math.max(0, breakdown.totalCents - coveredCents);
 
   // Orders are pickup-only and the server requires the business to be live + parked (Flow 2d). Show
@@ -100,7 +114,15 @@ export function OrderReview({ businessId, context }: { businessId: string; conte
     if (!biz || lines.length === 0) return;
     create.mutate(
       {
-        input: { businessId, businessName: biz.name, context, lines, breakdown, usePayItForward },
+        input: {
+          businessId,
+          businessName: biz.name,
+          context,
+          lines,
+          breakdown,
+          usePayItForward,
+          claimPifItemContributionId: claimPifItemContributionId ?? undefined,
+        },
         idempotencyKey: idemKey.current,
       },
       {
@@ -262,10 +284,32 @@ export function OrderReview({ businessId, context }: { businessId: string; conte
             Placed AFTER the total, so a customer sees the real price first and is never nudged into
             taking help before they know whether they need it.
           */}
-          <PayItForwardOffer
-            offer={offer}
-            checked={usePayItForward}
-            onChange={setUsePayItForward}
+          {/*
+            Pool offer hides entirely while a specific-item claim is selected — the two paths are
+            mutually exclusive both server-side and visually. Clearing the item re-reveals it.
+          */}
+          {!claimPifItemContributionId ? (
+            <PayItForwardOffer
+              offer={offer}
+              checked={usePayItForward}
+              onChange={setUsePayItForward}
+            />
+          ) : null}
+          {/*
+            PIF-II picker — one of the queued suspended items can be claimed when the matching
+            item is in the cart. The component renders nothing when nothing is claimable, so a
+            business with an empty queue (or a cart with no eligible items) sees no new UI.
+          */}
+          <PayItForwardItemPicker
+            businessId={businessId}
+            cartItemIds={lines.map((l) => l.itemId)}
+            selectedId={claimPifItemContributionId}
+            poolSelected={usePayItForward}
+            onSelect={(id, coverCents) => {
+              setClaimPifItemContributionId(id);
+              setClaimPifItemCoverCents(coverCents);
+              if (id) setUsePayItForward(false);
+            }}
           />
         </>
       ) : null}

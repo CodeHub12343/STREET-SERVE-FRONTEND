@@ -23,10 +23,16 @@ const isPublicRoute = createRouteMatcher([
   // The Sponsorships & Investors page. Its whole audience is people without an account, so gating
   // the rate card behind sign-in guaranteed nobody read it. Paying is guarded in the component,
   // and `POST /sponsors/purchase` is authenticated server-side regardless.
-  '/sponsor',
+  '/sponsor(.*)', // includes `/sponsor/ice-cream-giveaway` (program-specific sponsor page)
   '/business/(.*)', // public profile + menu
   '/gift/(.*)', // redemption (guest)
   '/api/health',
+  /**
+   * Franchise Phase 3: the invite accept page previews publicly (shows brand name + role)
+   * before the user signs in. Acceptance itself calls an authenticated backend endpoint, so
+   * the signed-out visitor sees a Sign-in CTA that redirects back to the accept page.
+   */
+  '/brand/accept/(.*)',
 ]);
 
 const clerk = clerkMiddleware(async (auth, req) => {

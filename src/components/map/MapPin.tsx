@@ -37,18 +37,43 @@ export interface MapPinProps {
   status: PinStatus;
   /** e.g. "2 min" when live; hidden/replaced by "Closed" for away. */
   etaLabel?: string;
+  /**
+   * Franchise Phase 1 — brand lockup. When set, the pin shows a small chip under the ETA with
+   * the brand name, so two operators of the same brand read as "same operation, two places".
+   * `truckLabel` is the operator's own display name ("North truck") when the pin IS an operator;
+   * absent for business pins, where the ring already shows the business name.
+   */
+  brandName?: string | null;
+  truckLabel?: string | null;
   onClick?: () => void;
 }
 
-export function MapPin({ name, logoUrl, status, etaLabel, onClick }: MapPinProps) {
+export function MapPin({
+  name,
+  logoUrl,
+  status,
+  etaLabel,
+  brandName,
+  truckLabel,
+  onClick,
+}: MapPinProps) {
   const away = status === 'away';
   const chip = away ? 'Closed' : etaLabel;
+  /**
+   * The chip under the pin reads "<brand> · <truck>" when both are set (operator pin), or just
+   * "<brand>" when only brand is set (single-truck brand), or nothing when neither — the brand
+   * chip is additive and never replaces the primary pin label.
+   */
+  const brandLine =
+    brandName && truckLabel && brandName !== truckLabel
+      ? `${brandName} · ${truckLabel}`
+      : brandName || null;
   return (
     <Wrap
       type="button"
       onClick={onClick}
       $away={away}
-      aria-label={`${name}, ${statusLabel(status)}${chip ? `, ${chip}` : ''}`}
+      aria-label={`${name}${brandLine ? `, ${brandLine}` : ''}, ${statusLabel(status)}${chip ? `, ${chip}` : ''}`}
     >
       <Ring $status={status}>
         {status === 'driving' && <PulseRing aria-hidden />}
@@ -58,6 +83,7 @@ export function MapPin({ name, logoUrl, status, etaLabel, onClick }: MapPinProps
       </Ring>
       <Tail $status={status} aria-hidden />
       {chip ? <Eta className="tnum">{chip}</Eta> : null}
+      {brandLine ? <BrandChip title={brandLine}>{brandLine}</BrandChip> : null}
     </Wrap>
   );
 }
@@ -164,4 +190,23 @@ const Eta = styled.span`
       ? '0 0 0 1px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.12)'
       : '0 1px 4px rgba(0, 0, 0, 0.3)'};
   white-space: nowrap;
+`;
+
+/**
+ * Franchise Phase 1 — the brand/truck line under the pin. Visually subordinate to the ETA chip
+ * (smaller type, muted color) so the primary pin label stays dominant and two operator pins of
+ * the same brand are still distinguishable at a glance.
+ */
+const BrandChip = styled.span`
+  margin-top: 2px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: ${({ theme }) => theme.radius.pill}px;
+  background: ${({ theme }) => theme.color.surfaceRaised2};
+  color: ${({ theme }) => theme.color.textSecondary};
 `;

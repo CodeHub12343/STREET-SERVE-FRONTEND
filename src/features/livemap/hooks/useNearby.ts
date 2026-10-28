@@ -35,6 +35,12 @@ interface RawPin {
   verified?: boolean;
   /** 7.6 — business-wide flash sale percent, 0 when none is running. */
   discountPercent?: number;
+  /** Franchise Phase 1 additions. */
+  brand?: { brandId: string; brandName: string; brandLogoUrl: string | null } | null;
+  operatorId?: string | null;
+  operatorDisplayName?: string | null;
+  /** The underlying business for Order / Menu / Profile actions. */
+  businessId?: string | null;
   location: { type: string; coordinates: LngLat };
 }
 
@@ -51,9 +57,20 @@ function toPinStatus(s: RawPin['status']): PinStatus {
 }
 
 function toPin(p: RawPin): MapPinData {
+  /**
+   * Franchise Phase 1: an operator pin's `actorId` is a BrandOperator id, not a business id. The
+   * UI's `businessId` must always point at the underlying business so Order / Menu / Profile
+   * routes land in the right place — the server now returns that as `businessId` on the pin,
+   * falling back to `actorId` for the pre-operator case.
+   */
+  const resolvedBusinessId = p.businessId ?? p.actorId;
+  const resolvedActorType =
+    p.actorType === 'operator' || p.actorType === 'seller' || p.actorType === 'business'
+      ? p.actorType
+      : undefined;
   return {
     sessionId: p.sessionId,
-    businessId: p.actorId,
+    businessId: resolvedBusinessId,
     name: p.name,
     category: p.categoryId ?? 'all',
     logoUrl: p.logoUrl ?? undefined,
@@ -63,6 +80,10 @@ function toPin(p: RawPin): MapPinData {
     etaMin: p.etaMinutes ?? undefined,
     verified: p.verified ?? false,
     discountPercent: p.discountPercent ?? 0,
+    brand: p.brand ?? null,
+    actorType: resolvedActorType,
+    operatorId: p.operatorId ?? null,
+    operatorDisplayName: p.operatorDisplayName ?? null,
   };
 }
 

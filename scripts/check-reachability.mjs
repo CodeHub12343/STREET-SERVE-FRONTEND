@@ -46,12 +46,16 @@ const ENDPOINTS_FILE = join(SRC, 'lib', 'api', 'endpoints.ts');
  * keeps an allowlist from quietly becoming an off switch.
  */
 const ALLOWLIST = {
-  notificationsReadAll: 'Bell UI marks items read individually; no "mark all read" control yet.',
   publicProfile: 'Public user profiles are not a screen; the app shows seller profiles instead.',
   launch: 'The landing page reads its prelaunch/live state from an env var, not this endpoint.',
-  sponsors: 'Public sponsor listing has no screen; only the admin management view is built.',
-  'liveSessions.location':
-    'Location updates ride the heartbeat; the standalone location PATCH is unused.',
+  'admin.sponsorReport':
+    'Admin-only per-sponsor report; the roster UI shows the headline figures inline, the detail screen is deferred.',
+  myBrands:
+    '2026-10-28 self-serve brand creation — lands with the business-register wizard update that offers the toggle at registration time (today the entry point is the convert-business endpoint from /vendor/franchise).',
+  myBrandSeatOperator:
+    '2026-10-28 owner self-serve add-operator — ready for the members-page add-operator form that replaces the admin-only seat (today operators are seated via the invite flow on /vendor/franchise).',
+  payForwardItemRefund:
+    'PIF-II giver change-of-mind refund — backend ready; UI surfaces off the "my contributions" list which currently only shows pool rows. Lands when that list is extended.',
   'business.reviews':
     'Reviews are fetched through the generic /reviews endpoint with a subject filter.',
   'business.registerHub': 'Hub self-registration UI is not built (hubs are created by admins).',

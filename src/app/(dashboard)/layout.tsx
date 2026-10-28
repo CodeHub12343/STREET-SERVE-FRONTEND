@@ -12,6 +12,7 @@ import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Radio, Users, Receipt, ClipboardList, Store, CheckSquare, Package, Coins, CalendarClock, MessageCircle, BarChart3, Wallet, Share2, Gift, Sparkles, FileCheck, SlidersHorizontal, Hand, Wrench, Megaphone, FileSignature, Settings, LayoutDashboard, Undo2, QrCode, HeartHandshake, Mail, Zap, Briefcase, Rocket, Map as MapIcon } from 'lucide-react';
 import { DashboardShell, type NavItem } from '@/components/layout/DashboardShell';
+import { BrandContextBanner } from '@/features/brand/BrandContextBanner';
 import { OrbitNav, OrbitDockButton, OrbitDockSlot } from '@/components/navigation';
 import { RoleSwitcher } from '@/features/identity';
 import { NotificationBell } from '@/features/notifications';
@@ -69,6 +70,9 @@ const NAV: (NavItem & { module: BusinessModule | null })[] = [
   { href: '/vendor/flash-sales', label: 'Flash Sales', icon: <Zap size={18} />, module: null },
   { href: '/vendor/back-office', label: 'Back Office', icon: <Briefcase size={18} />, module: null },
   { href: '/vendor/upgrade', label: 'Upgrade', icon: <Rocket size={18} />, module: null },
+  // 2026-10-28 — Self-serve Franchise Mode. Always visible; the page itself shows the right
+  // state (enable button vs "it's on, open your brand").
+  { href: '/vendor/franchise', label: 'Franchise Mode', icon: <Store size={18} />, module: null },
   { href: '/vendor/modules', label: 'Modules', icon: <SlidersHorizontal size={18} />, module: null },
   { href: '/vendor/settings', label: 'Settings', icon: <Settings size={18} />, module: null },
   // On /vendor the hub workspace is a single entry; the hub screens get their own nav below.
@@ -185,6 +189,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </>
       }
     >
+      {/*
+        2026-10-28 — brand context banner above every vendor/hub page. Self-adapting:
+        shows a franchise nudge for single-truck profiles, brand status for owners,
+        and "you're driving X for Y" for operators. One row at the top of the content
+        area so it never obscures the page but is always visible on scroll-to-top.
+      */}
+      <BrandContextBanner />
       {children}
     </DashboardShell>
   );

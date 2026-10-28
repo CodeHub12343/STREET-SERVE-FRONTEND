@@ -75,4 +75,9 @@ export interface CreateTransactionInput {
    * only: the server never applies it unasked, because accepting help is the customer's decision.
    */
   usePayItForward?: boolean;
+  /**
+   * PIF-II — the specific suspended item the customer picked off the queue. Mutually
+   * exclusive with `usePayItForward` server-side; the UI enforces the same mutual exclusion.
+   */
+  claimPifItemContributionId?: string;
 }

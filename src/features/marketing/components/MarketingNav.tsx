@@ -4,18 +4,37 @@
  * Marketing nav (IA §3.1) — sticky; transparent over the hero, gains the glass surface after
  * 24px of scroll. Center anchors (≥1024px) with active-section highlight via IntersectionObserver;
  * mobile collapses to wordmark + primary CTA + hamburger opening a full-snap Sheet menu.
+ *
+ * Dropdown support: a nav entry with `children` is a parent that reveals its children on hover
+ * (desktop) or on tap (both). Parent never navigates on its own — the Sponsorship program split
+ * (platform vs. Great Ice Cream Giveaway) is modelled as one of these.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import styled, { css } from 'styled-components';
+import { ChevronDown } from 'lucide-react';
 import { Sheet } from '@/components/primitives/Sheet';
+import { useAuthCompat } from '@/lib/auth/useAuthCompat';
 
 
 import { ConversionCta } from './ConversionCta';
-import { cta, navLinks, sectionAnchors } from '../content';
+import { cta, navLinks, sectionAnchors, type NavChild, type NavLink } from '../content';
 import { marketingConfig } from '../marketing.config';
 import { glass } from '../mk';
+
+/**
+ * The signed-in sponsor's own campaign dashboard. Added at runtime to the Sponsorships dropdown
+ * only when the viewer is authenticated — a signed-out visitor has no campaign to see, and
+ * exposing the link would land them on an auth bounce for no reason.
+ */
+const SIGNED_IN_SPONSOR_CHILDREN: readonly NavChild[] = [
+  {
+    href: '/sponsor/campaign',
+    label: 'Your campaign',
+    description: 'Your deliverables, reach, and reports.',
+  },
+];
 
 export function MarketingNav() {
 
@@ -23,6 +42,21 @@ export function MarketingNav() {
   const [hidden, setHidden] = useState(false);
   const [active, setActive] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  /** Which dropdown parent (by label) is currently open on desktop. One at a time. */
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { isSignedIn } = useAuthCompat();
+
+  /**
+   * Nav links with the signed-in-only children merged in. Non-mutating — a new array per render
+   * is cheap at this size and avoids the dropdown definition in content.ts being conditional.
+   */
+  const resolvedLinks: readonly NavLink[] = navLinks.map((link) => {
+    if ('children' in link && link.label === 'Sponsorships' && isSignedIn) {
+      return { ...link, children: [...link.children, ...SIGNED_IN_SPONSOR_CHILDREN] };
+    }
+    return link;
+  });
 
   useEffect(() => {
     let lastY = window.scrollY;
@@ -78,8 +112,56 @@ export function MarketingNav() {
           </Wordmark>
 
           <Anchors aria-label="Page sections">
-            {navLinks.map((l) =>
-              l.href.startsWith('#') ? (
+            {resolvedLinks.map((l) => {
+              if ('children' in l) {
+                const isOpen = openGroup === l.label;
+                return (
+                  <Group
+                    key={l.label}
+                    onMouseEnter={() => {
+                      if (closeTimer.current) clearTimeout(closeTimer.current);
+                      setOpenGroup(l.label);
+                    }}
+                    onMouseLeave={() => {
+                      /**
+                       * A short grace window on mouseleave: without it the panel disappears the
+                       * moment the pointer crosses the gap between trigger and panel, and the
+                       * link under the pointer is never clickable.
+                       */
+                      closeTimer.current = setTimeout(() => setOpenGroup(null), 120);
+                    }}
+                  >
+                    <GroupTrigger
+                      type="button"
+                      aria-haspopup="menu"
+                      aria-expanded={isOpen}
+                      $active={isOpen}
+                      onClick={() => setOpenGroup(isOpen ? null : l.label)}
+                    >
+                      {l.label}
+                      <ChevronDown size={14} aria-hidden />
+                    </GroupTrigger>
+                    {isOpen ? (
+                      <GroupPanel role="menu" aria-label={l.label}>
+                        {l.children.map((c) => (
+                          <GroupItem
+                            key={c.href}
+                            href={c.href}
+                            role="menuitem"
+                            onClick={() => setOpenGroup(null)}
+                          >
+                            <GroupItemLabel>{c.label}</GroupItemLabel>
+                            {c.description ? (
+                              <GroupItemDesc>{c.description}</GroupItemDesc>
+                            ) : null}
+                          </GroupItem>
+                        ))}
+                      </GroupPanel>
+                    ) : null}
+                  </Group>
+                );
+              }
+              return l.href.startsWith('#') ? (
                 <AnchorLink key={l.href} href={l.href} $active={active === l.href.slice(1)}>
                   {l.label}
                 </AnchorLink>
@@ -89,8 +171,8 @@ export function MarketingNav() {
                 <RouteLink key={l.href} href={l.href} $active={false}>
                   {l.label}
                 </RouteLink>
-              ),
-            )}
+              );
+            })}
           </Anchors>
 
           <Actions>
@@ -117,8 +199,29 @@ export function MarketingNav() {
         ariaLabel="Menu"
       >
         <MenuList>
-          {navLinks.map((l) =>
-            l.href.startsWith('#') ? (
+          {resolvedLinks.map((l) => {
+            if ('children' in l) {
+              /**
+               * On mobile a dropdown becomes a header + indented children — a sheet is one scroll,
+               * so collapsing the children behind a tap would hide what is already visible without
+               * a tap.
+               */
+              return (
+                <MenuGroup key={l.label}>
+                  <MenuGroupHeading>{l.label}</MenuGroupHeading>
+                  {l.children.map((c) => (
+                    <MenuRouteLink
+                      key={c.href}
+                      href={c.href}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      {c.label}
+                    </MenuRouteLink>
+                  ))}
+                </MenuGroup>
+              );
+            }
+            return l.href.startsWith('#') ? (
               <MenuLink key={l.href} href={l.href} onClick={() => setMenuOpen(false)}>
                 {l.label}
               </MenuLink>
@@ -126,8 +229,8 @@ export function MarketingNav() {
               <MenuRouteLink key={l.href} href={l.href} onClick={() => setMenuOpen(false)}>
                 {l.label}
               </MenuRouteLink>
-            ),
-          )}
+            );
+          })}
           <MenuRouteLink href={marketingConfig.signInHref} onClick={() => setMenuOpen(false)}>
             Sign in
           </MenuRouteLink>
@@ -313,4 +416,71 @@ const MenuRouteLink = styled(Link)`
 
 const MenuCta = styled.div`
   margin-top: ${({ theme }) => theme.space[3]}px;
+`;
+
+const Group = styled.div`
+  position: relative;
+  display: inline-block;
+`;
+
+const GroupTrigger = styled.button<{ $active: boolean }>`
+  ${anchorLinkStyles}
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  cursor: pointer;
+  background: ${({ theme, $active }) => ($active ? theme.color.surfaceRaised2 : 'transparent')};
+`;
+
+const GroupPanel = styled.div`
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 280px;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border-radius: ${({ theme }) => theme.radius.card}px;
+  background: ${({ theme }) => theme.color.surfaceRaised};
+  border: 1px solid ${({ theme }) => theme.color.line};
+  box-shadow: 0 10px 32px -16px rgba(0, 0, 0, 0.28);
+  z-index: 60;
+`;
+
+const GroupItem = styled(Link)`
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: ${({ theme }) => theme.radius.control}px;
+  &:hover {
+    background: ${({ theme }) => theme.color.surfaceRaised2};
+  }
+`;
+
+const GroupItemLabel = styled.span`
+  font-size: 14px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.color.textPrimary};
+`;
+
+const GroupItemDesc = styled.span`
+  font-size: 12px;
+  line-height: 1.4;
+  color: ${({ theme }) => theme.color.textSecondary};
+`;
+
+const MenuGroup = styled.div`
+  display: grid;
+  gap: ${({ theme }) => theme.space[2]}px;
+`;
+
+const MenuGroupHeading = styled.p`
+  padding: 10px 12px 2px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: ${({ theme }) => theme.color.textTertiary};
 `;

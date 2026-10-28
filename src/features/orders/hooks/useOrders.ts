@@ -141,6 +141,9 @@ export function useCreateTransaction() {
           items: input.lines.map((l) => ({ menuItemId: l.itemId, quantity: l.qty })),
           tipCents: input.breakdown.tipCents,
           ...(input.usePayItForward ? { usePayItForward: true } : {}),
+          ...(input.claimPifItemContributionId
+            ? { claimPifItemContributionId: input.claimPifItemContributionId }
+            : {}),
         },
         { idempotencyKey },
       );

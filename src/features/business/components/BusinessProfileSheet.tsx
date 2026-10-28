@@ -27,6 +27,7 @@ import { useBusinessModules } from '../hooks/useBusinessModules';
 import { useBusiness, useMenu, useQueuePreview, useReviews, useServices } from '../hooks/useBusiness';
 import { ActionRow } from './ActionRow';
 import { BusinessHero } from './BusinessHero';
+import { BrandTrucks } from './BrandTrucks';
 import { LiveQueueCard } from './LiveQueueCard';
 import { MenuPreview } from './MenuPreview';
 import { ServicesPreview } from './ServicesPreview';
@@ -39,6 +40,15 @@ import { ReviewsPreview } from './ReviewsPreview';
  */
 const PayItForwardCard = dynamic(
   () => import('@/features/payforward').then((m) => m.PayItForwardCard),
+  { ssr: false },
+);
+/**
+ * PIF-II — the specific-item ("suspended coffee") queue card. Dynamically imported for the
+ * same reason as PayItForwardCard: this is a secondary surface that only matters when the
+ * business runs PIF, so the lazy-load keeps the first-paint budget on the map intact.
+ */
+const PayItForwardItems = dynamic(
+  () => import('@/features/payforward/components/PayItForwardItems').then((m) => m.PayItForwardItems),
   { ssr: false },
 );
 const BoostCampaignCard = dynamic(
@@ -134,6 +144,9 @@ export function BusinessProfileSheet({
 
             <ActionRow businessId={biz.id} following={Boolean(biz.following)} lngLat={biz.lngLat} />
 
+            {/* Franchise Phase 1 — only renders when this business is part of a multi-truck brand. */}
+            <BrandTrucks businessId={biz.id} />
+
             {!isAway && sections.queue && queue ? <LiveQueueCard queue={queue} /> : null}
 
             {biz.todaysSpecial ? (
@@ -180,6 +193,28 @@ export function BusinessProfileSheet({
             {sections.payItForward ? (
               <Section>
                 <PayItForwardCard businessId={biz.id} businessName={biz.name} />
+                {/*
+                  PIF-II — the queue of specific items waiting for a claimer, plus a "Buy for the
+                  next customer" action. Sits beneath the pool card so a customer sees "pool" and
+                  "specific items" together as the two paths to Pay It Forward at this business.
+                  Renders nothing when the business has no claimable items AND no available menu
+                  — the component owns that collapse.
+                */}
+                <PayItForwardItems
+                  businessId={biz.id}
+                  businessName={biz.name}
+                  /*
+                    `useMenu` already filters out unavailable items, so the mapping below trusts
+                    every row and marks it available. If menu-level availability becomes a
+                    client-side filter later, this is where it enters the PIF-II buy flow.
+                  */
+                  menu={(menu ?? []).map((m) => ({
+                    id: m.id,
+                    name: m.name,
+                    priceCents: m.priceCents,
+                    isAvailable: true,
+                  }))}
+                />
               </Section>
             ) : null}
 

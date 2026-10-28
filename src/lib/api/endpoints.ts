@@ -35,6 +35,42 @@ export const endpoints = {
   /** The public rate card + buying a placement (self-serve sponsorship). */
   sponsorTiers: '/sponsors/tiers',
   sponsorPurchase: '/sponsors/purchase',
+  /** The signed-in sponsor's own fulfillment / campaign dashboard. */
+  sponsorMineFulfillment: '/sponsors/me/fulfillment',
+  /** Franchise Phase 1 — trucks of the brand that owns this business (profile-sheet section). */
+  businessTrucks: (businessId: string) =>
+    `/businesses/${encodeURIComponent(businessId)}/trucks`,
+  /** Franchise Phase 3 — the signed-in user's active brand memberships. */
+  myBrandMemberships: '/me/brand-memberships',
+  /** Franchise Phase 3 — brand overview for owner/manager (one-screen dashboard). */
+  brandOverview: (brandId: string) => `/brands/${encodeURIComponent(brandId)}/overview`,
+  /** Franchise Phase 3 — invites: list + create for a brand (owner/manager). */
+  brandInvites: (brandId: string) => `/brands/${encodeURIComponent(brandId)}/invites`,
+  /** 2026-10-28 — Self-serve brand actions (no admin). */
+  myBrands: '/me/brands',
+  myBusinessConvertToBrand: (businessId: string) =>
+    `/me/businesses/${encodeURIComponent(businessId)}/convert-to-brand`,
+  myBrandPayoutPolicy: (brandId: string) =>
+    `/me/brands/${encodeURIComponent(brandId)}/payout-policy`,
+  myBrandSeatOperator: (brandId: string) =>
+    `/me/brands/${encodeURIComponent(brandId)}/operators`,
+  myBrandOperatorRetire: (operatorId: string) =>
+    `/me/brand-operators/${encodeURIComponent(operatorId)}/retire`,
+  /** Franchise Phase 3 — revoke a pending invite. */
+  brandInviteRevoke: (inviteId: string) =>
+    `/brand-invites/${encodeURIComponent(inviteId)}/revoke`,
+  /** Franchise Phase 3 — public preview of an invite from its token (no auth). */
+  brandInvitePreview: (token: string) =>
+    `/brand-invites/${encodeURIComponent(token)}`,
+  /** Franchise Phase 3 — authenticated accept. */
+  brandInviteAccept: (token: string) =>
+    `/brand-invites/${encodeURIComponent(token)}/accept`,
+  /** The signed-in sponsor's reach + attribution stats. */
+  sponsorMineStats: '/sponsors/me/stats',
+  /** The signed-in sponsor's editable public-profile fields. */
+  sponsorMineProfile: '/sponsors/me/profile',
+  /** The public sponsor profile — Gold / Platinum / Diamond / Launch / Founding only. */
+  sponsorProfile: (slug: string) => `/sponsors/${encodeURIComponent(slug)}`,
 
   // live map
   mapNearby: '/map/nearby',
@@ -436,12 +472,18 @@ export const endpoints = {
     impact: `/pay-it-forward/${businessId}/impact`,
     contributions: `/pay-it-forward/${businessId}/contributions`, // GET recent · POST to give
     settings: `/pay-it-forward/${businessId}/settings`,
+    /** PIF-II — specific-item ("suspended coffee") contributions. */
+    items: `/pay-it-forward/${businessId}/items`,
+    itemsContribute: `/pay-it-forward/${businessId}/items/contribute`,
   }),
   /** The caller's own gifts, including ones still pending or that failed. Not business-scoped. */
   payForwardMine: '/pay-it-forward/contributions/mine',
   /** ADR-005 §7 — take back the unspent part of a gift, within 24 hours. */
   payForwardRefund: (contributionId: string) =>
     `/pay-it-forward/contributions/${contributionId}/refund`,
+  /** PIF-II — giver 24h change-of-mind refund on a specific-item contribution. */
+  payForwardItemRefund: (itemContributionId: string) =>
+    `/pay-it-forward/items/${itemContributionId}/refund`,
 
   // tax (Phase 5)
   sellerTaxStatement: '/tax/statements/seller',
@@ -478,6 +520,9 @@ export const endpoints = {
     sponsorReport: (id: string) => `/admin/sponsors/${id}/report`,
     sponsorApprove: (id: string) => `/admin/sponsors/${id}/approve`,
     sponsorReject: (id: string) => `/admin/sponsors/${id}/reject`,
+    /** Fulfillment tracker — read + log a delivery for a sponsor's campaign. */
+    sponsorFulfillment: (id: string) => `/admin/sponsors/${id}/fulfillment`,
+    sponsorFulfillmentLog: (id: string) => `/admin/sponsors/${id}/fulfillment/log`,
     /** The waitlist — writable by the public, and until now readable by nobody. */
     preregistrations: '/admin/preregistrations',
     categorySuggestions: '/admin/category-suggestions',

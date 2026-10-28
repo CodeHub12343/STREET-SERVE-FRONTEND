@@ -19,7 +19,8 @@
  */
 import { useState } from 'react';
 import styled from 'styled-components';
-import { Plus, Eye, UserPlus, Power, RotateCcw, Check, X, Inbox, Clock } from 'lucide-react';
+import Link from 'next/link';
+import { Plus, Eye, UserPlus, Power, RotateCcw, Check, X, Inbox, Clock, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/primitives/Button';
 import { Input } from '@/components/primitives/Input';
 import { StatusChip } from '@/components/primitives/StatusChip';
@@ -346,6 +347,13 @@ export function SponsorManagement() {
             </Stats>
 
             <Actions>
+              {/*
+                Fulfillment is per-sponsor and seeded on approval; the link is always rendered,
+                and the panel itself handles the "not yet seeded" case for inactive rows.
+              */}
+              <FulfillmentLink href={`/admin/sponsors/${s.id}/fulfillment`}>
+                <ClipboardCheck size={15} /> Fulfillment
+              </FulfillmentLink>
               <Button size="compact" variant="tertiary" loading={update.isPending} onClick={() => toggle(s)}>
                 {s.active ? (
                   <>
@@ -489,6 +497,22 @@ const Stat = styled.div`
 const Actions = styled.div`
   display: flex;
   justify-content: flex-end;
+  gap: ${({ theme }) => theme.space[2]}px;
+`;
+const FulfillmentLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: ${({ theme }) => theme.radius.control}px;
+  font-size: 13px;
+  font-weight: 700;
+  background: ${({ theme }) => theme.color.surfaceRaised2};
+  color: ${({ theme }) => theme.color.textPrimary};
+  border: 1px solid ${({ theme }) => theme.color.line};
+  &:hover {
+    background: ${({ theme }) => theme.color.surfaceRaised};
+  }
 `;
 const AddCard = styled.div`
   display: grid;

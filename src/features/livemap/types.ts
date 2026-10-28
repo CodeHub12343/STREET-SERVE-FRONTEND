@@ -32,6 +32,18 @@ export interface MapPinData {
    * — "20% off" on a pin has to be true of the whole menu, or it misleads someone into travelling.
    */
   discountPercent?: number;
+  /**
+   * Franchise Phase 1 — brand metadata when this pin belongs to a (possibly single-truck) brand.
+   * The frontend renders a brand chip when this is present, and uses `brandName` as the owner
+   * label so two operators of the same brand read as one operation at two addresses.
+   */
+  brand?: { brandId: string; brandName: string; brandLogoUrl: string | null } | null;
+  /** Franchise Phase 1 — the actor type that produced this pin. Null for seller/business. */
+  actorType?: 'business' | 'seller' | 'operator';
+  /** Franchise Phase 1 — the operator (truck) id when `actorType === 'operator'`. */
+  operatorId?: string | null;
+  /** Franchise Phase 1 — the operator's display name (e.g. "North truck"). */
+  operatorDisplayName?: string | null;
 }
 
 /**

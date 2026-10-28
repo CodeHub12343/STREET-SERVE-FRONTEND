@@ -133,6 +133,13 @@ export function MapHome({ initialBusinessId }: { initialBusinessId?: string }) {
             etaLabel={
               p.status === 'away' ? undefined : p.etaMin != null ? `${p.etaMin} min` : undefined
             }
+            /*
+              Franchise Phase 1 — chip under the pin reads "<brand> · <truck>" for an operator
+              pin, "<brand>" for a single-truck brand, and nothing for a pre-migration business.
+              `operatorDisplayName` only lands here for an operator; MapPin handles the None cases.
+             */
+            brandName={p.brand?.brandName ?? null}
+            truckLabel={p.operatorDisplayName ?? null}
             onClick={() => selectPin(p.businessId, p.lngLat)}
           />
         ),

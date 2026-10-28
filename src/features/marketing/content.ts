@@ -35,19 +35,44 @@ export const cta = {
  * The live map earns a top-level slot because it is the product; sponsorship and investment share
  * one entry because they share one page (client requirement: a single link, not two).
  */
-export const navLinks = [
+/**
+ * Nav entry. A top-level entry is either a plain link (`href`) or a dropdown parent (`children`,
+ * no `href`) — the parent reveals its children on hover/focus and never navigates on its own.
+ * The split exists so a sponsor can see the two sponsorship programs without the page having to
+ * pack them into one entry: "Sponsor / Invest" and "Great Ice Cream Giveaway" are different
+ * surfaces with different rate cards and should not share a landing page.
+ */
+export type NavChild = { readonly href: string; readonly label: string; readonly description?: string };
+export type NavLink =
+  | { readonly href: string; readonly label: string }
+  | { readonly label: string; readonly children: readonly NavChild[] };
+
+export const navLinks: readonly NavLink[] = [
   { href: '/map', label: 'Live map' },
   { href: '#how-it-works', label: 'How it works' },
   { href: '#features', label: 'Features' },
   { href: '#benefits', label: 'Who it’s for' },
-  { href: '#sponsorships', label: 'Sponsorships' },
+  {
+    label: 'Sponsorships',
+    children: [
+      {
+        href: '/sponsor',
+        label: 'Platform sponsorships',
+        description: 'Long-running placement on the live map and landing page.',
+      },
+      {
+        href: '/sponsor/ice-cream-giveaway',
+        label: 'Great Ice Cream Giveaway',
+        description: '90-day campaign sponsorship — Silver through Diamond.',
+      },
+    ],
+  },
   { href: '#faq', label: 'FAQ' },
-  { href: marketingConfig.sponsorHref, label: 'Sponsor / Invest' },
 ] as const;
 
 /** The subset of nav targets that are sections of this page — the only ones scroll-spy can track. */
 export const sectionAnchors = navLinks
-  .filter((l) => l.href.startsWith('#'))
+  .filter((l): l is { href: string; label: string } => 'href' in l && l.href.startsWith('#'))
   .map((l) => l.href.slice(1));
 
 export const hero = {
@@ -489,10 +514,20 @@ export const sponsorPage = {
   lede:
     'Two ways to back the street economy: put your name on the map, or back the company building it.',
   sponsor: {
-    eyebrow: 'Sponsorships',
+    eyebrow: 'Platform sponsorships',
     title: 'Put your logo on the map.',
     body:
       'Your logo on the landing page and a link that credits you with every person who signs up through it. One payment for the term you choose — no recurring charge, no auto-renewal.',
+    /**
+     * A visible pointer to the second sponsorship program (Great Ice Cream Giveaway). The
+     * platform page and the giveaway page share this file; a sponsor who lands here looking for
+     * the giveaway should see a one-line link out instead of being stranded.
+     */
+    giveawayHint: {
+      label: 'Sponsoring the Great Ice Cream Giveaway?',
+      cta: 'See the giveaway packages →',
+      href: '/sponsor/ice-cream-giveaway',
+    },
   },
   investors: {
     eyebrow: 'Investors',
@@ -623,3 +658,148 @@ export const footer = {
     live: `© ${new Date().getFullYear()} StreetServe · Live in ${marketingConfig.coverage}`,
   }),
 } as const;
+
+/**
+ * ═══ THE GREAT ICE CREAM GIVEAWAY — sponsorship landing content. ═══
+ *
+ * Separate from `sponsorPage` because the Great Ice Cream Giveaway is a different sponsorship
+ * program (`program: 'ice_cream_giveaway'` on the backend): different tier names, a one-time
+ * price for a fixed 90-day window instead of a monthly recurring commitment, and a different
+ * benefit mix (shout-outs, promotional videos, postcards). Reuses the SAME checkout and the
+ * SAME admin review path — only the rate card and the comparison matrix differ.
+ *
+ * Prices are mirrored from `GIVEAWAY_SPONSOR_TIERS` in the backend; the server re-derives the
+ * amount on purchase, so these are display-only. The rate-card figures after each benefit are
+ * what the sponsor would otherwise pay for that item, kept so the "proposed value" line matches
+ * the one quoted in the backend constants.
+ */
+export const giveawayProgram = {
+  slug: 'ice_cream_giveaway' as const,
+  title: 'The Great Ice Cream Giveaway',
+  tagline: 'A 90-day Silicon Valley community campaign — pursuing the Guinness World Records attempt for most ice creams given away through one mobile platform in 24 hours.',
+  hero: {
+    eyebrow: '90-day sponsorship & advertising program',
+    h1: 'Give away ice cream. Get your brand on every cone.',
+    body:
+      'StreetServes is bringing together mobile ice cream vendors, community supporters, and corporate sponsors to give away hundreds — potentially thousands — of free ice creams throughout Silicon Valley. Your sponsorship covers shout-outs, giveaway videos, printed postcards distributed to real households, and logo placement across every giveaway event. Every package runs 90 days.',
+    bullets: [
+      'Professional social-media shout-outs and branded promotional videos.',
+      'Printed postcards distributed directly to consumers.',
+      'Logo placement and sponsor recognition on StreetServes.com.',
+      'Promotional exposure through participating ice-cream giveaway events.',
+      'Campaign performance tracking and reporting.',
+    ],
+    aim: 'Our ambition is to expand this initiative into a Guinness World Records attempt for ice creams distributed through an online platform within 24 hours, subject to official approval.',
+  },
+  packages: [
+    {
+      slug: 'silver',
+      name: 'Silver',
+      priceCents: 300_000,
+      rateCardCents: 290_000,
+      kicker: 'Local community visibility',
+      pitch: 'Ideal for landscaping, plumbing, HVAC, locksmith, cleaning, and other local businesses.',
+      lines: [
+        { label: 'Website logo placement', valueCents: 25_000 },
+        { label: '10 shout-outs', valueCents: 25_000 },
+        { label: '14 giveaway videos', valueCents: 140_000 },
+        { label: '500 postcards', valueCents: 100_000 },
+      ],
+    },
+    {
+      slug: 'gold',
+      name: 'Gold',
+      priceCents: 500_000,
+      rateCardCents: 600_000,
+      kicker: 'Expanded local exposure',
+      pitch: 'Established businesses wanting broader local reach and a featured sponsor profile.',
+      lines: [
+        { label: 'Premium website logo', valueCents: 50_000 },
+        { label: '30 shout-outs', valueCents: 75_000 },
+        { label: '20 giveaway videos', valueCents: 200_000 },
+        { label: '1,000 postcards', valueCents: 200_000 },
+        { label: 'Event recognition', valueCents: 50_000 },
+        { label: 'Featured sponsor profile', valueCents: 25_000 },
+      ],
+    },
+    {
+      slug: 'platinum',
+      name: 'Platinum',
+      priceCents: 1_000_000,
+      rateCardCents: 1_260_000,
+      kicker: 'Premium regional campaign',
+      pitch: 'Established regional businesses looking for a premium promotional partnership.',
+      lines: [
+        { label: 'Priority website logo', valueCents: 75_000 },
+        { label: '60 shout-outs', valueCents: 150_000 },
+        { label: '40 giveaway videos', valueCents: 400_000 },
+        { label: '2,500 postcards', valueCents: 500_000 },
+        { label: 'Featured sponsor profile', valueCents: 35_000 },
+        { label: 'Giveaway recognition', valueCents: 75_000 },
+        { label: 'Monthly reporting', valueCents: 25_000 },
+      ],
+      /** Co-branded + spotlight are included benefits; the rate-card total omits a line value. */
+      note: 'Dedicated sponsor spotlight and co-branded giveaway are included benefits but are not assigned separate values in this rate-card total.',
+    },
+    {
+      slug: 'diamond',
+      name: 'Diamond',
+      priceCents: 2_500_000,
+      rateCardCents: 2_725_000,
+      /**
+       * Diamond is Contact-us, not self-serve. The checkout refuses it server-side; the landing
+       * page renders a mailto CTA on this card instead of a scroll-to-checkout button. The real
+       * reason the tier differs from Platinum is "negotiated category exclusivity", and
+       * negotiation does not fit on a form.
+       */
+      contactOnly: true,
+      contactCta: {
+        label: 'Contact us about Diamond',
+        href: `mailto:${marketingConfig.contactEmail}?subject=${encodeURIComponent('Great Ice Cream Giveaway — Diamond sponsorship enquiry')}`,
+      },
+      kicker: 'Premier campaign partnership',
+      pitch: 'Major regional sponsors looking for premier recognition and negotiated category exclusivity.',
+      lines: [
+        { label: 'Premier website logo', valueCents: 150_000 },
+        { label: '120 shout-outs', valueCents: 300_000 },
+        { label: '80 giveaway videos', valueCents: 800_000 },
+        { label: '5,000 postcards', valueCents: 1_000_000 },
+        { label: 'Featured sponsor profile', valueCents: 50_000 },
+        { label: 'Premium event branding', valueCents: 150_000 },
+        { label: '3 additional spotlight videos', valueCents: 75_000 },
+        { label: 'Co-branded giveaway promotion', valueCents: 150_000 },
+        { label: 'Reporting and tracking', valueCents: 50_000 },
+      ],
+    },
+  ],
+  comparison: {
+    rows: [
+      { label: 'Advertising period', values: ['90 days', '90 days', '90 days', '90 days'] },
+      { label: 'Social-media shout-outs', values: ['10', '30', '60', '120'] },
+      { label: 'Branded promotional videos', values: ['14', '20', '40', '80'] },
+      { label: 'Printed & distributed postcards', values: ['500', '1,000', '2,500', '5,000'] },
+      { label: 'Sponsor logo placement', values: ['Standard', 'Premium', 'Priority', 'Premier'] },
+      { label: 'Featured business profile', values: ['—', 'Yes', 'Yes', 'Yes'] },
+      { label: 'Dedicated sponsor spotlight videos', values: ['—', '—', '1', '3'] },
+      { label: 'Giveaway event recognition', values: ['Standard', 'Premium', 'Premium', 'Premier'] },
+      { label: 'Co-branded giveaway opportunity', values: ['—', '—', 'Yes', 'Yes'] },
+      { label: 'Campaign reporting', values: ['Final', 'Final', 'Monthly', 'Monthly'] },
+      { label: 'Category exclusivity', values: ['—', '—', 'Optional', 'Negotiable'] },
+    ],
+    columnNames: ['Silver $3K', 'Gold $5K', 'Platinum $10K', 'Diamond $25K'],
+  },
+  roster: {
+    eyebrow: 'Sponsors',
+    title: 'Partners of the Great Ice Cream Giveaway.',
+    empty:
+      'The first sponsor logos are open. New partners appear here once their logo has been approved.',
+  },
+  disclaimer:
+    'All advertising values are proposed StreetServes rate-card figures, not independently verified market valuations. Specific distribution locations, social channels, video formats, event availability, and category exclusivity are documented in the sponsorship agreement before any payment is accepted.',
+  contact: {
+    label: 'Questions? Email',
+    email: marketingConfig.contactEmail,
+    phone: '209-622-9391',
+  },
+} as const;
+
